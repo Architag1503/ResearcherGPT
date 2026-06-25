@@ -1,0 +1,74 @@
+[
+  {
+    "styles": {
+      "apa": "Abou Ali, M., Dornaika, F., & Charafeddine, J. (2026). Agentic AI: a comprehensive survey of architectures, applications, and future directions. *Artificial Intelligence Review*, *59*(11), 1–37. https://doi.org/10.1007/s10462-025-11422-4",
+      "mla": "Abou Ali, Mohamad, Fadi Dornaika, and Jinan Charafeddine. \"Agentic AI: a comprehensive survey of architectures, applications, and future directions.\" *Artificial Intelligence Review*, vol. 59, no. 11, 2026, pp. 1-37, doi:10.1007/s10462-025-11422-4.",
+      "ieee": "M. Abou Ali, F. Dornaika and J. Charafeddine, \"Agentic AI: a comprehensive survey of architectures, applications, and future directions,\" *Artificial Intelligence Review*, vol. 59, no. 11, pp. 1-37, 2026, doi: 10.1007/s10462-025-11422-4.",
+      "chicago": "Abou Ali, Mohamad, Fadi Dornaika, and Jinan Charafeddine. \"Agentic AI: A Comprehensive Survey of Architectures, Applications, and Future Directions.\" *Artificial Intelligence Review* 59, no. 11 (2026): 1–37. https://doi.org/10.1007/s10462-025-11422-4.",
+      "harvard": "Abou Ali, M., Dornaika, F. and Charafeddine, J., 2026. Agentic AI: a comprehensive survey of architectures, applications, and future directions. *Artificial Intelligence Review*, 59(11), pp.1-37. Available at: https://doi.org/10.1007/s10462-025-11422-4."
+    },
+    "_id": "6a393c6087653771b1bad763",
+    "projectId": "6a393ad287653771b1bad35c",
+    "key": "AbouAli2026",
+    "doi": "10.1007/s10462-025-11422-4",
+    "title": "Agentic AI: a comprehensive survey of architectures, applications, and future directions",
+    "authors": [
+      "Mohamad Abou Ali",
+      "Fadi Dornaika",
+      "Jinan Charafeddine"
+    ],
+    "journal": "Artificial Intelligence Review",
+    "year": 2026,
+    "volume": "59",
+    "issue": "11",
+    "pages": "1-37",
+    "publisher": "Springer",
+    "createdAt": "2026-06-22T13:45:04.197Z",
+    "updatedAt": "2026-06-22T13:45:04.197Z",
+    "__v": 0
+  },
+  {
+    "styles": {
+      "apa": "Kaelbling, L. P., Littman, M. L., & Cassandra, A. R. (1998). Planning and acting in partially observable stochastic domains. *Artificial Intelligence*, 101(1-2), 99-134.",
+      "ieee": "[2] L. P. Kaelbling, M. L. Littman, and A. R. Cassandra, \"Planning and acting in partially observable stochastic domains,\" *Artificial Intelligence*, vol. 101, no. 1-2, pp. 99-134, 1998. doi: 10.1016/s0004-3702(98)00023-x."
+    },
+    "_id": "6a3b8e2d2730f188316b8cf9",
+    "projectId": "6a393ad287653771b1bad35c",
+    "key": "Kaelbling1998",
+    "doi": "10.1016/s0004-3702(98)00023-x",
+    "title": "Planning and acting in partially observable stochastic domains",
+    "authors": [
+      "Leslie Pack Kaelbling",
+      "Michael L. Littman",
+      "Anthony R. Cassandra"
+    ],
+    "journal": "Artificial Intelligence",
+    "year": 1998,
+    "volume": "101",
+    "issue": "1-2",
+    "pages": "99-134",
+    "publisher": "Elsevier BV",
+    "createdAt": "2026-06-24T07:58:37.116Z",
+    "updatedAt": "2026-06-24T07:58:37.116Z",
+    "__v": 0
+  },
+  {
+    "styles": {
+      "apa": "Laird, J. E. (2012). *The Soar Cognitive Architecture*. MIT Press.",
+      "ieee": "[3] J. E. Laird, *The Soar Cognitive Architecture*. Cambridge, MA, USA: MIT Press, 2012. doi: 10.7551/mitpress/9434.001.0001."
+    },
+    "_id": "6a3b8e2d2730f188316b8cfb",
+    "projectId": "6a393ad287653771b1bad35c",
+    "key": "Laird2012",
+    "doi": "10.7551/mitpress/9434.001.0001",
+    "title": "The Soar Cognitive Architecture",
+    "authors": [
+      "John E. Laird"
+    ],
+    "year": 2012,
+    "publisher": "MIT Press",
+    "createdAt": "2026-06-24T07:58:37.120Z",
+    "updatedAt": "2026-06-24T07:58:37.120Z",
+    "__v": 0
+  }
+]

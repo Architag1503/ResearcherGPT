@@ -1,0 +1,17 @@
+fastapi==0.110.0
+uvicorn==0.28.0
+pydantic==2.6.4
+langchain==0.1.12
+langchain-community==0.0.28
+langchain-google-genai==1.0.1
+langgraph==0.0.26
+crewai==0.22.5
+sentence-transformers==2.5.1
+qdrant-client==1.8.0
+neo4j==5.18.0
+networkx==3.2.1
+pymupdf==1.23.26
+pdfplumber==0.11.0
+python-multipart==0.0.9
+requests==2.31.0
+python-dotenv==1.0.0

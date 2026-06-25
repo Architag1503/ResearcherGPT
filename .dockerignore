@@ -1,0 +1,12 @@
+**/node_modules
+**/.next
+**/dist
+**/uploads
+**/.venv
+**/venv
+**/env
+**/*.tsbuildinfo
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.env*
