@@ -13,13 +13,17 @@ VECTOR_DIMENSION = 384  # Dimension of all-MiniLM-L6-v2
 
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 
 # Initialize Qdrant Client with fallback support
 client = None
 fallback_store: List[Dict[str, Any]] = []
 
 try:
-    client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT, timeout=5)
+    if QDRANT_HOST.startswith("http://") or QDRANT_HOST.startswith("https://"):
+        client = QdrantClient(url=QDRANT_HOST, api_key=QDRANT_API_KEY if QDRANT_API_KEY else None, timeout=5)
+    else:
+        client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT, timeout=5)
     # Check connection
     client.get_collections()
     print("Qdrant database connection successfully established.")
