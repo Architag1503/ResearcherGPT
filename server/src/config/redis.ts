@@ -9,6 +9,7 @@ const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const parseRedisUrl = (url: string) => {
   try {
     const parsed = new URL(url);
+    const isTls = parsed.protocol === 'rediss:';
     return {
       host: parsed.hostname || 'localhost',
       port: parseInt(parsed.port || '6379', 10),
@@ -18,6 +19,7 @@ const parseRedisUrl = (url: string) => {
       maxRetriesPerRequest: null,
       enableOfflineQueue: true,
       lazyConnect: true,
+      tls: isTls ? { rejectUnauthorized: false } : undefined,
     };
   } catch (e) {
     return { host: 'localhost', port: 6379, maxRetriesPerRequest: null, enableOfflineQueue: true, lazyConnect: true };
