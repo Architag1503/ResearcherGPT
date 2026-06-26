@@ -61,12 +61,23 @@ def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -
     indexed_results = []
     points = []
     
-    for c in chunks:
+    # Batch encode all chunk texts to drastically improve speed
+    texts = [c["text_content"] for c in chunks]
+    vectors = []
+    if texts:
+        try:
+            encoded_vectors = model.encode(texts, batch_size=32, show_progress_bar=False)
+            vectors = encoded_vectors.tolist()
+        except Exception as e:
+            print(f"Batch encoding failed: {e}. Falling back to sequential encoding.")
+            vectors = [get_embedding(t) for t in texts]
+    
+    for idx, c in enumerate(chunks):
         text = c["text_content"]
         page_num = c["page_number"]
         chunk_idx = c["chunk_index"]
         
-        vector = get_embedding(text)
+        vector = vectors[idx] if idx < len(vectors) else get_embedding(text)
         point_id = str(uuid.uuid4())
         
         payload = {
@@ -99,7 +110,7 @@ def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -
             client.upsert(collection_name=COLLECTION_NAME, points=points)
             print(f"Uploaded {len(points)} points to Qdrant.")
         except Exception as e:
-            print(f"Qdrant upload failed, writing to fallback memory: {e}")
+            print(f"Failed to upsert to Qdrant: {e}")
             for pt in points:
                 fallback_store.append({
                     "id": pt.id,

@@ -44,23 +44,23 @@ def extract_pdf_content(file_path: str) -> Dict[str, Any]:
         })
         full_text.append(cleaned)
 
-    # 2. Use pdfplumber for table extraction (if any)
+    # 2. Use pdfplumber for table extraction (if any) - Disabled to prevent OOM/timeouts since tables are not consumed by the gateway
     tables = []
-    try:
-        with pdfplumber.open(file_path) as pdf:
-            for page_idx, page in enumerate(pdf.pages):
-                extracted_tables = page.extract_tables()
-                for table in extracted_tables:
-                    # Clean and format table
-                    formatted_table = []
-                    for row in table:
-                        formatted_table.append([cell or "" for cell in row])
-                    tables.append({
-                        "page_number": page_idx + 1,
-                        "data": formatted_table
-                    })
-    except Exception as e:
-        print(f"pdfplumber table extraction warning: {str(e)}")
+    # try:
+    #     with pdfplumber.open(file_path) as pdf:
+    #         for page_idx, page in enumerate(pdf.pages):
+    #             extracted_tables = page.extract_tables()
+    #             for table in extracted_tables:
+    #                 # Clean and format table
+    #                 formatted_table = []
+    #                 for row in table:
+    #                     formatted_table.append([cell or "" for cell in row])
+    #                 tables.append({
+    #                     "page_number": page_idx + 1,
+    #                     "data": formatted_table
+    #                 })
+    # except Exception as e:
+    #     print(f"pdfplumber table extraction warning: {str(e)}")
 
     # 3. Simple heuristic rules to extract title, year, abstract, DOI from the first page text
     first_page_text = page_texts[0]["text"] if page_texts else ""
