@@ -3,6 +3,7 @@ import uuid
 import numpy as np
 import requests
 from typing import List, Dict, Any
+from qdrant_client import QdrantClient
 
 # Dynamic config based on whether Gemini API is configured
 gemini_key = os.getenv("GEMINI_API_KEY")
