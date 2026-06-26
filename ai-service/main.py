@@ -738,6 +738,6 @@ def formatex_repair_paper(req: FormaTexRepairPaperRequest):
         return {"success": False, "error": str(e)}
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def home():
     return {"service": "ResearcherGPT AI Engine", "status": "active"}
