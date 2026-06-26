@@ -208,6 +208,69 @@ def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -
                     "payload": pt.payload
                 })
                 
+def duplicate_paper_vectors(source_paper_id: str, target_paper_id: str, target_project_id: str) -> List[Dict[str, Any]]:
+    ensure_collection()
+    
+    indexed_results = []
+    
+    if client:
+        try:
+            from qdrant_client.models import Filter, FieldCondition, MatchValue, PointStruct
+            # Retrieve all points matching the source_paper_id
+            search_filter = Filter(must=[FieldCondition(key="paper_id", match=MatchValue(value=source_paper_id))])
+            
+            # Scroll points (supports pagination for up to 1000 chunks)
+            scroll_result, _ = client.scroll(
+                collection_name=COLLECTION_NAME,
+                scroll_filter=search_filter,
+                limit=1000,
+                with_vectors=True
+            )
+            
+            points_to_upsert = []
+            for point in scroll_result:
+                payload = dict(point.payload)
+                payload["paper_id"] = target_paper_id
+                payload["project_id"] = target_project_id
+                
+                new_point_id = str(uuid.uuid4())
+                points_to_upsert.append(PointStruct(id=new_point_id, vector=point.vector, payload=payload))
+                
+                indexed_results.append({
+                    "chunk_index": payload.get("chunk_index"),
+                    "text_content": payload.get("text_content"),
+                    "page_number": payload.get("page_number"),
+                    "qdrant_id": new_point_id
+                })
+            
+            if points_to_upsert:
+                client.upsert(collection_name=COLLECTION_NAME, points=points_to_upsert)
+                print(f"Duplicated {len(points_to_upsert)} vector points from {source_paper_id} to {target_paper_id}.")
+            return indexed_results
+        except Exception as e:
+            print(f"Failed to duplicate Qdrant vectors: {e}")
+            
+    # Fallback to local memory store copy
+    for item in fallback_store:
+        payload = item["payload"]
+        if payload.get("paper_id") == source_paper_id:
+            new_payload = dict(payload)
+            new_payload["paper_id"] = target_paper_id
+            new_payload["project_id"] = target_project_id
+            
+            new_point_id = str(uuid.uuid4())
+            fallback_store.append({
+                "id": new_point_id,
+                "vector": item["vector"],
+                "payload": new_payload
+            })
+            indexed_results.append({
+                "chunk_index": new_payload.get("chunk_index"),
+                "text_content": new_payload.get("text_content"),
+                "page_number": new_payload.get("page_number"),
+                "qdrant_id": new_point_id
+            })
+            
     return indexed_results
 
 def search_relevant_chunks(project_id: str, query: str, limit: int = 5) -> List[Dict[str, Any]]:

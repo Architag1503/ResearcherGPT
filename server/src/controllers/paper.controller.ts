@@ -1,13 +1,36 @@
 import { Request, Response } from 'express';
 import { Queue } from 'bullmq';
 import fs from 'fs';
+import crypto from 'crypto';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import Paper from '../models/Paper.js';
+import PaperChunk from '../models/PaperChunk.js';
 import { bullConfig } from '../config/redis.js';
+
+const s3Client = new S3Client({
+  endpoint: process.env.R2_ENDPOINT || 'https://10daf3809212776719f5a55b3f6b0f6e.r2.cloudflarestorage.com',
+  region: process.env.R2_REGION || 'auto',
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+  },
+});
 
 let pdfQueue: Queue | null = null;
 if (process.env.DISABLE_QUEUE !== 'true') {
   try {
-    pdfQueue = new Queue('pdf-processing', bullConfig);
+    pdfQueue = new Queue('pdf-processing', {
+      ...bullConfig,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+      }
+    });
     pdfQueue.on('error', (err) => {
       console.warn('[paper.controller] Queue error:', err.message);
     });
@@ -28,34 +51,131 @@ export const uploadPaper = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'PDF file is required' });
     }
 
-    // 1. Create paper record
-    const paper = new Paper({
-      projectId,
-      title: file.originalname.replace(/\.[^/.]+$/, ""), // remove extension
-      authors: [],
-      status: 'pending',
-      pdfUrl: file.path,
-    });
+    // Stage 1: Validate file size (50MB) and type
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({ error: 'File size exceeds 50MB limit.' });
+    }
+    if (file.mimetype !== 'application/pdf') {
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({ error: 'Only PDF files are supported.' });
+    }
 
-    await paper.save();
+    const buffer = fs.readFileSync(file.path);
 
-    // 2. Queue the PDF processing background job (only if Redis is available)
+    // Validate magic PDF signature (%PDF-)
+    const signature = buffer.toString('utf8', 0, 5);
+    if (signature !== '%PDF-') {
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({ error: 'Invalid PDF signature. File may be corrupted.' });
+    }
+
+    // Check if PDF is encrypted / password protected
+    const headerStr = buffer.toString('utf8', 0, Math.min(buffer.length, 16384));
+    if (headerStr.includes('/Encrypt')) {
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({ error: 'PDF is encrypted or password-protected.' });
+    }
+
+    // Calculate SHA-256 checksum
+    const hash = crypto.createHash('sha256');
+    hash.update(buffer);
+    const checksum = hash.digest('hex');
+
+    // Deduplication check: check if this file is already processed in MongoDB
+    const existingPaper = await Paper.findOne({ checksum, status: 'processed' });
+
+    let storageUrl = '';
+    let paper: any;
+
+    if (existingPaper) {
+      console.log(`[uploadPaper] Duplicate paper detected (checksum: ${checksum}). Reusing existing processed data.`);
+      
+      // Reuse PDF from R2
+      storageUrl = existingPaper.storageUrl || existingPaper.pdfUrl || '';
+
+      // Create new Paper entry for the new project
+      paper = new Paper({
+        projectId,
+        title: existingPaper.title,
+        authors: existingPaper.authors,
+        doi: existingPaper.doi,
+        journal: existingPaper.journal,
+        year: existingPaper.year,
+        abstract: existingPaper.abstract,
+        pdfUrl: storageUrl,
+        storageUrl,
+        checksum,
+        status: 'processed',
+        currentStage: 'Completed',
+        progress: 100,
+        metadata: existingPaper.metadata,
+      });
+      await paper.save();
+
+      // Duplicate database chunks to save processing time
+      const existingChunks = await PaperChunk.find({ paperId: existingPaper._id });
+      if (existingChunks.length > 0) {
+        const newChunks = existingChunks.map((c) => ({
+          paperId: paper._id,
+          projectId,
+          chunkIndex: c.chunkIndex,
+          textContent: c.textContent,
+          pageNumber: c.pageNumber,
+          qdrantId: c.qdrantId,
+        }));
+        await PaperChunk.insertMany(newChunks);
+      }
+    } else {
+      // Stage 1: Upload to Cloudflare R2
+      const bucketName = process.env.R2_BUCKET_NAME || 'researcher-gpt';
+      const key = `uploads/${Date.now()}-${file.filename || file.originalname}`;
+
+      const uploadParams = {
+        Bucket: bucketName,
+        Key: key,
+        Body: buffer,
+        ContentType: 'application/pdf',
+      };
+
+      await s3Client.send(new PutObjectCommand(uploadParams));
+      storageUrl = `${process.env.R2_ENDPOINT || 'https://10daf3809212776719f5a55b3f6b0f6e.r2.cloudflarestorage.com'}/${bucketName}/${key}`;
+
+      // Create paper record with pending status
+      paper = new Paper({
+        projectId,
+        title: file.originalname.replace(/\.[^/.]+$/, ''),
+        authors: [],
+        status: 'pending',
+        pdfUrl: storageUrl,
+        storageUrl,
+        checksum,
+        currentStage: 'Queued',
+        progress: 10,
+      });
+      await paper.save();
+    }
+
+    // Immediately delete temporary local files
+    try {
+      if (fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
+    } catch (err) {
+      console.warn('[uploadPaper] Failed to delete temp local file:', err);
+    }
+
+    // Queue the PDF processing background job (only if Redis is available)
     let jobId: string | undefined;
     if (pdfQueue) {
-      let fileBase64: string | undefined;
-      try {
-        if (fs.existsSync(file.path)) {
-          fileBase64 = fs.readFileSync(file.path).toString('base64');
-        }
-      } catch (err: any) {
-        console.warn('[uploadPaper] Failed to read file for queuing:', err.message);
-      }
-
       const job = await pdfQueue.add('pdf-processing', {
         paperId: paper._id,
-        filePath: file.path,
-        fileBase64,
         projectId,
+        storageUrl,
+        checksum,
+        reusePaperId: existingPaper ? existingPaper._id : undefined,
+        processingVersion: '1.0.0',
       });
       jobId = job.id;
     } else {

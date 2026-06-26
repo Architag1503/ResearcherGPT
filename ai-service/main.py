@@ -9,8 +9,9 @@ from pydantic import BaseModel
 import requests
 
 from utils.pdf_processor import extract_pdf_content, chunk_text
-from services.qdrant_service import index_chunks, search_relevant_chunks
+from services.qdrant_service import index_chunks, search_relevant_chunks, duplicate_paper_vectors
 from services.graph_service import build_project_graph
+from rag.hybrid_retriever import retrieve_hybrid
 from agents.router import agent_workflow, call_llm, report_progress
 from services.learning_service import generate_learning_node_details, answer_learning_node_question
 from services.formatex_service import FormaTeXService
@@ -31,8 +32,10 @@ EXPRESS_API_URL = os.getenv("EXPRESS_API_URL", "http://localhost:5000")
 class ProcessPDFRequest(BaseModel):
     paper_id: str
     project_id: str
-    file_path: str
+    file_path: Optional[str] = None
     file_base64: Optional[str] = None
+    storage_url: Optional[str] = None
+    reuse_paper_id: Optional[str] = None
 
 class GenerateGraphRequest(BaseModel):
     project_id: str
@@ -58,8 +61,18 @@ class ComparisonRequest(BaseModel):
 @app.post("/api/pdf/process")
 def process_pdf(req: ProcessPDFRequest):
     try:
+        # Stage 11: Deduplication — Reuse existing vectors
+        if req.reuse_paper_id:
+            print(f"Reusing existing vectors from paper {req.reuse_paper_id}...")
+            indexed_chunks = duplicate_paper_vectors(req.reuse_paper_id, req.paper_id, req.project_id)
+            return {
+                "success": True,
+                "chunks": indexed_chunks,
+                "metadata": {}
+            }
+
         is_temp_file = False
-        file_path = req.file_path
+        file_path = req.file_path or ""
 
         # If base64 content is provided directly, decode it
         if req.file_base64:
@@ -77,17 +90,33 @@ def process_pdf(req: ProcessPDFRequest):
             except Exception as e:
                 print(f"Error decoding base64 PDF: {str(e)}")
 
-        # Fallback local path resolution if base64 not provided/failed
-        if not is_temp_file:
+        # If storage_url is provided, download to a temp file
+        if req.storage_url and not req.file_base64:
+            print(f"Downloading PDF from storage URL: {req.storage_url}")
+            try:
+                import tempfile
+                res = requests.get(req.storage_url, timeout=60)
+                if res.status_code == 200:
+                    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                    tmp_file.write(res.content)
+                    tmp_file.close()
+                    file_path = tmp_file.name
+                    is_temp_file = True
+                    print(f"Successfully downloaded file to: {file_path}")
+            except Exception as e:
+                print(f"Error downloading PDF from storage URL: {str(e)}")
+
+        # Fallback local path resolution if other methods failed
+        if not is_temp_file and file_path:
             # Fallback relative to server if folder path varies
             if not os.path.exists(file_path):
                 # Try server-side directory relative lookup
                 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                file_path = os.path.join(base_dir, "server", req.file_path)
+                file_path = os.path.join(base_dir, "server", file_path)
 
             if not os.path.exists(file_path):
                 # Try downloading from Express server via HTTP
-                filename = os.path.basename(req.file_path)
+                filename = os.path.basename(file_path)
                 download_url = f"{EXPRESS_API_URL}/uploads/{filename}"
                 print(f"File not found locally. Attempting download from: {download_url}")
                 try:
@@ -103,7 +132,7 @@ def process_pdf(req: ProcessPDFRequest):
                 except Exception as e:
                     print(f"Error downloading PDF file: {str(e)}")
 
-        if not os.path.exists(file_path):
+        if not file_path or not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail=f"PDF file not found at path: {req.file_path}")
 
         # 1. Parse PDF
@@ -161,8 +190,12 @@ def generate_graph(req: GenerateGraphRequest):
 
 @app.post("/api/chat/stream")
 def chat_stream(req: ChatStreamRequest):
-    # Retrieve relevant segments from Qdrant
-    sources = search_relevant_chunks(req.project_id, req.query, limit=5)
+    # Stage 7: Multi-Index Hybrid KG-boosted Retrieval
+    try:
+        sources = retrieve_hybrid(req.project_id, req.query, limit=5)
+    except Exception as e:
+        print(f"[chat_stream] Hybrid retrieval failed: {e}. Falling back to standard vector search.")
+        sources = search_relevant_chunks(req.project_id, req.query, limit=5)
     
     async def event_generator():
         # Yield sources metadata first

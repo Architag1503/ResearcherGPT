@@ -12,6 +12,13 @@ export interface IPaper extends Document {
   status: 'pending' | 'processing' | 'processed' | 'failed';
   processingError?: string;
   metadata?: Record<string, any>;
+  checksum?: string;
+  storageUrl?: string;
+  progress?: number;
+  currentStage?: string;
+  completedStages?: string[];
+  retryCount?: number;
+  processingVersion?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +40,13 @@ const PaperSchema: Schema = new Schema(
     },
     processingError: { type: String },
     metadata: { type: Schema.Types.Mixed, default: {} },
+    checksum: { type: String, index: true },
+    storageUrl: { type: String },
+    progress: { type: Number, default: 0 },
+    currentStage: { type: String, default: 'Upload' },
+    completedStages: [{ type: String }],
+    retryCount: { type: Number, default: 0 },
+    processingVersion: { type: String, default: '1.0.0' },
   },
   { timestamps: true }
 );

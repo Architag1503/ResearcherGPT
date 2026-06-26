@@ -1,6 +1,40 @@
 import math
+import re
 from typing import List, Dict, Any
 from .retriever import retrieve
+from services.graph_service import neo4j_client
+
+def query_knowledge_graph(project_id: str, query: str) -> List[str]:
+    """
+    Finds papers in the Neo4j knowledge graph connected to entities matching query terms.
+    Returns a list of matching paper IDs to boost in hybrid retrieval.
+    """
+    if not neo4j_client or not neo4j_client.driver:
+        return []
+    
+    # Extract query terms
+    words = [w.strip().lower() for w in re.split(r'\W+', query) if len(w.strip()) > 3]
+    if not words:
+        return []
+    
+    query_cypher = """
+    MATCH (e:Entity {projectId: $projectId})
+    WHERE toLower(e.label) IN $words AND NOT e.type = 'paper'
+    MATCH (e)-[r:RELATION]-(p:Entity {type: 'paper', projectId: $projectId})
+    RETURN DISTINCT p.id as paperId
+    """
+    
+    paper_ids = []
+    try:
+        with neo4j_client.driver.session() as session:
+            res = session.run(query_cypher, projectId=project_id, words=words)
+            for record in res:
+                p_id = record["paperId"]
+                if p_id.startswith("paper_"):
+                    paper_ids.append(p_id.replace("paper_", ""))
+    except Exception as e:
+        print(f"[hybrid_retriever] KG search failed: {e}")
+    return paper_ids
 
 def bm25_search(chunks: List[Dict[str, Any]], query: str) -> List[Dict[str, Any]]:
     """
@@ -48,9 +82,9 @@ def bm25_search(chunks: List[Dict[str, Any]], query: str) -> List[Dict[str, Any]
         
     return results
 
-def reciprocal_rank_fusion(vector_results: List[Dict[str, Any]], keyword_results: List[Dict[str, Any]], k: int = 60) -> List[Dict[str, Any]]:
+def reciprocal_rank_fusion(vector_results: List[Dict[str, Any]], keyword_results: List[Dict[str, Any]], kg_boost_papers: List[str], k: int = 60) -> List[Dict[str, Any]]:
     """
-    Reciprocal Rank Fusion (RRF) to merge BM25 and Vector search listings.
+    Reciprocal Rank Fusion (RRF) with Knowledge Graph paper ID boosting.
     """
     scores: Dict[str, float] = {}
     doc_map: Dict[str, Dict[str, Any]] = {}
@@ -58,10 +92,18 @@ def reciprocal_rank_fusion(vector_results: List[Dict[str, Any]], keyword_results
     def add_ranks(results):
         for rank, doc in enumerate(results):
             # Unique identifier for chunk
-            key = f"{doc['paper_id']}_{doc['chunk_index']}"
+            key = f"{doc['paper_id']}_{doc.get('chunk_index', 0)}"
             if key not in doc_map:
                 doc_map[key] = doc
-            scores[key] = scores.get(key, 0.0) + (1.0 / (k + (rank + 1)))
+            
+            # Standard RRF score
+            base_score = 1.0 / (k + (rank + 1))
+            
+            # Boost score if chunk belongs to a paper highly connected to query entities in Neo4j
+            if doc['paper_id'] in kg_boost_papers:
+                base_score *= 1.3
+                
+            scores[key] = scores.get(key, 0.0) + base_score
 
     add_ranks(vector_results)
     add_ranks(keyword_results)
@@ -79,16 +121,18 @@ def reciprocal_rank_fusion(vector_results: List[Dict[str, Any]], keyword_results
 
 def retrieve_hybrid(project_id: str, query: str, paper_id: str = None, limit: int = 10) -> List[Dict[str, Any]]:
     """
-    Query both vector DB and BM25 term frequency index, then fuse the results using RRF.
+    Query vector DB, BM25 term index, and Neo4j KG, then fuse using Reciprocal Rank Fusion.
     """
-    # 1. Fetch vector results
+    # 1. Fetch vector results (metadata pre-filtered by project_id and paper_id)
     vector_res = retrieve(project_id, query, paper_id=paper_id, limit=limit * 2)
     
-    # 2. Extract context pool to compute BM25 keyword rankings (BM25 needs documents pool)
-    # We fetch a larger candidate pool of vector chunks as candidates for local keyword scoring
+    # 2. Compute BM25 keyword rankings
     keyword_res = bm25_search(vector_res, query)
     
-    # 3. Merge vectors and keywords
-    fused = reciprocal_rank_fusion(vector_res, keyword_res)
+    # 3. Query Neo4j Knowledge Graph for connected papers to boost
+    kg_boost_papers = query_knowledge_graph(project_id, query)
+    
+    # 4. Merge vectors and keywords with KG boosts using RRF
+    fused = reciprocal_rank_fusion(vector_res, keyword_res, kg_boost_papers)
     
     return fused[:limit]
