@@ -1,15 +1,13 @@
 import os
 import uuid
 import numpy as np
+import requests
 from typing import List, Dict, Any
-from sentence_transformers import SentenceTransformer
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
 
-# Initialize the embedding model locally (requires no API keys)
-print("Loading sentence-transformer embedding model...")
-model = SentenceTransformer('all-MiniLM-L6-v2')
-VECTOR_DIMENSION = 384  # Dimension of all-MiniLM-L6-v2
+# Dynamic config based on whether Gemini API is configured
+gemini_key = os.getenv("GEMINI_API_KEY")
+use_gemini_default = bool(gemini_key and "your_gemini_api_key" not in gemini_key)
+VECTOR_DIMENSION = 768 if use_gemini_default else 384
 
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
@@ -33,30 +31,109 @@ except Exception as e:
 
 COLLECTION_NAME = "research_chunks"
 
-def ensure_collection():
+# Lazy-loaded model to save memory
+_local_model = None
+
+def get_local_model():
+    global _local_model
+    if _local_model is None:
+        print("Loading local sentence-transformer embedding model lazily...")
+        from sentence_transformers import SentenceTransformer
+        import torch
+        # Minimize resource consumption for PyTorch
+        torch.set_num_threads(1)
+        _local_model = SentenceTransformer('all-MiniLM-L6-v2')
+    return _local_model
+
+def get_gemini_embedding_single(text: str) -> List[float]:
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_key or "your_gemini_api_key" in gemini_key:
+        raise ValueError("GEMINI_API_KEY not configured")
+        
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={gemini_key}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "model": "models/text-embedding-004",
+        "content": {
+            "parts": [{"text": text}]
+        }
+    }
+    res = requests.post(url, headers=headers, json=payload, timeout=30)
+    if res.status_code != 200:
+        raise Exception(f"Gemini Embeddings API returned status {res.status_code}: {res.text}")
+    res_data = res.json()
+    return res_data.get("embedding", {}).get("values", [])
+
+def get_gemini_embeddings_batch(texts: List[str]) -> List[List[float]]:
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_key or "your_gemini_api_key" in gemini_key:
+        raise ValueError("GEMINI_API_KEY not configured")
+        
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key={gemini_key}"
+    headers = {"Content-Type": "application/json"}
+    
+    requests_list = []
+    for t in texts:
+        requests_list.append({
+            "model": "models/text-embedding-004",
+            "content": {
+                "parts": [{"text": t}]
+            }
+        })
+        
+    payload = {"requests": requests_list}
+    res = requests.post(url, headers=headers, json=payload, timeout=30)
+    if res.status_code != 200:
+        raise Exception(f"Gemini Embeddings API returned status {res.status_code}: {res.text}")
+    
+    res_data = res.json()
+    embeddings = []
+    for emb in res_data.get("embeddings", []):
+        embeddings.append(emb.get("values", []))
+    return embeddings
+
+def ensure_collection(vector_size: int = VECTOR_DIMENSION):
     if not client:
         return
     try:
+        from qdrant_client.models import Distance, VectorParams
         collections = client.get_collections().collections
         exists = any(c.name == COLLECTION_NAME for c in collections)
+        if exists:
+            info = client.get_collection(COLLECTION_NAME)
+            current_size = info.config.params.vectors.size
+            if current_size != vector_size:
+                print(f"Recreating collection {COLLECTION_NAME} because dimension changed from {current_size} to {vector_size}")
+                client.delete_collection(COLLECTION_NAME)
+                exists = False
+                
         if not exists:
             client.create_collection(
                 collection_name=COLLECTION_NAME,
-                vectors_config=VectorParams(size=VECTOR_DIMENSION, distance=Distance.COSINE),
+                vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
             )
-            print(f"Created Qdrant collection: {COLLECTION_NAME}")
+            print(f"Created Qdrant collection: {COLLECTION_NAME} with size {vector_size}")
     except Exception as e:
         print(f"Failed to verify/create Qdrant collection: {e}")
 
 # Run initial setup
-ensure_collection()
+ensure_collection(VECTOR_DIMENSION)
 
 def get_embedding(text: str) -> List[float]:
-    embedding = model.encode(text)
-    return embedding.tolist()
+    try:
+        return get_gemini_embedding_single(text)
+    except Exception as e:
+        print(f"Gemini embedding API failed: {e}. Falling back to local SentenceTransformer.")
+        model = get_local_model()
+        embedding = model.encode(text)
+        return embedding.tolist()
 
 def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    ensure_collection()
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    use_gemini = bool(gemini_key and "your_gemini_api_key" not in gemini_key)
+    vector_size = 768 if use_gemini else 384
+    
+    ensure_collection(vector_size)
     
     indexed_results = []
     points = []
@@ -65,13 +142,25 @@ def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -
     texts = [c["text_content"] for c in chunks]
     vectors = []
     if texts:
-        try:
-            encoded_vectors = model.encode(texts, batch_size=32, show_progress_bar=False)
-            vectors = encoded_vectors.tolist()
-        except Exception as e:
-            print(f"Batch encoding failed: {e}. Falling back to sequential encoding.")
-            vectors = [get_embedding(t) for t in texts]
+        if use_gemini:
+            try:
+                print("Generating embeddings using Gemini API in batch...")
+                vectors = get_gemini_embeddings_batch(texts)
+            except Exception as e:
+                print(f"Gemini batch embedding API failed: {e}. Falling back to local model.")
+                use_gemini = False
+                
+        if not use_gemini:
+            ensure_collection(384)
+            try:
+                model = get_local_model()
+                encoded_vectors = model.encode(texts, batch_size=16, show_progress_bar=False)
+                vectors = encoded_vectors.tolist()
+            except Exception as e:
+                print(f"Batch encoding failed locally: {e}. Falling back to sequential encoding.")
+                vectors = [get_embedding(t) for t in texts]
     
+    from qdrant_client.models import PointStruct
     for idx, c in enumerate(chunks):
         text = c["text_content"]
         page_num = c["page_number"]
