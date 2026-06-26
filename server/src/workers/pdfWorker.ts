@@ -82,20 +82,23 @@ try {
           await updateProgress(paperId, 'Vector Indexing', 90, 'Vector Indexing');
         } else {
           let fileBase64 = '';
+          let aiServiceStorageUrl = storageUrl;
 
           // Step 1: Downloading from R2 (or local file fallback)
           if (!hasParsed && !completed.includes('Downloading')) {
             await updateProgress(paperId, 'Downloading', 20);
             
             if (storageUrl) {
-              console.log(`[pdfWorker] Downloading PDF from object storage: ${storageUrl}`);
+              console.log(`[pdfWorker] Generating pre-signed URL for object storage: ${storageUrl}`);
               const bucketName = process.env.R2_BUCKET_NAME || 'researcher-gpt';
               const urlObj = new URL(storageUrl);
               const key = urlObj.pathname.replace(`/${bucketName}/`, '').replace(/^\//, '');
 
-              const s3Response = await s3Client.send(new GetObjectCommand({ Bucket: bucketName, Key: key }));
-              const fileBuffer = await streamToBuffer(s3Response.Body);
-              fileBase64 = fileBuffer.toString('base64');
+              const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
+              const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
+              // Generate a pre-signed URL valid for 15 minutes
+              aiServiceStorageUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
+              console.log(`[pdfWorker] Pre-signed URL generated successfully.`);
             } else if (paper.pdfUrl) {
               console.log(`[pdfWorker] Reading PDF from local file storage: ${paper.pdfUrl}`);
               if (fs.existsSync(paper.pdfUrl)) {
@@ -123,8 +126,12 @@ try {
               paper_id: paperId,
               project_id: projectId,
               file_base64: fileBase64,
-              storage_url: storageUrl,
+              storage_url: aiServiceStorageUrl,
               file_path: '',
+            }, {
+              timeout: 180000, // 3 minutes timeout to give AI Service enough time
+              maxBodyLength: Infinity,
+              maxContentLength: Infinity
             });
 
             const { success, chunks: processedChunks, metadata: processedMeta, error } = response.data;
