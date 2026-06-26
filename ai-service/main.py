@@ -1,7 +1,7 @@
 import os
 import json
 import asyncio
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -32,6 +32,7 @@ class ProcessPDFRequest(BaseModel):
     paper_id: str
     project_id: str
     file_path: str
+    file_base64: Optional[str] = None
 
 class GenerateGraphRequest(BaseModel):
     project_id: str
@@ -57,31 +58,50 @@ class ComparisonRequest(BaseModel):
 @app.post("/api/pdf/process")
 def process_pdf(req: ProcessPDFRequest):
     try:
-        file_path = req.file_path
-        # Fallback relative to server if folder path varies
-        if not os.path.exists(file_path):
-            # Try server-side directory relative lookup
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            file_path = os.path.join(base_dir, "server", req.file_path)
-
         is_temp_file = False
-        if not os.path.exists(file_path):
-            # Try downloading from Express server via HTTP
-            filename = os.path.basename(req.file_path)
-            download_url = f"{EXPRESS_API_URL}/uploads/{filename}"
-            print(f"File not found locally. Attempting download from: {download_url}")
+        file_path = req.file_path
+
+        # If base64 content is provided directly, decode it
+        if req.file_base64:
+            print("Decoding base64 PDF payload...")
             try:
+                import base64
                 import tempfile
-                res = requests.get(download_url, timeout=30)
-                if res.status_code == 200:
-                    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-                    tmp_file.write(res.content)
-                    tmp_file.close()
-                    file_path = tmp_file.name
-                    is_temp_file = True
-                    print(f"Successfully downloaded file to: {file_path}")
+                pdf_data = base64.b64decode(req.file_base64)
+                tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                tmp_file.write(pdf_data)
+                tmp_file.close()
+                file_path = tmp_file.name
+                is_temp_file = True
+                print(f"Successfully decoded base64 PDF to: {file_path}")
             except Exception as e:
-                print(f"Error downloading PDF file: {str(e)}")
+                print(f"Error decoding base64 PDF: {str(e)}")
+
+        # Fallback local path resolution if base64 not provided/failed
+        if not is_temp_file:
+            # Fallback relative to server if folder path varies
+            if not os.path.exists(file_path):
+                # Try server-side directory relative lookup
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                file_path = os.path.join(base_dir, "server", req.file_path)
+
+            if not os.path.exists(file_path):
+                # Try downloading from Express server via HTTP
+                filename = os.path.basename(req.file_path)
+                download_url = f"{EXPRESS_API_URL}/uploads/{filename}"
+                print(f"File not found locally. Attempting download from: {download_url}")
+                try:
+                    import tempfile
+                    res = requests.get(download_url, timeout=30)
+                    if res.status_code == 200:
+                        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                        tmp_file.write(res.content)
+                        tmp_file.close()
+                        file_path = tmp_file.name
+                        is_temp_file = True
+                        print(f"Successfully downloaded file to: {file_path}")
+                except Exception as e:
+                    print(f"Error downloading PDF file: {str(e)}")
 
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail=f"PDF file not found at path: {req.file_path}")

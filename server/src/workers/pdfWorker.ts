@@ -1,5 +1,6 @@
 import { Worker, Job } from 'bullmq';
 import axios from 'axios';
+import fs from 'fs';
 import { bullConfig } from '../config/redis.js';
 import Paper from '../models/Paper.js';
 import PaperChunk from '../models/PaperChunk.js';
@@ -19,12 +20,23 @@ try {
         // 1. Update Paper status to processing
         await Paper.findByIdAndUpdate(paperId, { status: 'processing' });
 
+        // Read local file and encode to base64
+        let fileBase64: string | undefined;
+        try {
+          if (fs.existsSync(filePath)) {
+            fileBase64 = fs.readFileSync(filePath).toString('base64');
+          }
+        } catch (err: any) {
+          console.warn(`[pdfWorker] Could not read file to encode base64: ${err.message}`);
+        }
+
         // 2. Call Python AI service to process PDF
         // The AI service parses PDF with PyMuPDF/pdfplumber, chunks it, and creates vector records in Qdrant
         const response = await axios.post(`${AI_SERVICE_URL}/api/pdf/process`, {
           paper_id: paperId,
           project_id: projectId,
           file_path: filePath,
+          file_base64: fileBase64,
         });
 
         const { success, chunks, metadata, error } = response.data;
