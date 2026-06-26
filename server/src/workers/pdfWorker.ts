@@ -1,6 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import axios from 'axios';
 import fs from 'fs';
+import path from 'path';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { bullConfig } from '../config/redis.js';
 import Paper from '../models/Paper.js';
@@ -82,18 +83,34 @@ try {
         } else {
           let fileBase64 = '';
 
-          // Step 1: Downloading from R2
+          // Step 1: Downloading from R2 (or local file fallback)
           if (!hasParsed && !completed.includes('Downloading')) {
             await updateProgress(paperId, 'Downloading', 20);
-            console.log(`[pdfWorker] Downloading PDF from object storage: ${storageUrl}`);
             
-            const bucketName = process.env.R2_BUCKET_NAME || 'researcher-gpt';
-            const urlObj = new URL(storageUrl);
-            const key = urlObj.pathname.replace(`/${bucketName}/`, '').replace(/^\//, '');
+            if (storageUrl) {
+              console.log(`[pdfWorker] Downloading PDF from object storage: ${storageUrl}`);
+              const bucketName = process.env.R2_BUCKET_NAME || 'researcher-gpt';
+              const urlObj = new URL(storageUrl);
+              const key = urlObj.pathname.replace(`/${bucketName}/`, '').replace(/^\//, '');
 
-            const s3Response = await s3Client.send(new GetObjectCommand({ Bucket: bucketName, Key: key }));
-            const fileBuffer = await streamToBuffer(s3Response.Body);
-            fileBase64 = fileBuffer.toString('base64');
+              const s3Response = await s3Client.send(new GetObjectCommand({ Bucket: bucketName, Key: key }));
+              const fileBuffer = await streamToBuffer(s3Response.Body);
+              fileBase64 = fileBuffer.toString('base64');
+            } else if (paper.pdfUrl) {
+              console.log(`[pdfWorker] Reading PDF from local file storage: ${paper.pdfUrl}`);
+              if (fs.existsSync(paper.pdfUrl)) {
+                fileBase64 = fs.readFileSync(paper.pdfUrl).toString('base64');
+              } else {
+                const relativePath = path.join('uploads', path.basename(paper.pdfUrl));
+                if (fs.existsSync(relativePath)) {
+                  fileBase64 = fs.readFileSync(relativePath).toString('base64');
+                } else {
+                  throw new Error(`Local file not found at path: ${paper.pdfUrl}`);
+                }
+              }
+            } else {
+              throw new Error('No storage URL or local path configured.');
+            }
             
             await updateProgress(paperId, 'Downloading', 30, 'Downloading');
           }

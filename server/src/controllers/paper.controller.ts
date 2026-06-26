@@ -128,43 +128,78 @@ export const uploadPaper = async (req: Request, res: Response) => {
         }));
         await PaperChunk.insertMany(newChunks);
       }
-    } else {
-      // Stage 1: Upload to Cloudflare R2
-      const bucketName = process.env.R2_BUCKET_NAME || 'researcher-gpt';
-      const key = `uploads/${Date.now()}-${file.filename || file.originalname}`;
 
-      const uploadParams = {
-        Bucket: bucketName,
-        Key: key,
-        Body: buffer,
-        ContentType: 'application/pdf',
-      };
-
-      await s3Client.send(new PutObjectCommand(uploadParams));
-      storageUrl = `${process.env.R2_ENDPOINT || 'https://10daf3809212776719f5a55b3f6b0f6e.r2.cloudflarestorage.com'}/${bucketName}/${key}`;
-
-      // Create paper record with pending status
-      paper = new Paper({
-        projectId,
-        title: file.originalname.replace(/\.[^/.]+$/, ''),
-        authors: [],
-        status: 'pending',
-        pdfUrl: storageUrl,
-        storageUrl,
-        checksum,
-        currentStage: 'Queued',
-        progress: 10,
-      });
-      await paper.save();
-    }
-
-    // Immediately delete temporary local files
-    try {
-      if (fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
+      // Clean up temp file
+      try {
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+      } catch (err) {
+        console.warn('[uploadPaper] Failed to delete duplicate temp local file:', err);
       }
-    } catch (err) {
-      console.warn('[uploadPaper] Failed to delete temp local file:', err);
+    } else {
+      const hasR2Creds = process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY;
+      let isUploadedToR2 = false;
+
+      if (hasR2Creds) {
+        try {
+          // Stage 1: Upload to Cloudflare R2
+          const bucketName = process.env.R2_BUCKET_NAME || 'researcher-gpt';
+          const key = `uploads/${Date.now()}-${file.filename || file.originalname}`;
+
+          const uploadParams = {
+            Bucket: bucketName,
+            Key: key,
+            Body: buffer,
+            ContentType: 'application/pdf',
+          };
+
+          await s3Client.send(new PutObjectCommand(uploadParams));
+          storageUrl = `${process.env.R2_ENDPOINT || 'https://10daf3809212776719f5a55b3f6b0f6e.r2.cloudflarestorage.com'}/${bucketName}/${key}`;
+          isUploadedToR2 = true;
+        } catch (err: any) {
+          console.warn('[uploadPaper] R2 upload failed, falling back to local file storage:', err.message);
+        }
+      }
+
+      if (isUploadedToR2) {
+        // Create paper record with pending status (R2 path)
+        paper = new Paper({
+          projectId,
+          title: file.originalname.replace(/\.[^/.]+$/, ''),
+          authors: [],
+          status: 'pending',
+          pdfUrl: storageUrl,
+          storageUrl,
+          checksum,
+          currentStage: 'Queued',
+          progress: 10,
+        });
+      } else {
+        // Fallback: Create paper record using local file path (do NOT delete local file)
+        paper = new Paper({
+          projectId,
+          title: file.originalname.replace(/\.[^/.]+$/, ''),
+          authors: [],
+          status: 'pending',
+          pdfUrl: file.path,
+          checksum,
+          currentStage: 'Queued',
+          progress: 10,
+        });
+      }
+      await paper.save();
+
+      // Immediately delete temporary local files ONLY if it was uploaded to R2
+      if (isUploadedToR2) {
+        try {
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+          }
+        } catch (err) {
+          console.warn('[uploadPaper] Failed to delete temp local file:', err);
+        }
+      }
     }
 
     // Queue the PDF processing background job (only if Redis is available)
@@ -225,11 +260,31 @@ export const getPaperById = async (req: Request, res: Response) => {
 export const deletePaper = async (req: Request, res: Response) => {
   try {
     const { paperId } = req.params;
+    
+    // Safety check: if it is a mock ID (e.g. random float from client fallback), return 200 to allow UI to remove it
+    const mongoose = await import('mongoose');
+    if (!mongoose.default.Types.ObjectId.isValid(paperId)) {
+      console.log(`[deletePaper] Invalid paperId "${paperId}" (likely local mock). Returning 200 for clean UI removal.`);
+      return res.status(200).json({ message: 'Paper deleted successfully (mock cleanup)' });
+    }
+
     const paper = await Paper.findByIdAndDelete(paperId);
     if (!paper) {
       return res.status(404).json({ error: 'Paper not found' });
     }
-    // In production: delete files from disk
+
+    // If local storage was used, delete the file from the filesystem
+    if (paper.pdfUrl && !paper.storageUrl) {
+      try {
+        if (fs.existsSync(paper.pdfUrl)) {
+          fs.unlinkSync(paper.pdfUrl);
+          console.log(`[deletePaper] Deleted local PDF file: ${paper.pdfUrl}`);
+        }
+      } catch (err: any) {
+        console.warn(`[deletePaper] Failed to delete local file ${paper.pdfUrl}:`, err.message);
+      }
+    }
+
     return res.status(200).json({ message: 'Paper deleted successfully' });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
