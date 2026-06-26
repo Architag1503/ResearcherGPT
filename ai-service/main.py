@@ -57,7 +57,6 @@ class ComparisonRequest(BaseModel):
 @app.post("/api/pdf/process")
 def process_pdf(req: ProcessPDFRequest):
     try:
-        # Check if file exists on shared workspace volumes
         file_path = req.file_path
         # Fallback relative to server if folder path varies
         if not os.path.exists(file_path):
@@ -65,11 +64,37 @@ def process_pdf(req: ProcessPDFRequest):
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             file_path = os.path.join(base_dir, "server", req.file_path)
 
+        is_temp_file = False
+        if not os.path.exists(file_path):
+            # Try downloading from Express server via HTTP
+            filename = os.path.basename(req.file_path)
+            download_url = f"{EXPRESS_API_URL}/uploads/{filename}"
+            print(f"File not found locally. Attempting download from: {download_url}")
+            try:
+                import tempfile
+                res = requests.get(download_url, timeout=30)
+                if res.status_code == 200:
+                    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                    tmp_file.write(res.content)
+                    tmp_file.close()
+                    file_path = tmp_file.name
+                    is_temp_file = True
+                    print(f"Successfully downloaded file to: {file_path}")
+            except Exception as e:
+                print(f"Error downloading PDF file: {str(e)}")
+
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail=f"PDF file not found at path: {req.file_path}")
 
         # 1. Parse PDF
-        parsed = extract_pdf_content(file_path)
+        try:
+            parsed = extract_pdf_content(file_path)
+        finally:
+            if is_temp_file and os.path.exists(file_path):
+                try:
+                    os.unlink(file_path)
+                except Exception as e:
+                    print(f"Failed to delete temp file {file_path}: {e}")
         
         # 2. Chunk Text
         chunks = chunk_text(parsed["pages"])
