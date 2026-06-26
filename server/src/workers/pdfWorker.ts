@@ -13,21 +13,23 @@ try {
   pdfWorker = new Worker(
     'pdf-processing',
     async (job: Job) => {
-      const { paperId, filePath, projectId } = job.data;
+      const { paperId, filePath, projectId, fileBase64: jobFileBase64 } = job.data;
       console.log(`[pdfWorker] Processing paper ${paperId} at path: ${filePath}`);
 
       try {
         // 1. Update Paper status to processing
         await Paper.findByIdAndUpdate(paperId, { status: 'processing' });
 
-        // Read local file and encode to base64
-        let fileBase64: string | undefined;
-        try {
-          if (fs.existsSync(filePath)) {
-            fileBase64 = fs.readFileSync(filePath).toString('base64');
+        // Prioritize base64 from job payload, fall back to local disk
+        let fileBase64 = jobFileBase64;
+        if (!fileBase64) {
+          try {
+            if (fs.existsSync(filePath)) {
+              fileBase64 = fs.readFileSync(filePath).toString('base64');
+            }
+          } catch (err: any) {
+            console.warn(`[pdfWorker] Could not read file to encode base64: ${err.message}`);
           }
-        } catch (err: any) {
-          console.warn(`[pdfWorker] Could not read file to encode base64: ${err.message}`);
         }
 
         // 2. Call Python AI service to process PDF

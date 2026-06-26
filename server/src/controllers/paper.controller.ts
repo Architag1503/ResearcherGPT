@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Queue } from 'bullmq';
+import fs from 'fs';
 import Paper from '../models/Paper.js';
 import { bullConfig } from '../config/redis.js';
 
@@ -41,9 +42,19 @@ export const uploadPaper = async (req: Request, res: Response) => {
     // 2. Queue the PDF processing background job (only if Redis is available)
     let jobId: string | undefined;
     if (pdfQueue) {
+      let fileBase64: string | undefined;
+      try {
+        if (fs.existsSync(file.path)) {
+          fileBase64 = fs.readFileSync(file.path).toString('base64');
+        }
+      } catch (err: any) {
+        console.warn('[uploadPaper] Failed to read file for queuing:', err.message);
+      }
+
       const job = await pdfQueue.add('pdf-processing', {
         paperId: paper._id,
         filePath: file.path,
+        fileBase64,
         projectId,
       });
       jobId = job.id;
