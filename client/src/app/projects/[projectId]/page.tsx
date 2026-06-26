@@ -2854,7 +2854,7 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                             <FileText className="w-8 h-8 text-zinc-500 mt-1" />
                             <div className="min-w-0">
                               <a
-                                href={`${API_URL}/${p.pdfUrl}`}
+                                href={`${API_URL}/api/papers/${p._id}/pdf`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="hover:underline cursor-pointer group/title"
@@ -2864,7 +2864,11 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                                 </p>
                               </a>
                               <p className="text-zinc-500 text-xs mt-0.5">
-                                {p.authors?.join(', ') || 'Processing Authors...'} • Year {p.year || 'N/A'}
+                                {p.status === 'processed'
+                                  ? (p.authors && p.authors.length > 0 ? p.authors.join(', ') : 'Unknown Author')
+                                  : p.status === 'failed'
+                                    ? 'Error processing authors'
+                                    : (p.authors && p.authors.length > 0 ? p.authors.join(', ') : 'Processing Authors...')} • Year {p.year || 'N/A'}
                               </p>
                             </div>
                           </div>

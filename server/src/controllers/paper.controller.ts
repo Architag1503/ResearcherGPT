@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Queue } from 'bullmq';
 import fs from 'fs';
+import path from 'path';
 import crypto from 'crypto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import Paper from '../models/Paper.js';
@@ -231,6 +232,42 @@ export const deletePaper = async (req: Request, res: Response) => {
     // In production: delete files from disk
     return res.status(200).json({ message: 'Paper deleted successfully' });
   } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const getPaperPdf = async (req: Request, res: Response) => {
+  try {
+    const { paperId } = req.params;
+    const paper = await Paper.findById(paperId);
+    if (!paper) {
+      return res.status(404).json({ error: 'Paper not found' });
+    }
+
+    if (paper.storageUrl) {
+      // Dynamic import to keep S3 pre-signer cleanly resolved
+      const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
+      const { GetObjectCommand } = await import("@aws-sdk/client-s3");
+
+      const bucketName = process.env.R2_BUCKET_NAME || 'researcher-gpt';
+      const urlObj = new URL(paper.storageUrl);
+      const key = urlObj.pathname.replace(`/${bucketName}/`, '').replace(/^\//, '');
+
+      const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
+      const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+
+      return res.redirect(presignedUrl);
+    } else if (paper.pdfUrl) {
+      const filePath = path.resolve(paper.pdfUrl);
+      if (fs.existsSync(filePath)) {
+        return res.sendFile(filePath);
+      }
+      return res.status(404).json({ error: 'Local PDF file not found' });
+    }
+
+    return res.status(404).json({ error: 'PDF path not configured' });
+  } catch (error: any) {
+    console.error('[getPaperPdf] Error:', error.message);
     return res.status(500).json({ error: error.message });
   }
 };

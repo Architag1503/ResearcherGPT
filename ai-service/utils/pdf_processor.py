@@ -28,7 +28,7 @@ def ocr_page_with_gemini(page: fitz.Page) -> str:
         img_bytes = pix.tobytes("png")
         b64_data = base64.b64encode(img_bytes).decode("utf-8")
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
         headers = {"Content-Type": "application/json"}
         payload = {
             "contents": [
@@ -67,7 +67,7 @@ def extract_metadata_with_gemini(first_page_text: str) -> Dict[str, Any]:
         return {}
 
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
         headers = {"Content-Type": "application/json"}
         
         prompt = f"""

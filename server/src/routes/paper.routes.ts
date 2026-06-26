@@ -6,6 +6,7 @@ import {
   getPapers,
   getPaperById,
   deletePaper,
+  getPaperPdf,
 } from '../controllers/paper.controller.js';
 
 const router = Router();
@@ -35,6 +36,7 @@ const upload = multer({
 router.post('/upload', upload.single('pdf'), uploadPaper);
 router.get('/', getPapers);
 router.get('/:paperId', getPaperById);
+router.get('/:paperId/pdf', getPaperPdf);
 router.delete('/:paperId', deletePaper);
 
 export default router;

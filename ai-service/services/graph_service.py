@@ -64,7 +64,7 @@ def extract_graph_gemini(paper_title: str, abstract: str) -> Dict[str, Any]:
     if not gemini_key or "your_gemini_api_key" in gemini_key:
         return {}
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
     headers = {"Content-Type": "application/json"}
     
     prompt = f"""
