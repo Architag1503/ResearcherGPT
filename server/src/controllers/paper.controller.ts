@@ -182,7 +182,7 @@ export const uploadPaper = async (req: Request, res: Response) => {
           title: file.originalname.replace(/\.[^/.]+$/, ''),
           authors: [],
           status: 'pending',
-          pdfUrl: file.path,
+          pdfUrl: file.path.replace(/\\/g, '/'),
           checksum,
           currentStage: 'Queued',
           progress: 10,
@@ -214,19 +214,31 @@ export const uploadPaper = async (req: Request, res: Response) => {
         processingVersion: '1.0.0',
       });
       jobId = job.id;
+      
+      return res.status(201).json({
+        message: 'Paper upload successful, processing queued.',
+        paper,
+        jobId,
+      });
     } else {
-      console.warn('[uploadPaper] PDF queue unavailable — paper saved but not queued for AI processing.');
+      console.warn('[uploadPaper] PDF queue unavailable — processing failed.');
+      paper.status = 'failed';
+      paper.currentStage = 'Failed (Queue Unavailable)';
+      await paper.save();
+      
+      try {
+        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      } catch (err) {}
+      
+      return res.status(503).json({ error: 'AI processing queue is unavailable. Please try again later.' });
     }
-
-    return res.status(201).json({
-      message: pdfQueue
-        ? 'Paper upload successful, processing queued.'
-        : 'Paper saved. AI processing is unavailable (Redis not connected).',
-      paper,
-      jobId,
-    });
   } catch (error: any) {
     console.error('[uploadPaper] Error:', error.message);
+    try {
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+    } catch (e) {}
     return res.status(500).json({ error: error.message });
   }
 };

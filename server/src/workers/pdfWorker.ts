@@ -83,9 +83,10 @@ try {
         } else {
           let fileBase64 = '';
           let aiServiceStorageUrl = storageUrl;
+          let localFilePath = '';
 
           // Step 1: Downloading from R2 (or local file fallback)
-          if (!hasParsed && !completed.includes('Downloading')) {
+          if (!hasParsed) {
             await updateProgress(paperId, 'Downloading', 20);
             
             if (storageUrl) {
@@ -100,17 +101,15 @@ try {
               aiServiceStorageUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
               console.log(`[pdfWorker] Pre-signed URL generated successfully.`);
             } else if (paper.pdfUrl) {
-              console.log(`[pdfWorker] Reading PDF from local file storage: ${paper.pdfUrl}`);
-              if (fs.existsSync(paper.pdfUrl)) {
-                fileBase64 = fs.readFileSync(paper.pdfUrl).toString('base64');
-              } else {
-                const relativePath = path.join('uploads', path.basename(paper.pdfUrl));
-                if (fs.existsSync(relativePath)) {
-                  fileBase64 = fs.readFileSync(relativePath).toString('base64');
-                } else {
+              console.log(`[pdfWorker] Validating local file storage: ${paper.pdfUrl}`);
+              localFilePath = paper.pdfUrl;
+              if (!fs.existsSync(localFilePath)) {
+                localFilePath = path.join('uploads', path.basename(paper.pdfUrl));
+                if (!fs.existsSync(localFilePath)) {
                   throw new Error(`Local file not found at path: ${paper.pdfUrl}`);
                 }
               }
+              // fileBase64 is left empty to avoid memory spikes
             } else {
               throw new Error('No storage URL or local path configured.');
             }
@@ -127,7 +126,7 @@ try {
               project_id: projectId,
               file_base64: fileBase64,
               storage_url: aiServiceStorageUrl,
-              file_path: '',
+              file_path: localFilePath,
             }, {
               timeout: 180000, // 3 minutes timeout to give AI Service enough time
               maxBodyLength: Infinity,
@@ -187,6 +186,10 @@ try {
           await updateProgress(paperId, 'Graph Construction', 98, 'Graph Construction');
         } catch (err: any) {
           console.warn('[pdfWorker] Graph generation warning:', err.message);
+          let warningMsg = err.response?.data?.error || err.message;
+          metadata.extra_meta = metadata.extra_meta || {};
+          metadata.extra_meta.warnings = metadata.extra_meta.warnings || [];
+          metadata.extra_meta.warnings.push(`Graph Generation: ${warningMsg}`);
         }
 
         // Stage 8: Validation

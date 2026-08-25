@@ -2508,17 +2508,9 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       fetchPapers();
-    } catch (err) {
-      // Local fallback simulator
-      const mockPaper = {
-        _id: Math.random().toString(),
-        title: file.name.replace(/\.[^/.]+$/, ""),
-        authors: ['Dr. Sarah Jenkins'],
-        year: 2024,
-        status: 'processed',
-        pdfUrl: '#'
-      };
-      setPapers((prev) => [mockPaper, ...prev]);
+    } catch (err: any) {
+      console.error('Upload failed:', err);
+      alert(err.response?.data?.error || 'Failed to upload paper. Please try again.');
     } finally {
       setUploading(false);
     }

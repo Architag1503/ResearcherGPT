@@ -95,10 +95,11 @@ def process_pdf(req: ProcessPDFRequest):
             print(f"Downloading PDF from storage URL: {req.storage_url}")
             try:
                 import tempfile
-                res = requests.get(req.storage_url, timeout=60)
+                res = requests.get(req.storage_url, timeout=60, stream=True)
                 if res.status_code == 200:
                     tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-                    tmp_file.write(res.content)
+                    for chunk in res.iter_content(chunk_size=8192):
+                        tmp_file.write(chunk)
                     tmp_file.close()
                     file_path = tmp_file.name
                     is_temp_file = True
@@ -112,7 +113,12 @@ def process_pdf(req: ProcessPDFRequest):
             if not os.path.exists(file_path):
                 # Try server-side directory relative lookup
                 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                file_path = os.path.join(base_dir, "server", file_path)
+                server_path = os.path.join(base_dir, "server", file_path)
+                docker_path = os.path.join("/usr/src/app", file_path)
+                if os.path.exists(server_path):
+                    file_path = server_path
+                elif os.path.exists(docker_path):
+                    file_path = docker_path
 
             if not os.path.exists(file_path):
                 # Try downloading from Express server via HTTP
@@ -121,10 +127,11 @@ def process_pdf(req: ProcessPDFRequest):
                 print(f"File not found locally. Attempting download from: {download_url}")
                 try:
                     import tempfile
-                    res = requests.get(download_url, timeout=30)
+                    res = requests.get(download_url, timeout=30, stream=True)
                     if res.status_code == 200:
                         tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-                        tmp_file.write(res.content)
+                        for chunk in res.iter_content(chunk_size=8192):
+                            tmp_file.write(chunk)
                         tmp_file.close()
                         file_path = tmp_file.name
                         is_temp_file = True
