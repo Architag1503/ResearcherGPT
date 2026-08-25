@@ -51,10 +51,10 @@ def get_gemini_embedding_single(text: str) -> List[float]:
     if not gemini_key or "your_gemini_api_key" in gemini_key:
         raise ValueError("GEMINI_API_KEY not configured")
         
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={gemini_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key={gemini_key}"
     headers = {"Content-Type": "application/json"}
     payload = {
-        "model": "models/text-embedding-004",
+        "model": "models/gemini-embedding-001",
         "content": {
             "parts": [{"text": text}]
         }
@@ -70,13 +70,13 @@ def get_gemini_embeddings_batch(texts: List[str]) -> List[List[float]]:
     if not gemini_key or "your_gemini_api_key" in gemini_key:
         raise ValueError("GEMINI_API_KEY not configured")
         
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key={gemini_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents?key={gemini_key}"
     headers = {"Content-Type": "application/json"}
     
     requests_list = []
     for t in texts:
         requests_list.append({
-            "model": "models/text-embedding-004",
+            "model": "models/gemini-embedding-001",
             "content": {
                 "parts": [{"text": t}]
             }
