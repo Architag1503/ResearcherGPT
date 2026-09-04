@@ -8,7 +8,17 @@ import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { FolderPlus, RefreshCw, ChevronRight, Plus, FileText, BookOpen, Layers, Cpu, BookMarked, Pencil, Trash2 } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const getApiUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    const envUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+      return envUrl;
+    }
+    return `${window.location.protocol}//${window.location.hostname}:5000`;
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+};
+const API_URL = getApiUrl();
 
 interface DashboardStats {
   projects: number;
@@ -88,8 +98,16 @@ export default function Dashboard() {
     setLoading(true);
     setApiError(false);
     try {
-      const res = await axios.get(`${API_URL}/api/projects`);
-      setProjects(res.data);
+      const res = await axios.get(`${API_URL}/api/projects`, {
+        params: { _t: Date.now() },
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      });
+      if (Array.isArray(res.data)) {
+        setProjects(res.data);
+      } else {
+        console.warn('Projects returned non-array payload:', res.data);
+        setProjects([]);
+      }
     } catch (err) {
       console.warn('Failed to fetch projects.');
       setApiError(true);
@@ -103,8 +121,13 @@ export default function Dashboard() {
   const fetchStats = async () => {
     setStatsLoading(true);
     try {
-      const res = await axios.get(`${API_URL}/api/dashboard/stats`);
-      setStats(res.data);
+      const res = await axios.get(`${API_URL}/api/dashboard/stats`, {
+        params: { _t: Date.now() },
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      });
+      if (res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
+        setStats(res.data);
+      }
     } catch (err) {
       console.warn('Failed to fetch dashboard stats.');
       setStats(emptyStats);

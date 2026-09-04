@@ -32,6 +32,18 @@ if (!fs.existsSync('uploads')) {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Disable ETag generation to prevent 304 Not Modified empty body responses on dynamic REST APIs
+app.set('etag', false);
+
+// Disable caching for all API responses so clients always receive fresh 200 OK data
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  next();
+});
+
 // Enable CORS
 app.use(cors({
   origin: '*', // Allow all in dev, secure in production

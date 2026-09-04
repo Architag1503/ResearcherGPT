@@ -1395,8 +1395,13 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
   // Load project meta
   const loadProjectData = async () => {
     try {
-      const projRes = await axios.get(`${API_URL}/api/projects/${projectId}`);
-      setProject(projRes.data);
+      const projRes = await axios.get(`${API_URL}/api/projects/${projectId}`, {
+        params: { _t: Date.now() },
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      });
+      if (projRes.data && typeof projRes.data === 'object' && projRes.data.name) {
+        setProject(projRes.data);
+      }
     } catch {
       setProject({ name: 'Active Research Workspace', description: 'Investigating modular architectures' });
     }
@@ -1422,8 +1427,15 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
   // Fetch lists
   const fetchPapers = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/papers?projectId=${projectId}`);
-      setPapers(res.data);
+      const res = await axios.get(`${API_URL}/api/papers?projectId=${projectId}`, {
+        params: { _t: Date.now() },
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      });
+      if (Array.isArray(res.data)) {
+        setPapers(res.data);
+      } else {
+        setPapers([]);
+      }
     } catch {
       setPapers([]);
     }
@@ -1440,8 +1452,15 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
 
   const fetchCitations = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/citations?projectId=${projectId}`);
-      setCitations(res.data);
+      const res = await axios.get(`${API_URL}/api/citations?projectId=${projectId}`, {
+        params: { _t: Date.now() },
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      });
+      if (Array.isArray(res.data)) {
+        setCitations(res.data);
+      } else {
+        setCitations([]);
+      }
     } catch {
       setCitations([]);
     }
@@ -1449,8 +1468,15 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
 
   const fetchGaps = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/projects/${projectId}/gaps`);
-      setGaps(res.data);
+      const res = await axios.get(`${API_URL}/api/projects/${projectId}/gaps`, {
+        params: { _t: Date.now() },
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      });
+      if (Array.isArray(res.data)) {
+        setGaps(res.data);
+      } else {
+        setGaps([]);
+      }
     } catch {
       setGaps([]);
     }
@@ -1458,8 +1484,11 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
 
   const fetchSavedPapers = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/projects/${projectId}/generated-papers`);
-      const papers = res.data || [];
+      const res = await axios.get(`${API_URL}/api/projects/${projectId}/generated-papers`, {
+        params: { _t: Date.now() },
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      });
+      const papers = Array.isArray(res.data) ? res.data : [];
       setSavedPapers(papers);
       
       // Load first paper by default if none is active
