@@ -163,7 +163,7 @@ def process_pdf(req: ProcessPDFRequest):
                     print(f"Failed to delete temp file {file_path}: {e}")
         
         # 2. Chunk Text
-        chunks = chunk_text(parsed["pages"])
+        chunks = chunk_text(parsed["pages"], metadata=parsed["metadata"])
         
         # 3. Create Embeddings & Index in Qdrant
         indexed_chunks = index_chunks(req.project_id, req.paper_id, chunks)

@@ -60,7 +60,14 @@ try {
         let metadata: any = {};
 
         // Stage 10: Error Recovery / Resumability
-        const hasParsed = completed.includes('Parsing') && completed.includes('Chunking');
+        let hasParsed = completed.includes('Parsing') && completed.includes('Chunking');
+        if (hasParsed) {
+          const existingChunks = await PaperChunk.countDocuments({ paperId });
+          if (existingChunks === 0) {
+            console.log(`[pdfWorker] hasParsed was true but 0 chunks found in DB for paper ${paperId}. Forcing re-parsing.`);
+            hasParsed = false;
+          }
+        }
 
         if (reusePaperId) {
           // Stage 11: Deduplication — Reuse existing chunks and vectors
@@ -157,6 +164,8 @@ try {
                 qdrantId: c.qdrant_id,
               }));
               await PaperChunk.insertMany(chunkDocuments);
+            } else {
+              throw new Error('No extractable text or OCR content found in this PDF.');
             }
             await updateProgress(paperId, 'Embedding', 80, 'Chunking');
           } else {

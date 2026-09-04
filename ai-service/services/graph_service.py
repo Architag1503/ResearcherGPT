@@ -64,8 +64,12 @@ def extract_graph_gemini(paper_title: str, abstract: str) -> Dict[str, Any]:
     if not gemini_key or "your_gemini_api_key" in gemini_key:
         return {}
 
-    gemini_model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={gemini_key}"
+    preferred = os.getenv("GEMINI_MODEL")
+    models_to_try = [preferred] if preferred else []
+    for m in ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3.6-flash"]:
+        if m not in models_to_try:
+            models_to_try.append(m)
+
     headers = {"Content-Type": "application/json"}
     
     prompt = f"""
@@ -88,17 +92,19 @@ def extract_graph_gemini(paper_title: str, abstract: str) -> Dict[str, Any]:
         "contents": [{"parts": [{"text": prompt}]}]
     }
 
-    try:
-        res = requests.post(url, headers=headers, json=payload, timeout=12)
-        if res.status_code == 200:
-            text = res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-            if text.startswith("```json"):
-                text = text.replace("```json", "").replace("```", "").strip()
-            elif text.startswith("```"):
-                text = text.replace("```", "").strip()
-            return json.loads(text)
-    except Exception as e:
-        print(f"[graph_service] Fast fallback from Gemini graph extraction: {e}")
+    for gemini_model in models_to_try:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={gemini_key}"
+            res = requests.post(url, headers=headers, json=payload, timeout=12)
+            if res.status_code == 200:
+                text = res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if text.startswith("```json"):
+                    text = text.replace("```json", "").replace("```", "").strip()
+                elif text.startswith("```"):
+                    text = text.replace("```", "").strip()
+                return json.loads(text)
+        except Exception as e:
+            print(f"[graph_service] Fast fallback from Gemini graph extraction on {gemini_model}: {e}")
     return {}
 
 def extract_entities_heuristics(paper: Dict[str, Any]) -> Dict[str, List[str]]:
