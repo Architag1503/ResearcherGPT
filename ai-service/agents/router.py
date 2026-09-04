@@ -135,7 +135,7 @@ def _call_with_retry(call_fn, max_retries: int = 3, base_delay: float = 5.0):
 
 
 def call_model(agent_role: str, system_prompt: str, user_prompt: str) -> str:
-    model = MODEL_REGISTRY.get(agent_role, "gemini-2.5-flash")
+    model = MODEL_REGISTRY.get(agent_role, "gemini-3.6-flash")
     temp = AGENT_TEMPERATURES.get(agent_role, 0.3)
     
     # Writer gets extra tokens for long content
@@ -389,7 +389,7 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str) -> str:
         try:
             # Fallback 1: Gemini 2.5 Flash - large context, free tier, ideal for writing
             gemini_fb_tokens = 65536 if is_writer else 8192
-            return call_gemini_direct("gemini-2.5-flash", temp, system_prompt, user_prompt, max_output_tokens=gemini_fb_tokens)
+            return call_gemini_direct(os.getenv("GEMINI_MODEL", "gemini-3.6-flash"), temp, system_prompt, user_prompt, max_output_tokens=gemini_fb_tokens)
         except Exception as gemini_err:
             print(f"[Fallback Fail] Gemini fallback failed: {gemini_err}. Trying Groq fallback...")
             try:

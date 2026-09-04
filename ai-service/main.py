@@ -1,4 +1,14 @@
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env from root project directory or local folder before any service imports
+_root_env = Path(__file__).resolve().parent.parent / ".env"
+if _root_env.exists():
+    load_dotenv(dotenv_path=_root_env)
+else:
+    load_dotenv()
+
 import json
 import asyncio
 from typing import Dict, Any, List, Optional

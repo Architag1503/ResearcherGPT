@@ -824,7 +824,7 @@ class FormaTeXService:
 
         # 10. Clean up math double-dollars inside paragraph tags
         p = p.replace("<p>$$", "$$").replace("$$</p>", "$$")
-        p = p.replace("<p>\$\$", "$$").replace("\$\$</p>", "$$")
+        p = p.replace(r"<p>\$\$", "$$").replace(r"\$\$</p>", "$$")
 
         # 11. Clean up ALL remaining HTML tags safely (to avoid leaving raw div/p tags in final LaTeX)
         p = re.sub(r'</?[a-zA-Z][^>]*>', '', p)

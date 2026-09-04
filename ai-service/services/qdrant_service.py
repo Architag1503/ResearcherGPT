@@ -1,4 +1,13 @@
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+_root_env = Path(__file__).resolve().parent.parent.parent / ".env"
+if _root_env.exists():
+    load_dotenv(dotenv_path=_root_env)
+else:
+    load_dotenv()
+
 import uuid
 import numpy as np
 import requests
@@ -8,7 +17,7 @@ from qdrant_client import QdrantClient
 # Dynamic config based on whether Gemini API is configured
 gemini_key = os.getenv("GEMINI_API_KEY")
 use_gemini_default = bool(gemini_key and "your_gemini_api_key" not in gemini_key)
-VECTOR_DIMENSION = 768 if use_gemini_default else 384
+VECTOR_DIMENSION = 3072 if use_gemini_default else 384
 
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
@@ -132,9 +141,7 @@ def get_embedding(text: str) -> List[float]:
 def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     gemini_key = os.getenv("GEMINI_API_KEY")
     use_gemini = bool(gemini_key and "your_gemini_api_key" not in gemini_key)
-    vector_size = 768 if use_gemini else 384
-    
-    ensure_collection(vector_size)
+    vector_size = 3072 if use_gemini else 384
     
     indexed_results = []
     points = []
@@ -161,6 +168,13 @@ def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -
                 print(f"Batch encoding failed locally: {e}. Falling back to sequential encoding.")
                 vectors = [get_embedding(t) for t in texts]
     
+    # Ensure collection matches the actual vector dimension produced
+    if vectors and len(vectors) > 0:
+        actual_dim = len(vectors[0])
+        ensure_collection(actual_dim)
+    else:
+        ensure_collection(vector_size)
+
     from qdrant_client.models import PointStruct
     for idx, c in enumerate(chunks):
         text = c["text_content"]
@@ -207,6 +221,8 @@ def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -
                     "vector": pt.vector,
                     "payload": pt.payload
                 })
+
+    return indexed_results
                 
 def duplicate_paper_vectors(source_paper_id: str, target_paper_id: str, target_project_id: str) -> List[Dict[str, Any]]:
     ensure_collection()
