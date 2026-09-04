@@ -49,7 +49,7 @@ def ocr_page_with_gemini(page: fitz.Page) -> str:
             ]
         }
 
-        res = requests.post(url, headers=headers, json=payload, timeout=60)
+        res = requests.post(url, headers=headers, json=payload, timeout=25)
         if res.status_code == 200:
             res_data = res.json()
             return res_data["candidates"][0]["content"]["parts"][0]["text"]
@@ -134,10 +134,10 @@ def extract_pdf_content(file_path: str) -> Dict[str, Any]:
         page = doc[page_num]
         text = page.get_text().strip()
         
-        # Heuristic: If page text is very short, classify as scanned page
-        if len(text) < 100:
+        # Heuristic: Only trigger OCR on truly scanned/empty pages (not digital pages with figures)
+        if len(text) < 10 and scanned_pages_count < 3:
             scanned_pages_count += 1
-            print(f"[pdf_processor] Page {page_num + 1} detected as Scanned (character count: {len(text)})")
+            print(f"[pdf_processor] Page {page_num + 1} detected as Scanned (character count: {len(text)}). Running OCR...")
             # Multimodal OCR fallback via Gemini
             ocr_text = ocr_page_with_gemini(page)
             if ocr_text:

@@ -129,7 +129,7 @@ try {
               storage_url: aiServiceStorageUrl,
               file_path: localFilePath,
             }, {
-              timeout: 180000, // 3 minutes timeout to give AI Service enough time
+              timeout: 600000, // 10 minutes timeout to allow large papers to process fully
               maxBodyLength: Infinity,
               maxContentLength: Infinity
             });

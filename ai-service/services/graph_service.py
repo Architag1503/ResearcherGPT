@@ -89,7 +89,7 @@ def extract_graph_gemini(paper_title: str, abstract: str) -> Dict[str, Any]:
     }
 
     try:
-        res = requests.post(url, headers=headers, json=payload, timeout=30)
+        res = requests.post(url, headers=headers, json=payload, timeout=12)
         if res.status_code == 200:
             text = res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
             if text.startswith("```json"):
@@ -98,7 +98,7 @@ def extract_graph_gemini(paper_title: str, abstract: str) -> Dict[str, Any]:
                 text = text.replace("```", "").strip()
             return json.loads(text)
     except Exception as e:
-        print(f"[graph_service] Failed to extract graph from Gemini: {e}")
+        print(f"[graph_service] Fast fallback from Gemini graph extraction: {e}")
     return {}
 
 def extract_entities_heuristics(paper: Dict[str, Any]) -> Dict[str, List[str]]:
@@ -145,6 +145,8 @@ def extract_entities_heuristics(paper: Dict[str, Any]) -> Dict[str, List[str]]:
             
     return entities
 
+_paper_graph_cache: Dict[str, Any] = {}
+
 def build_project_graph(project_id: str, papers: List[Dict[str, Any]]) -> Dict[str, Any]:
     G = nx.Graph()
     nodes: Dict[str, Dict[str, Any]] = {}
@@ -165,8 +167,14 @@ def build_project_graph(project_id: str, papers: List[Dict[str, Any]]) -> Dict[s
             "color": "#6366f1"
         }
         
-        # Query Gemini for rich KG entities
-        gemini_graph = extract_graph_gemini(paper_title, abstract)
+        # Query Gemini for rich KG entities with caching (avoids re-extracting previous papers on every new upload)
+        pid_str = str(paper_id)
+        if pid_str in _paper_graph_cache:
+            gemini_graph = _paper_graph_cache[pid_str]
+        else:
+            gemini_graph = extract_graph_gemini(paper_title, abstract)
+            if gemini_graph and gemini_graph.get("entities"):
+                _paper_graph_cache[pid_str] = gemini_graph
         
         if gemini_graph and gemini_graph.get("entities"):
             # Add Gemini scientific entities and link to Paper node

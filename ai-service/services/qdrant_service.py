@@ -82,25 +82,31 @@ def get_gemini_embeddings_batch(texts: List[str]) -> List[List[float]]:
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents?key={gemini_key}"
     headers = {"Content-Type": "application/json"}
     
-    requests_list = []
-    for t in texts:
-        requests_list.append({
-            "model": "models/gemini-embedding-001",
-            "content": {
-                "parts": [{"text": t}]
-            }
-        })
-        
-    payload = {"requests": requests_list}
-    res = requests.post(url, headers=headers, json=payload, timeout=30)
-    if res.status_code != 200:
-        raise Exception(f"Gemini Embeddings API returned status {res.status_code}: {res.text}")
+    # Process in sub-batches of 40 to avoid Google Gemini request payload limits and timeouts
+    SUB_BATCH_SIZE = 40
+    all_embeddings = []
     
-    res_data = res.json()
-    embeddings = []
-    for emb in res_data.get("embeddings", []):
-        embeddings.append(emb.get("values", []))
-    return embeddings
+    for i in range(0, len(texts), SUB_BATCH_SIZE):
+        chunk_batch = texts[i:i + SUB_BATCH_SIZE]
+        requests_list = []
+        for t in chunk_batch:
+            requests_list.append({
+                "model": "models/gemini-embedding-001",
+                "content": {
+                    "parts": [{"text": t}]
+                }
+            })
+            
+        payload = {"requests": requests_list}
+        res = requests.post(url, headers=headers, json=payload, timeout=25)
+        if res.status_code != 200:
+            raise Exception(f"Gemini Embeddings API returned status {res.status_code}: {res.text}")
+        
+        res_data = res.json()
+        for emb in res_data.get("embeddings", []):
+            all_embeddings.append(emb.get("values", []))
+            
+    return all_embeddings
 
 def ensure_collection(vector_size: int = VECTOR_DIMENSION):
     if not client:
