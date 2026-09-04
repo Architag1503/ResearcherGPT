@@ -1212,6 +1212,7 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
   const [plagiarismRunning, setPlagiarismRunning] = useState<string | null>(null);
   const [selectedPlagiarismReport, setSelectedPlagiarismReport] = useState<any | null>(null);
   const [plagiarismView, setPlagiarismView] = useState<'list' | 'report'>('list');
+  const plagiarismPollRef = useRef<NodeJS.Timeout | null>(null);
 
   // 3D Graph Interactive Learning States
   const [isLearningMode, setIsLearningMode] = useState<boolean>(false);
@@ -1643,29 +1644,46 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
   // ── Plagiarism Report Handlers ──────────────────────────────────────────
   const fetchPlagiarismReports = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/projects/${projectId}/plagiarism-reports`);
-      setPlagiarismReports(res.data || []);
+      const res = await axios.get(`${API_URL}/api/projects/${projectId}/plagiarism-reports`, {
+        params: { _t: Date.now() },
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      });
+      setPlagiarismReports(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Failed to fetch plagiarism reports:', err);
     }
   };
 
   const handleRunPlagiarismCheck = async (paperId: string) => {
+    if (plagiarismPollRef.current) {
+      clearInterval(plagiarismPollRef.current);
+      plagiarismPollRef.current = null;
+    }
+
     try {
       setPlagiarismRunning(paperId);
       await axios.post(`${API_URL}/api/projects/${projectId}/plagiarism-reports/${paperId}/run`);
       
+      // Refresh list immediately so processing state shows
+      await fetchPlagiarismReports();
+
       // Poll for completion
-      const pollInterval = setInterval(async () => {
+      plagiarismPollRef.current = setInterval(async () => {
         try {
-          const res = await axios.get(`${API_URL}/api/projects/${projectId}/plagiarism-reports`);
-          const reports = res.data || [];
+          const res = await axios.get(`${API_URL}/api/projects/${projectId}/plagiarism-reports`, {
+            params: { _t: Date.now() },
+            headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+          });
+          const reports = Array.isArray(res.data) ? res.data : [];
           setPlagiarismReports(reports);
           
-          // Check if latest report for this paper is completed
+          // Check if latest report for this paper is completed or failed
           const latestReport = reports.find((r: any) => r.generatedPaperId === paperId && (r.status === 'completed' || r.status === 'failed'));
           if (latestReport) {
-            clearInterval(pollInterval);
+            if (plagiarismPollRef.current) {
+              clearInterval(plagiarismPollRef.current);
+              plagiarismPollRef.current = null;
+            }
             setPlagiarismRunning(null);
             if (latestReport.status === 'completed') {
               setSelectedPlagiarismReport(latestReport);
@@ -1675,13 +1693,16 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
         } catch (e) {
           console.error('Polling error:', e);
         }
-      }, 3000);
+      }, 2500);
 
-      // Safety timeout — stop polling after 5 minutes
+      // Safety timeout — stop polling after 60 seconds
       setTimeout(() => {
-        clearInterval(pollInterval);
+        if (plagiarismPollRef.current) {
+          clearInterval(plagiarismPollRef.current);
+          plagiarismPollRef.current = null;
+        }
         setPlagiarismRunning(null);
-      }, 300000);
+      }, 60000);
     } catch (err) {
       console.error('Failed to run plagiarism check:', err);
       setPlagiarismRunning(null);
@@ -1695,6 +1716,16 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
 
   const handleDeletePlagiarismReport = async (reportId: string) => {
     try {
+      // If the report being deleted is for the currently running check, stop polling
+      const target = plagiarismReports.find(r => r._id === reportId);
+      if (target && plagiarismRunning === target.generatedPaperId) {
+        if (plagiarismPollRef.current) {
+          clearInterval(plagiarismPollRef.current);
+          plagiarismPollRef.current = null;
+        }
+        setPlagiarismRunning(null);
+      }
+
       await axios.delete(`${API_URL}/api/projects/${projectId}/plagiarism-reports/${reportId}`);
       setPlagiarismReports(prev => prev.filter(r => r._id !== reportId));
       if (selectedPlagiarismReport?._id === reportId) {
@@ -4724,13 +4755,22 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
               ) : selectedPlagiarismReport && (
                 /* ── Full Report Dashboard ──────────────────────── */
                 <div className="space-y-6">
-                  {/* Back Button */}
-                  <button
-                    onClick={() => { setPlagiarismView('list'); setSelectedPlagiarismReport(null); }}
-                    className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    ← Back to Reports
-                  </button>
+                  {/* Back & Actions Header */}
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => { setPlagiarismView('list'); setSelectedPlagiarismReport(null); }}
+                      className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+                    >
+                      ← Back to Reports
+                    </button>
+                    <button
+                      onClick={() => handleDeletePlagiarismReport(selectedPlagiarismReport._id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs font-semibold transition-colors"
+                      title="Delete this plagiarism report"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete Report
+                    </button>
+                  </div>
 
                   {/* ── Executive Summary Banner ──────────────────── */}
                   <motion.div

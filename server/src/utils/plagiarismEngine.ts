@@ -296,6 +296,18 @@ function detectExactPlagiarism(
   sourceSentences: { sentence: string; title: string; doi?: string; url?: string }[]
 ): MatchResult[] {
   const matches: MatchResult[] = [];
+  if (sourceSentences.length === 0 || paperSentences.length === 0) return matches;
+
+  // Pre-compute source shingles and min-hashes ONCE outside the loop
+  const precomputedSources = sourceSentences
+    .map(source => {
+      const tokens = tokenize(source.sentence);
+      if (tokens.length < 5) return null;
+      const shingles = generateShingles(tokens);
+      const minHash = generateMinHash(shingles);
+      return { source, minHash };
+    })
+    .filter((s): s is { source: typeof sourceSentences[0]; minHash: number[] } => s !== null);
 
   for (const paperSent of paperSentences) {
     const paperTokens = tokenize(paperSent);
@@ -306,16 +318,10 @@ function detectExactPlagiarism(
 
     let bestMatch: MatchResult | null = null;
 
-    for (const source of sourceSentences) {
-      const sourceTokens = tokenize(source.sentence);
-      if (sourceTokens.length < 5) continue;
-
-      const sourceShingles = generateShingles(sourceTokens);
-      const sourceMinHash = generateMinHash(sourceShingles);
-
+    for (const { source, minHash: sourceMinHash } of precomputedSources) {
       const similarity = jaccardFromMinHash(paperMinHash, sourceMinHash);
 
-      if (similarity > 0.6 && (!bestMatch || similarity > bestMatch.similarity)) {
+      if (similarity > 0.6 && (!bestMatch || similarity > bestMatch.similarity / 100)) {
         bestMatch = {
           sentence: paperSent.substring(0, 300),
           source: source.sentence.substring(0, 300),
@@ -323,6 +329,7 @@ function detectExactPlagiarism(
           sourceDOI: source.doi,
           sourceURL: source.url,
           similarity: Math.round(similarity * 100),
+          confidence: 0.95,
         };
       }
     }
@@ -333,78 +340,55 @@ function detectExactPlagiarism(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Phase 3: Semantic Plagiarism Detection (TF-IDF Cosine Similarity)
+// Phase 3: Semantic Plagiarism Detection (High-Speed Sparse TF-IDF Cosine)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function buildVocabulary(documents: string[]): Map<string, number> {
-  const vocab = new Map<string, number>();
-  let idx = 0;
-  for (const doc of documents) {
-    const tokens = tokenize(doc);
-    for (const token of tokens) {
-      if (!vocab.has(token)) {
-        vocab.set(token, idx++);
-      }
-    }
-  }
-  return vocab;
+interface SparseVector {
+  weights: Map<string, number>;
+  magnitude: number;
 }
 
-function computeTFIDF(
+function computeSparseTFIDF(
   document: string,
-  vocab: Map<string, number>,
   idfScores: Map<string, number>
-): number[] {
+): SparseVector {
   const tokens = tokenize(document);
+  if (tokens.length === 0) {
+    return { weights: new Map(), magnitude: 0 };
+  }
   const tf = new Map<string, number>();
   for (const token of tokens) {
     tf.set(token, (tf.get(token) || 0) + 1);
   }
 
-  const vector = new Array(vocab.size).fill(0);
+  const weights = new Map<string, number>();
+  let sumSq = 0;
   for (const [token, count] of tf.entries()) {
-    const idx = vocab.get(token);
-    if (idx !== undefined) {
-      const tfScore = count / tokens.length;
-      const idf = idfScores.get(token) || 1;
-      vector[idx] = tfScore * idf;
-    }
+    const tfScore = count / tokens.length;
+    const idf = idfScores.get(token) || 1;
+    const weight = tfScore * idf;
+    weights.set(token, weight);
+    sumSq += weight * weight;
   }
-  return vector;
+  return { weights, magnitude: Math.sqrt(sumSq) };
 }
 
-function computeIDF(documents: string[], vocab: Map<string, number>): Map<string, number> {
-  const docCount = documents.length;
-  const df = new Map<string, number>();
+function sparseCosineSimilarity(vec1: SparseVector, vec2: SparseVector): number {
+  if (vec1.magnitude === 0 || vec2.magnitude === 0) return 0;
 
-  for (const doc of documents) {
-    const uniqueTokens = new Set(tokenize(doc));
-    for (const token of uniqueTokens) {
-      df.set(token, (df.get(token) || 0) + 1);
-    }
-  }
+  const [smaller, larger] = vec1.weights.size <= vec2.weights.size
+    ? [vec1.weights, vec2.weights]
+    : [vec2.weights, vec1.weights];
 
-  const idf = new Map<string, number>();
-  for (const [token] of vocab.entries()) {
-    const docFreq = df.get(token) || 1;
-    idf.set(token, Math.log((docCount + 1) / (docFreq + 1)) + 1);
-  }
-  return idf;
-}
-
-function cosineSimilarity(vec1: number[], vec2: number[]): number {
   let dotProduct = 0;
-  let mag1 = 0;
-  let mag2 = 0;
-
-  for (let i = 0; i < vec1.length; i++) {
-    dotProduct += vec1[i] * vec2[i];
-    mag1 += vec1[i] * vec1[i];
-    mag2 += vec2[i] * vec2[i];
+  for (const [token, w1] of smaller.entries()) {
+    const w2 = larger.get(token);
+    if (w2 !== undefined) {
+      dotProduct += w1 * w2;
+    }
   }
 
-  const magnitude = Math.sqrt(mag1) * Math.sqrt(mag2);
-  return magnitude === 0 ? 0 : dotProduct / magnitude;
+  return dotProduct / (vec1.magnitude * vec2.magnitude);
 }
 
 function detectSemanticPlagiarism(
@@ -412,30 +396,44 @@ function detectSemanticPlagiarism(
   sourceSentences: { sentence: string; title: string; doi?: string; url?: string }[]
 ): MatchResult[] {
   const matches: MatchResult[] = [];
-  if (sourceSentences.length === 0) return matches;
+  if (sourceSentences.length === 0 || paperSentences.length === 0) return matches;
 
-  // Build combined vocabulary
+  // Build IDF table across document collection
   const allDocs = [
     ...paperSentences,
     ...sourceSentences.map(s => s.sentence),
   ];
-  const vocab = buildVocabulary(allDocs);
-  const idfScores = computeIDF(allDocs, vocab);
+  const docCount = allDocs.length;
+  const df = new Map<string, number>();
 
-  // Pre-compute source vectors
-  const sourceVectors = sourceSentences.map(s => ({
+  for (const doc of allDocs) {
+    const uniqueTokens = new Set(tokenize(doc));
+    for (const token of uniqueTokens) {
+      df.set(token, (df.get(token) || 0) + 1);
+    }
+  }
+
+  const idfScores = new Map<string, number>();
+  for (const [token, count] of df.entries()) {
+    idfScores.set(token, Math.log((docCount + 1) / (count + 1)) + 1);
+  }
+
+  // Pre-compute sparse source vectors ONCE outside the sentence loop
+  const precomputedSources = sourceSentences.map(s => ({
     ...s,
-    vector: computeTFIDF(s.sentence, vocab, idfScores),
-  }));
+    sparseVector: computeSparseTFIDF(s.sentence, idfScores),
+  })).filter(s => s.sparseVector.magnitude > 0);
 
   for (const paperSent of paperSentences) {
     if (paperSent.length < 30) continue;
 
-    const paperVector = computeTFIDF(paperSent, vocab, idfScores);
+    const paperVector = computeSparseTFIDF(paperSent, idfScores);
+    if (paperVector.magnitude === 0) continue;
+
     let bestMatch: (MatchResult & { confidence: number }) | null = null;
 
-    for (const source of sourceVectors) {
-      const similarity = cosineSimilarity(paperVector, source.vector);
+    for (const source of precomputedSources) {
+      const similarity = sparseCosineSimilarity(paperVector, source.sparseVector);
 
       if (similarity > SEMANTIC_THRESHOLD_MODERATE && (!bestMatch || similarity > bestMatch.similarity / 100)) {
         const confidence = similarity >= SEMANTIC_THRESHOLD_HIGH ? 0.95 : 0.75;
@@ -706,7 +704,7 @@ function reconstructAbstract(invertedIndex: Record<string, number[]>): string {
 
 async function searchOpenAlex(query: string, maxResults: number = MAX_OPENALEX_RESULTS): Promise<OpenAlexWork[]> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  const timeoutId = setTimeout(() => controller.abort(), 3500);
 
   try {
     // Clean and truncate query for API
@@ -714,16 +712,16 @@ async function searchOpenAlex(query: string, maxResults: number = MAX_OPENALEX_R
       .replace(/[^\w\s]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-      .substring(0, 200);
+      .substring(0, 180);
 
-    if (cleanQuery.length < 10) {
+    if (cleanQuery.length < 8) {
       clearTimeout(timeoutId);
       return [];
     }
 
     const params = new URLSearchParams({
       search: cleanQuery,
-      per_page: String(Math.min(maxResults, 50)),
+      per_page: String(Math.min(maxResults, 25)),
       sort: 'relevance_score:desc',
       select: 'id,title,doi,authorships,abstract_inverted_index,publication_year,cited_by_count,referenced_works',
     });
@@ -745,7 +743,6 @@ async function searchOpenAlex(query: string, maxResults: number = MAX_OPENALEX_R
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.error(`OpenAlex API error: ${response.status} ${response.statusText}`);
       return [];
     }
 
@@ -753,11 +750,6 @@ async function searchOpenAlex(query: string, maxResults: number = MAX_OPENALEX_R
     return data.results || [];
   } catch (error: any) {
     clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      console.warn(`OpenAlex search timed out for query: "${query.substring(0, 50)}..."`);
-    } else {
-      console.error('OpenAlex search error:', error);
-    }
     return [];
   }
 }
@@ -769,67 +761,9 @@ async function discoverSources(
 ): Promise<SourceInfo[]> {
   const allSources: Map<string, SourceInfo> = new Map();
 
-  // Search 1: By paper title
-  const titleResults = await searchOpenAlex(paperTitle, 25);
-  for (const work of titleResults) {
-    if (!work.title) continue;
-    const abstract = work.abstract_inverted_index ? reconstructAbstract(work.abstract_inverted_index) : '';
-    const authors = (work.authorships || []).map(a => a.author?.display_name).filter(Boolean) as string[];
-    const doi = work.doi ? work.doi.replace('https://doi.org/', '') : undefined;
-
-    allSources.set(work.id, {
-      title: work.title,
-      authors,
-      doi,
-      url: work.doi || `https://openalex.org/works/${work.id.split('/').pop()}`,
-      year: work.publication_year,
-      similarity: 0,
-      matchedSentences: 0,
-      openAlexId: work.id,
-      abstract,
-    });
-  }
-
-  // Search 2: By key sentences (sample up to 50 sentences for breadth and accuracy)
-  const sampleSentences = paperSentences
-    .filter(s => s.length > 50)
-    .sort(() => 0.5 - Math.random())
-    .slice(0, 50);
-
-  for (const sentence of sampleSentences) {
-    const sentenceResults = await searchOpenAlex(sentence, 15);
-    for (const work of sentenceResults) {
-      if (!work.title) continue;
-      if (allSources.has(work.id)) continue;
-
-      const abstract = work.abstract_inverted_index ? reconstructAbstract(work.abstract_inverted_index) : '';
-      const authors = (work.authorships || []).map(a => a.author?.display_name).filter(Boolean) as string[];
-      const doi = work.doi ? work.doi.replace('https://doi.org/', '') : undefined;
-
-      allSources.set(work.id, {
-        title: work.title,
-        authors,
-        doi,
-        url: work.doi || `https://openalex.org/works/${work.id.split('/').pop()}`,
-        year: work.publication_year,
-        similarity: 0,
-        matchedSentences: 0,
-        openAlexId: work.id,
-        abstract,
-      });
-    }
-
-    // Rate limit: 100ms between requests (polite crawling)
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-
-  // Search 3: By key phrases from references
-  const refSamples = paperReferences.slice(0, 3);
-  for (const ref of refSamples) {
-    const refResults = await searchOpenAlex(ref, 10);
-    for (const work of refResults) {
+  const addWorks = (works: OpenAlexWork[]) => {
+    for (const work of works) {
       if (!work.title || allSources.has(work.id)) continue;
-
       const abstract = work.abstract_inverted_index ? reconstructAbstract(work.abstract_inverted_index) : '';
       const authors = (work.authorships || []).map(a => a.author?.display_name).filter(Boolean) as string[];
       const doi = work.doi ? work.doi.replace('https://doi.org/', '') : undefined;
@@ -846,8 +780,44 @@ async function discoverSources(
         abstract,
       });
     }
+  };
 
-    await new Promise(resolve => setTimeout(resolve, 100));
+  try {
+    // 1. Search by paper title
+    const titleResults = await searchOpenAlex(paperTitle, 20);
+    addWorks(titleResults);
+
+    // 2. Sample top 4 distinctive sentences (run in parallel)
+    const sampleSentences = paperSentences
+      .filter(s => s.length >= 60 && s.length <= 250)
+      .sort((a, b) => b.length - a.length)
+      .slice(0, 4);
+
+    if (sampleSentences.length > 0) {
+      const sentenceResults = await Promise.allSettled(
+        sampleSentences.map(sent => searchOpenAlex(sent, 10))
+      );
+      for (const res of sentenceResults) {
+        if (res.status === 'fulfilled') {
+          addWorks(res.value);
+        }
+      }
+    }
+
+    // 3. Search top 2 references (run in parallel)
+    const refSamples = paperReferences.slice(0, 2);
+    if (refSamples.length > 0) {
+      const refResults = await Promise.allSettled(
+        refSamples.map(ref => searchOpenAlex(ref, 10))
+      );
+      for (const res of refResults) {
+        if (res.status === 'fulfilled') {
+          addWorks(res.value);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[plagiarismEngine] discoverSources error:', err);
   }
 
   return Array.from(allSources.values());

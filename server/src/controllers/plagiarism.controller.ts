@@ -19,7 +19,14 @@ export const runPlagiarismCheck = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Generated paper not found' });
     }
 
-    // 2. Create a report in "processing" state immediately
+    // 2. Clean up any previous dangling/stuck reports for this paper in "processing" state
+    await PlagiarismReport.deleteMany({
+      projectId,
+      generatedPaperId: paperId,
+      status: 'processing',
+    });
+
+    // Create a new report in "processing" state
     const report = new PlagiarismReport({
       projectId,
       generatedPaperId: paperId,
@@ -54,49 +61,65 @@ export const runPlagiarismCheck = async (req: Request, res: Response) => {
       }
     }
 
-    // 4. Run the detection engine
+    // 4. Run the detection engine with a 45-second timeout guard
     try {
-      const result = await runPlagiarismDetection(
+      const detectionPromise = runPlagiarismDetection(
         generatedPaper.title || 'Untitled',
         generatedPaper.sections || [],
         generatedPaper.references || [],
         localPaperData
       );
 
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Plagiarism analysis timed out after 45s')), 45000)
+      );
+
+      const result = await Promise.race([detectionPromise, timeoutPromise]);
+
+      // Verify report was not deleted by the user while running
+      const stillExists = await PlagiarismReport.findById(report._id);
+      if (!stillExists) {
+        console.log(`[plagiarism] Report ${report._id} was deleted by user during processing. Skipping save.`);
+        return;
+      }
+
       // 5. Update the report with results
-      report.overallScore = result.overallScore;
-      report.exactMatchScore = result.exactMatchScore;
-      report.semanticScore = result.semanticScore;
-      report.citationScore = result.citationScore;
-      report.structureScore = result.structureScore;
-      report.formulaScore = result.formulaScore;
-      report.figureScore = result.figureScore;
-      report.codeScore = result.codeScore;
+      stillExists.overallScore = result.overallScore;
+      stillExists.exactMatchScore = result.exactMatchScore;
+      stillExists.semanticScore = result.semanticScore;
+      stillExists.citationScore = result.citationScore;
+      stillExists.structureScore = result.structureScore;
+      stillExists.formulaScore = result.formulaScore;
+      stillExists.figureScore = result.figureScore;
+      stillExists.codeScore = result.codeScore;
 
-      report.exactMatches = result.exactMatches as any;
-      report.semanticMatches = result.semanticMatches as any;
-      report.citationMatches = result.citationMatches as any;
-      report.formulaMatches = result.formulaMatches as any;
-      report.structureMatches = result.structureMatches as any;
-      report.codeMatches = result.codeMatches as any;
+      stillExists.exactMatches = result.exactMatches as any;
+      stillExists.semanticMatches = result.semanticMatches as any;
+      stillExists.citationMatches = result.citationMatches as any;
+      stillExists.formulaMatches = result.formulaMatches as any;
+      stillExists.structureMatches = result.structureMatches as any;
+      stillExists.codeMatches = result.codeMatches as any;
 
-      report.aiDetection = result.aiDetection;
-      report.sectionScores = result.sectionScores;
-      report.topSources = result.topSources;
+      stillExists.aiDetection = result.aiDetection;
+      stillExists.sectionScores = result.sectionScores;
+      stillExists.topSources = result.topSources;
 
-      report.summary = result.summary;
-      report.severityLevel = result.severityLevel as any;
-      report.status = 'completed';
-      report.totalSentencesAnalyzed = result.totalSentencesAnalyzed;
-      report.totalSourcesSearched = result.totalSourcesSearched;
+      stillExists.summary = result.summary;
+      stillExists.severityLevel = result.severityLevel as any;
+      stillExists.status = 'completed';
+      stillExists.totalSentencesAnalyzed = result.totalSentencesAnalyzed;
+      stillExists.totalSourcesSearched = result.totalSourcesSearched;
 
-      await report.save();
+      await stillExists.save();
       console.log(`✅ Plagiarism check completed for paper: ${generatedPaper.title} — Score: ${result.overallScore}%`);
     } catch (engineError: any) {
-      report.status = 'failed';
-      report.processingError = engineError.message || 'Engine processing error';
-      await report.save();
       console.error(`❌ Plagiarism engine error:`, engineError);
+      const stillExists = await PlagiarismReport.findById(report._id);
+      if (stillExists) {
+        stillExists.status = 'failed';
+        stillExists.processingError = engineError.message || 'Engine processing error';
+        await stillExists.save();
+      }
     }
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
