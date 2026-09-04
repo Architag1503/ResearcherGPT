@@ -26,7 +26,9 @@ def ocr_page_with_gemini(page: fitz.Page) -> str:
         # Render page to image bytes (150 DPI is standard for clear text OCR)
         pix = page.get_pixmap(dpi=150)
         img_bytes = pix.tobytes("png")
+        del pix
         b64_data = base64.b64encode(img_bytes).decode("utf-8")
+        del img_bytes
 
         gemini_model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={gemini_key}"
@@ -49,7 +51,7 @@ def ocr_page_with_gemini(page: fitz.Page) -> str:
             ]
         }
 
-        res = requests.post(url, headers=headers, json=payload, timeout=25)
+        res = requests.post(url, headers=headers, json=payload, timeout=15)
         if res.status_code == 200:
             res_data = res.json()
             return res_data["candidates"][0]["content"]["parts"][0]["text"]
@@ -91,7 +93,7 @@ def extract_metadata_with_gemini(first_page_text: str) -> Dict[str, Any]:
         payload = {
             "contents": [{"parts": [{"text": prompt}]}]
         }
-        res = requests.post(url, headers=headers, json=payload, timeout=30)
+        res = requests.post(url, headers=headers, json=payload, timeout=12)
         if res.status_code == 200:
             text = res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
             # Clean up potential markdown formatting
@@ -101,7 +103,7 @@ def extract_metadata_with_gemini(first_page_text: str) -> Dict[str, Any]:
                 text = text.replace("```", "").strip()
             return json.loads(text)
     except Exception as e:
-        print(f"[pdf_processor] Failed to parse metadata with Gemini: {str(e)}")
+        print(f"[pdf_processor] Fast fallback for metadata: {str(e)}")
     return {}
 
 def extract_pdf_content(file_path: str) -> Dict[str, Any]:
@@ -116,76 +118,86 @@ def extract_pdf_content(file_path: str) -> Dict[str, Any]:
     }
 
     page_texts = []
+    doc = None
 
-    # 1. Parse using PyMuPDF (fitz)
-    doc = fitz.open(file_path)
-    
-    # Try to extract PDF built-in metadata
-    doc_meta = doc.metadata or {}
-    metadata["title"] = doc_meta.get("title", "")
-    if doc_meta.get("author"):
-        metadata["authors"] = [a.strip() for a in doc_meta.get("author", "").split(",") if a.strip()]
-
-    # Document Type Detection (Digital vs Scanned)
-    scanned_pages_count = 0
-    total_pages = len(doc)
-
-    for page_num in range(total_pages):
-        page = doc[page_num]
-        text = page.get_text().strip()
+    try:
+        # 1. Parse using PyMuPDF (fitz)
+        doc = fitz.open(file_path)
         
-        # Heuristic: Only trigger OCR on truly scanned/empty pages (not digital pages with figures)
-        if len(text) < 10 and scanned_pages_count < 3:
-            scanned_pages_count += 1
-            print(f"[pdf_processor] Page {page_num + 1} detected as Scanned (character count: {len(text)}). Running OCR...")
-            # Multimodal OCR fallback via Gemini
-            ocr_text = ocr_page_with_gemini(page)
-            if ocr_text:
-                text = ocr_text
-        
-        cleaned = clean_text(text)
-        page_texts.append({
-            "page_number": page_num + 1,
-            "text": cleaned
-        })
+        # Try to extract PDF built-in metadata
+        doc_meta = doc.metadata or {}
+        metadata["title"] = doc_meta.get("title", "")
+        if doc_meta.get("author"):
+            metadata["authors"] = [a.strip() for a in doc_meta.get("author", "").split(",") if a.strip()]
 
-    # Classify overall document type
-    doc_type = "Digital"
-    if scanned_pages_count == total_pages:
-        doc_type = "Scanned"
-    elif scanned_pages_count > 0:
-        doc_type = "Mixed"
-    metadata["extra_meta"]["document_type"] = doc_type
+        # Document Type Detection (Digital vs Scanned)
+        scanned_pages_count = 0
+        total_pages = len(doc)
 
-    # 2. Extract metadata using Gemini if possible (runs on first page)
-    first_page_text = page_texts[0]["text"] if page_texts else ""
-    if first_page_text:
-        gemini_meta = extract_metadata_with_gemini(first_page_text)
-        if gemini_meta:
-            metadata["title"] = gemini_meta.get("title") or metadata["title"]
-            metadata["authors"] = gemini_meta.get("authors") or metadata["authors"]
-            metadata["doi"] = gemini_meta.get("doi") or metadata["doi"]
-            metadata["year"] = gemini_meta.get("year") or metadata["year"]
-            metadata["abstract"] = gemini_meta.get("abstract") or metadata["abstract"]
-            metadata["journal"] = gemini_meta.get("journal") or metadata["journal"]
+        for page_num in range(total_pages):
+            page = doc[page_num]
+            text = page.get_text().strip()
+            
+            # Heuristic: Only trigger OCR on truly scanned/empty pages (not digital pages with figures)
+            if len(text) < 10 and scanned_pages_count < 3:
+                scanned_pages_count += 1
+                print(f"[pdf_processor] Page {page_num + 1} detected as Scanned (character count: {len(text)}). Running OCR...")
+                # Multimodal OCR fallback via Gemini
+                ocr_text = ocr_page_with_gemini(page)
+                if ocr_text:
+                    text = ocr_text
+            
+            cleaned = clean_text(text)
+            page_texts.append({
+                "page_number": page_num + 1,
+                "text": cleaned
+            })
 
-    # Fallback heuristics if Gemini metadata fails or is unavailable
-    if not metadata["title"] and first_page_text:
-        lines = [line.strip() for line in first_page_text.split(".") if len(line.strip()) > 10]
-        if lines:
-            metadata["title"] = lines[0][:150]
+        # Classify overall document type
+        doc_type = "Digital"
+        if scanned_pages_count == total_pages:
+            doc_type = "Scanned"
+        elif scanned_pages_count > 0:
+            doc_type = "Mixed"
+        metadata["extra_meta"]["document_type"] = doc_type
 
-    # Extract DOI from text if missing
-    if not metadata["doi"] and first_page_text:
-        doi_match = re.search(r'(10\.\d{4,9}/[-._;()/:A-Z0-9]+)', first_page_text, re.IGNORECASE)
-        if doi_match:
-            metadata["doi"] = doi_match.group(1)
+        # 2. Extract metadata using Gemini if possible (runs on first page)
+        first_page_text = page_texts[0]["text"] if page_texts else ""
+        if first_page_text:
+            gemini_meta = extract_metadata_with_gemini(first_page_text)
+            if gemini_meta:
+                metadata["title"] = gemini_meta.get("title") or metadata["title"]
+                metadata["authors"] = gemini_meta.get("authors") or metadata["authors"]
+                metadata["doi"] = gemini_meta.get("doi") or metadata["doi"]
+                metadata["year"] = gemini_meta.get("year") or metadata["year"]
+                metadata["abstract"] = gemini_meta.get("abstract") or metadata["abstract"]
+                metadata["journal"] = gemini_meta.get("journal") or metadata["journal"]
 
-    return {
-        "metadata": metadata,
-        "pages": page_texts,
-        "tables": []
-    }
+        # Fallback heuristics if Gemini metadata fails or is unavailable
+        if not metadata["title"] and first_page_text:
+            lines = [line.strip() for line in first_page_text.split(".") if len(line.strip()) > 10]
+            if lines:
+                metadata["title"] = lines[0][:150]
+
+        # Extract DOI from text if missing
+        if not metadata["doi"] and first_page_text:
+            doi_match = re.search(r'(10\.\d{4,9}/[-._;()/:A-Z0-9]+)', first_page_text, re.IGNORECASE)
+            if doi_match:
+                metadata["doi"] = doi_match.group(1)
+
+        return {
+            "metadata": metadata,
+            "pages": page_texts,
+            "tables": []
+        }
+    finally:
+        if doc:
+            try:
+                doc.close()
+            except Exception:
+                pass
+        import gc
+        gc.collect()
 
 def chunk_text(pages: List[Dict[str, Any]], chunk_size: int = 1200, overlap: int = 200) -> List[Dict[str, Any]]:
     """

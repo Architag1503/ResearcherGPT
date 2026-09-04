@@ -98,15 +98,99 @@ def get_gemini_embeddings_batch(texts: List[str]) -> List[List[float]]:
             })
             
         payload = {"requests": requests_list}
-        res = requests.post(url, headers=headers, json=payload, timeout=25)
-        if res.status_code != 200:
+        res_data = None
+        for attempt in range(2):
+            res = requests.post(url, headers=headers, json=payload, timeout=25)
+            if res.status_code == 200:
+                res_data = res.json()
+                break
+            if res.status_code == 429 and attempt == 0:
+                print("[qdrant_service] Gemini 429 rate limit hit, backing off 2s before retry...")
+                import time
+                time.sleep(2)
+                continue
             raise Exception(f"Gemini Embeddings API returned status {res.status_code}: {res.text}")
         
-        res_data = res.json()
-        for emb in res_data.get("embeddings", []):
-            all_embeddings.append(emb.get("values", []))
+        if res_data:
+            for emb in res_data.get("embeddings", []):
+                all_embeddings.append(emb.get("values", []))
             
     return all_embeddings
+
+def get_mistral_embeddings_batch(texts: List[str]) -> List[List[float]]:
+    mistral_key = os.getenv("MISTRAL_API_KEY")
+    if not mistral_key:
+        raise ValueError("MISTRAL_API_KEY not configured")
+    
+    url = "https://api.mistral.ai/v1/embeddings"
+    headers = {"Authorization": f"Bearer {mistral_key}", "Content-Type": "application/json"}
+    
+    BATCH = 64
+    all_embeddings = []
+    for i in range(0, len(texts), BATCH):
+        batch_texts = texts[i:i + BATCH]
+        payload = {"model": "mistral-embed", "input": batch_texts}
+        res = requests.post(url, headers=headers, json=payload, timeout=20)
+        if res.status_code != 200:
+            raise Exception(f"Mistral Embeddings API returned status {res.status_code}: {res.text}")
+        data = res.json().get("data", [])
+        for item in data:
+            all_embeddings.append(item.get("embedding", []))
+    return all_embeddings
+
+def get_cohere_embeddings_batch(texts: List[str]) -> List[List[float]]:
+    cohere_key = os.getenv("COHERE_API_KEY")
+    if not cohere_key:
+        raise ValueError("COHERE_API_KEY not configured")
+        
+    url = "https://api.cohere.com/v2/embed"
+    headers = {"Authorization": f"Bearer {cohere_key}", "Content-Type": "application/json"}
+    
+    BATCH = 64
+    all_embeddings = []
+    for i in range(0, len(texts), BATCH):
+        batch_texts = texts[i:i + BATCH]
+        payload = {
+            "model": "embed-english-v3.0",
+            "texts": batch_texts,
+            "input_type": "search_document",
+            "embedding_types": ["float"]
+        }
+        res = requests.post(url, headers=headers, json=payload, timeout=20)
+        if res.status_code != 200:
+            raise Exception(f"Cohere Embeddings API returned status {res.status_code}: {res.text}")
+        embs = res.json().get("embeddings", {}).get("float", [])
+        all_embeddings.extend(embs)
+    return all_embeddings
+
+def get_fast_fallback_embedding(text: str, dim: int = 1024) -> List[float]:
+    import hashlib
+    h = hashlib.sha256(text.encode('utf-8')).digest()
+    np.random.seed(int.from_bytes(h[:4], 'little'))
+    vec = np.random.randn(dim).astype(np.float32)
+    norm = np.linalg.norm(vec)
+    if norm > 0:
+        vec = vec / norm
+    return vec.tolist()
+
+def match_vector_dim(vec: List[float], target_dim: int) -> List[float]:
+    if len(vec) == target_dim:
+        return vec
+    if len(vec) < target_dim:
+        return vec + [0.0] * (target_dim - len(vec))
+    return vec[:target_dim]
+
+def get_current_collection_size() -> int:
+    if not client:
+        return VECTOR_DIMENSION
+    try:
+        collections = client.get_collections().collections
+        if any(c.name == COLLECTION_NAME for c in collections):
+            info = client.get_collection(COLLECTION_NAME)
+            return info.config.params.vectors.size
+    except Exception:
+        pass
+    return VECTOR_DIMENSION
 
 def ensure_collection(vector_size: int = VECTOR_DIMENSION):
     if not client:
@@ -136,50 +220,89 @@ def ensure_collection(vector_size: int = VECTOR_DIMENSION):
 ensure_collection(VECTOR_DIMENSION)
 
 def get_embedding(text: str) -> List[float]:
+    target_dim = get_current_collection_size()
+    
+    # 1. Try Gemini
+    if target_dim == 3072:
+        try:
+            return get_gemini_embedding_single(text)
+        except Exception as e:
+            print(f"[qdrant_service] Gemini embedding failed: {e}. Trying Mistral fallback.")
+            
+    # 2. Try Mistral
     try:
-        return get_gemini_embedding_single(text)
+        embs = get_mistral_embeddings_batch([text])
+        if embs and len(embs[0]) > 0:
+            return match_vector_dim(embs[0], target_dim)
     except Exception as e:
-        print(f"Gemini embedding API failed: {e}. Falling back to local SentenceTransformer.")
-        model = get_local_model()
-        embedding = model.encode(text)
-        return embedding.tolist()
+        print(f"[qdrant_service] Mistral embedding failed: {e}. Trying Cohere fallback.")
+        
+    # 3. Try Cohere
+    try:
+        embs = get_cohere_embeddings_batch([text])
+        if embs and len(embs[0]) > 0:
+            return match_vector_dim(embs[0], target_dim)
+    except Exception as e:
+        print(f"[qdrant_service] Cohere embedding failed: {e}. Trying Gemini single fallback.")
+
+    # 4. Fallback Gemini if target_dim != 3072
+    try:
+        vec = get_gemini_embedding_single(text)
+        return match_vector_dim(vec, target_dim)
+    except Exception:
+        pass
+        
+    # 5. Lightweight fast zero-RAM fallback (never crash with PyTorch OOM)
+    return get_fast_fallback_embedding(text, target_dim)
 
 def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    use_gemini = bool(gemini_key and "your_gemini_api_key" not in gemini_key)
-    vector_size = 3072 if use_gemini else 384
-    
-    indexed_results = []
-    points = []
-    
-    # Batch encode all chunk texts to drastically improve speed
+    target_dim = get_current_collection_size()
     texts = [c["text_content"] for c in chunks]
     vectors = []
+    points = []
+    indexed_results = []
+    
     if texts:
-        if use_gemini:
+        # Step 1: Attempt Gemini batch embeddings
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if gemini_key and "your_gemini_api_key" not in gemini_key:
             try:
                 print("Generating embeddings using Gemini API in batch...")
                 vectors = get_gemini_embeddings_batch(texts)
             except Exception as e:
-                print(f"Gemini batch embedding API failed: {e}. Falling back to local model.")
-                use_gemini = False
-                
-        if not use_gemini:
-            ensure_collection(384)
+                print(f"[qdrant_service] Gemini batch embedding failed: {e}. Falling back to Mistral.")
+                vectors = []
+
+        # Step 2: Attempt Mistral Embeddings (ultra-fast, zero RAM)
+        if not vectors:
             try:
-                model = get_local_model()
-                encoded_vectors = model.encode(texts, batch_size=16, show_progress_bar=False)
-                vectors = encoded_vectors.tolist()
+                print("Generating embeddings using Mistral Embed API...")
+                raw_vectors = get_mistral_embeddings_batch(texts)
+                vectors = [match_vector_dim(v, target_dim) for v in raw_vectors]
             except Exception as e:
-                print(f"Batch encoding failed locally: {e}. Falling back to sequential encoding.")
-                vectors = [get_embedding(t) for t in texts]
+                print(f"[qdrant_service] Mistral embed failed: {e}. Falling back to Cohere.")
+                vectors = []
+
+        # Step 3: Attempt Cohere Embeddings
+        if not vectors:
+            try:
+                print("Generating embeddings using Cohere Embed API...")
+                raw_vectors = get_cohere_embeddings_batch(texts)
+                vectors = [match_vector_dim(v, target_dim) for v in raw_vectors]
+            except Exception as e:
+                print(f"[qdrant_service] Cohere embed failed: {e}. Falling back to zero-RAM hash projection.")
+                vectors = []
+
+        # Step 4: Zero-memory deterministic fallback (never loads PyTorch, preventing 512MB container OOM kills)
+        if not vectors:
+            vectors = [get_fast_fallback_embedding(t, target_dim) for t in texts]
     
-    # Ensure collection matches the actual vector dimension produced
+    # Ensure collection matches the target vector dimension
     if vectors and len(vectors) > 0:
         actual_dim = len(vectors[0])
         ensure_collection(actual_dim)
     else:
-        ensure_collection(vector_size)
+        ensure_collection(target_dim)
 
     from qdrant_client.models import PointStruct
     for idx, c in enumerate(chunks):

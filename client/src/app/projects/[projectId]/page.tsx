@@ -2891,7 +2891,7 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
 
                         {/* Rendering beautiful pipeline stages animation if processing or pending */}
                         {(p.status === 'processing' || p.status === 'pending') && (
-                          <ProcessingTimeline status={p.status} />
+                          <ProcessingTimeline status={p.status} stage={p.currentStage} />
                         )}
                       </div>
                     ))}
@@ -5341,24 +5341,36 @@ function ActiveStepDataView({ stepName, status, output, result, query }: { stepN
   return <p className="text-zinc-600 italic text-[10px]">&gt; Awaiting agent initialization...</p>;
 }
 
-function ProcessingTimeline({ status }: { status: string }) {
+function ProcessingTimeline({ status, stage }: { status: string; stage?: string }) {
   const [step, setStep] = useState(1);
 
   useEffect(() => {
+    if (stage) {
+      const lower = stage.toLowerCase();
+      if (lower.includes('download') || lower.includes('queue') || lower.includes('ingest')) {
+        setStep(1);
+      } else if (lower.includes('pars') || lower.includes('chunk')) {
+        setStep(2);
+      } else if (lower.includes('embed') || lower.includes('vector')) {
+        setStep(3);
+      } else if (lower.includes('graph') || lower.includes('validat') || lower.includes('complet')) {
+        setStep(4);
+      }
+      return;
+    }
     if (status === 'pending') {
       setStep(1);
       return;
     }
-    // If it is processing, we simulate the steps in the pipeline
-    const timer1 = setTimeout(() => setStep(2), 2000); 
-    const timer2 = setTimeout(() => setStep(3), 5000); 
-    const timer3 = setTimeout(() => setStep(4), 8500); 
+    const timer1 = setTimeout(() => setStep(2), 3000); 
+    const timer2 = setTimeout(() => setStep(3), 8000); 
+    const timer3 = setTimeout(() => setStep(4), 18000); 
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
       clearTimeout(timer3);
     };
-  }, [status]);
+  }, [status, stage]);
 
   const steps = [
     { label: 'Ingested', desc: 'Queued for processing' },

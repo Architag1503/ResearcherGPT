@@ -168,12 +168,17 @@ def process_pdf(req: ProcessPDFRequest):
         # 3. Create Embeddings & Index in Qdrant
         indexed_chunks = index_chunks(req.project_id, req.paper_id, chunks)
 
+        import gc
+        gc.collect()
+
         return {
             "success": True,
             "chunks": indexed_chunks,
             "metadata": parsed["metadata"]
         }
     except Exception as e:
+        import gc
+        gc.collect()
         print(f"Error in process_pdf: {str(e)}")
         return {
             "success": False,

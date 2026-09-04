@@ -183,7 +183,7 @@ try {
         try {
           await axios.post(`${AI_SERVICE_URL}/api/graph/generate`, {
             project_id: projectId,
-          });
+          }, { timeout: 30000 });
           await updateProgress(paperId, 'Graph Construction', 98, 'Graph Construction');
         } catch (err: any) {
           console.warn('[pdfWorker] Graph generation warning:', err.message);
@@ -217,10 +217,11 @@ try {
 
         console.log(`[pdfWorker] Successfully processed paper: ${paperId}`);
       } catch (error: any) {
-        console.error(`[pdfWorker] Error processing paper ${paperId}:`, error.message);
+        const errorDetail = error.response?.data?.error || error.message || 'Unknown processing error';
+        console.error(`[pdfWorker] Error processing paper ${paperId}:`, errorDetail);
         await Paper.findByIdAndUpdate(paperId, {
           status: 'failed',
-          processingError: error.message || 'Unknown processing error',
+          processingError: errorDetail,
         });
         throw error;
       }
