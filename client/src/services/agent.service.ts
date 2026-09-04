@@ -1,20 +1,19 @@
 import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import { getApiUrl } from '../utils/apiUrl';
 
 export const agentService = {
   async getAgentRuns(projectId: string) {
-    const res = await axios.get(`${API_URL}/api/agents?projectId=${projectId}`);
+    const res = await axios.get(`${getApiUrl()}/api/agents?projectId=${projectId}`);
     return res.data;
   },
 
   async triggerAgentRun(projectId: string, query: string) {
-    const res = await axios.post(`${API_URL}/api/agents/run`, { projectId, query });
+    const res = await axios.post(`${getApiUrl()}/api/agents/run`, { projectId, query });
     return res.data;
   },
 
   async getAgentRunStatus(runId: string) {
-    const res = await axios.get(`${API_URL}/api/agents/${runId}`);
+    const res = await axios.get(`${getApiUrl()}/api/agents/${runId}`);
     return res.data;
   }
 };

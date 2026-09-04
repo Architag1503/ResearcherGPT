@@ -47,8 +47,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Enable CORS
 app.use(cors({
   origin: '*', // Allow all in dev, secure in production
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'Expires', 'X-Requested-With', 'Accept', 'Origin'],
 }));
 
 // Increase body size limit to 50MB — the Writing Agent sends the full generated

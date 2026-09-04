@@ -6,8 +6,9 @@ import { motion } from 'framer-motion';
 import { useProjectStore } from '../../store/projectStore';
 import axios from 'axios';
 import { ArrowLeft, BookOpen, Layers, RefreshCw } from 'lucide-react';
+import { getApiUrl } from '../../utils/apiUrl';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = getApiUrl();
 
 export default function LiteratureReviewPage() {
   const { activeProject, fetchProjects } = useProjectStore();

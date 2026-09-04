@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { useProjectStore } from '../../store/projectStore';
 import axios from 'axios';
 import { ArrowLeft, ShieldAlert, RefreshCw, BarChart2 } from 'lucide-react';
+import { getApiUrl } from '../../utils/apiUrl';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = getApiUrl();
 
 export default function PlagiarismPage() {
   const { activeProject, fetchProjects } = useProjectStore();

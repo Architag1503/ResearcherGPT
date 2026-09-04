@@ -14,18 +14,8 @@ import ChatWindow from '../../../components/ChatWindow';
 import TipTapEditor from '../../../components/TipTapEditor';
 import EvidencePanel from '../../../components/EvidencePanel';
 import KnowledgeGraph3D from '../../../components/KnowledgeGraph3D';
+import { getApiUrl } from '../../../utils/apiUrl';
 
-const getApiUrl = (): string => {
-  if (typeof window !== 'undefined') {
-    const envUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
-      return envUrl;
-    }
-    // Dynamic fallback to serve from the correct host IP/hostname
-    return `${window.location.protocol}//${window.location.hostname}:5000`;
-  }
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-};
 const API_URL = getApiUrl();
 
 const tabItems = [
@@ -1396,9 +1386,9 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
   // Load project meta
   const loadProjectData = async () => {
     try {
-      const projRes = await axios.get(`${API_URL}/api/projects/${projectId}`, {
+      const apiBase = getApiUrl();
+      const projRes = await axios.get(`${apiBase}/api/projects/${projectId}`, {
         params: { _t: Date.now() },
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
       });
       if (projRes.data && typeof projRes.data === 'object' && projRes.data.name) {
         setProject(projRes.data);
@@ -1412,7 +1402,8 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
     if (!editProjectName.trim()) return;
     setIsSavingProjectDetails(true);
     try {
-      const res = await axios.put(`${API_URL}/api/projects/${projectId}`, {
+      const apiBase = getApiUrl();
+      const res = await axios.put(`${apiBase}/api/projects/${projectId}`, {
         name: editProjectName,
         description: editProjectDesc,
       });
@@ -1428,9 +1419,9 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
   // Fetch lists
   const fetchPapers = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/papers?projectId=${projectId}`, {
+      const apiBase = getApiUrl();
+      const res = await axios.get(`${apiBase}/api/papers?projectId=${projectId}`, {
         params: { _t: Date.now() },
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
       });
       if (Array.isArray(res.data)) {
         setPapers(res.data);
@@ -1444,7 +1435,8 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
 
   const handleDeletePaper = async (paperId: string) => {
     try {
-      await axios.delete(`${API_URL}/api/papers/${paperId}`);
+      const apiBase = getApiUrl();
+      await axios.delete(`${apiBase}/api/papers/${paperId}`);
       fetchPapers();
     } catch (err) {
       console.error('Failed to delete paper:', err);
@@ -1453,9 +1445,9 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
 
   const fetchCitations = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/citations?projectId=${projectId}`, {
+      const apiBase = getApiUrl();
+      const res = await axios.get(`${apiBase}/api/citations?projectId=${projectId}`, {
         params: { _t: Date.now() },
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
       });
       if (Array.isArray(res.data)) {
         setCitations(res.data);
@@ -1469,9 +1461,9 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
 
   const fetchGaps = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/projects/${projectId}/gaps`, {
+      const apiBase = getApiUrl();
+      const res = await axios.get(`${apiBase}/api/projects/${projectId}/gaps`, {
         params: { _t: Date.now() },
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
       });
       if (Array.isArray(res.data)) {
         setGaps(res.data);
@@ -1485,9 +1477,9 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
 
   const fetchSavedPapers = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/projects/${projectId}/generated-papers`, {
+      const apiBase = getApiUrl();
+      const res = await axios.get(`${apiBase}/api/projects/${projectId}/generated-papers`, {
         params: { _t: Date.now() },
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
       });
       const papers = Array.isArray(res.data) ? res.data : [];
       setSavedPapers(papers);
@@ -1644,9 +1636,9 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
   // ── Plagiarism Report Handlers ──────────────────────────────────────────
   const fetchPlagiarismReports = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/projects/${projectId}/plagiarism-reports`, {
+      const apiBase = getApiUrl();
+      const res = await axios.get(`${apiBase}/api/projects/${projectId}/plagiarism-reports`, {
         params: { _t: Date.now() },
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
       });
       setPlagiarismReports(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
@@ -1661,8 +1653,9 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
     }
 
     try {
+      const apiBase = getApiUrl();
       setPlagiarismRunning(paperId);
-      await axios.post(`${API_URL}/api/projects/${projectId}/plagiarism-reports/${paperId}/run`);
+      await axios.post(`${apiBase}/api/projects/${projectId}/plagiarism-reports/${paperId}/run`);
       
       // Refresh list immediately so processing state shows
       await fetchPlagiarismReports();
@@ -1670,9 +1663,8 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
       // Poll for completion
       plagiarismPollRef.current = setInterval(async () => {
         try {
-          const res = await axios.get(`${API_URL}/api/projects/${projectId}/plagiarism-reports`, {
+          const res = await axios.get(`${apiBase}/api/projects/${projectId}/plagiarism-reports`, {
             params: { _t: Date.now() },
-            headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
           });
           const reports = Array.isArray(res.data) ? res.data : [];
           setPlagiarismReports(reports);
