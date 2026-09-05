@@ -5730,6 +5730,7 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                           setEditorDoc(newHtml);
                         }}
                         format={selectedFormat}
+                        projectId={projectId}
                       />
                     )}
                   </div>

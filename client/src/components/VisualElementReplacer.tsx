@@ -18,7 +18,8 @@ import {
   X,
   RotateCcw,
   Edit3,
-  Type
+  Type,
+  Wand2
 } from 'lucide-react';
 import { getApiUrl } from '../utils/apiUrl';
 
@@ -47,6 +48,7 @@ interface VisualElementReplacerProps {
   onUpdateHtml: (newHtml: string) => void;
   format?: string;
   onClose?: () => void;
+  projectId?: string;
 }
 
 export default function VisualElementReplacer({
@@ -54,10 +56,13 @@ export default function VisualElementReplacer({
   onUpdateHtml,
   format = 'IEEE',
   onClose,
+  projectId,
 }: VisualElementReplacerProps) {
   const API_URL = getApiUrl();
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'diagram' | 'table' | 'formula'>('all');
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<{ [id: string]: string }>({});
   const [uploadSuccessId, setUploadSuccessId] = useState<string | null>(null);
   const [customCaptions, setCustomCaptions] = useState<{ [id: string]: string }>({});
   const [captionSuccessId, setCaptionSuccessId] = useState<string | null>(null);
@@ -558,6 +563,76 @@ export default function VisualElementReplacer({
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
+  };
+
+  // Handle AI Visual Generation using Qwen AI / DashScope
+  const handleGenerateWithQwen = async (item: VisualElement) => {
+    try {
+      setGeneratingId(item.id);
+      setGenerationError(prev => {
+        const copy = { ...prev };
+        delete copy[item.id];
+        return copy;
+      });
+
+      const prompt = getCaptionValue(item) || item.name;
+      const res = await axios.post(`${API_URL}/api/projects/${projectId || 'default'}/generate-visual`, {
+        prompt,
+        visualType: item.type,
+        rawContent: item.rawContent || item.currentHtml || '',
+      });
+
+      if (res.data && res.data.success && res.data.image_url) {
+        let fullImageUrl = res.data.image_url;
+        if (!fullImageUrl.startsWith('http') && !fullImageUrl.startsWith('data:')) {
+          fullImageUrl = `${API_URL}/${fullImageUrl.replace(/^\//, '')}`;
+        }
+
+        try {
+          const imgRes = await fetch(fullImageUrl);
+          const blob = await imgRes.blob();
+          const file = new File([blob], `qwen_${item.type}_${Date.now()}.png`, { type: 'image/png' });
+
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const dataUrl = e.target?.result as string;
+            const img = new Image();
+            img.onload = () => {
+              setStagedFiles(prev => ({
+                ...prev,
+                [item.id]: {
+                  file,
+                  previewUrl: dataUrl || fullImageUrl,
+                  dataUrl: dataUrl,
+                  dimensions: { width: img.naturalWidth, height: img.naturalHeight },
+                },
+              }));
+            };
+            img.src = dataUrl || fullImageUrl;
+          };
+          reader.readAsDataURL(blob);
+        } catch (fetchErr) {
+          // If direct fetch fails (e.g. CORS), fallback to using URL directly
+          setStagedFiles(prev => ({
+            ...prev,
+            [item.id]: {
+              file: new File([], `qwen_${item.type}.png`),
+              previewUrl: fullImageUrl,
+              dimensions: { width: item.recommendedResolution.width, height: item.recommendedResolution.height },
+            },
+          }));
+        }
+      } else {
+        const msg = res.data?.error || 'AI generation could not complete. You can upload an image manually.';
+        setGenerationError(prev => ({ ...prev, [item.id]: msg }));
+      }
+    } catch (err: any) {
+      console.error('Qwen visual generation failed:', err);
+      const msg = err.response?.data?.error || err.message || 'AI generation failed.';
+      setGenerationError(prev => ({ ...prev, [item.id]: msg }));
+    } finally {
+      setGeneratingId(null);
+    }
   };
 
   // Caption helper functions for custom editing & formatting
@@ -1156,6 +1231,48 @@ export default function VisualElementReplacer({
                           </div>
                         )}
                       </div>
+                    </div>
+
+                    {/* AI Visual Generation with Qwen */}
+                    <div className="p-3 rounded-xl bg-gradient-to-r from-purple-950/30 to-indigo-950/30 border border-purple-500/25 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Wand2 className="w-4 h-4 text-purple-400 shrink-0" />
+                          <div>
+                            <div className="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
+                              Generate with Qwen AI
+                              <span className="text-[9px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/30">
+                                Auto
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-zinc-400">
+                              Generate publication-grade {item.type} matching IEEE specs
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateWithQwen(item)}
+                          disabled={generatingId === item.id || isUploading}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white flex items-center gap-1.5 transition-all shadow-sm shrink-0"
+                        >
+                          {generatingId === item.id ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Wand2 className="w-3.5 h-3.5" /> Generate
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      {generationError[item.id] && (
+                        <div className="p-2 rounded-lg bg-red-950/30 border border-red-500/20 text-[10.5px] text-red-300 flex items-start gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                          <span>{generationError[item.id]}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Image Upload Area */}

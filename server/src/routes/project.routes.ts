@@ -19,6 +19,7 @@ import {
   updateProject,
   generateAIDescription,
   exportProjectPaperPDF,
+  generateVisualWithQwen,
 } from '../controllers/project.controller.js';
 import {
   runPlagiarismCheck,
@@ -52,6 +53,7 @@ router.get('/:projectId/generated-papers', getProjectGeneratedPapers);
 router.put('/:projectId/generated-papers', updateProjectGeneratedPaper);
 router.delete('/:projectId/generated-papers/:paperId', deleteProjectGeneratedPaper);
 router.post('/:projectId/export-pdf', exportProjectPaperPDF);
+router.post('/:projectId/generate-visual', generateVisualWithQwen);
 
 // Plagiarism reports
 router.post('/:projectId/plagiarism-reports/:paperId/run', runPlagiarismCheck);

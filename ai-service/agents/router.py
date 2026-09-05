@@ -1751,10 +1751,18 @@ def _enhance_sections_content(sections: list) -> list:
     return enhanced
 
 def replace_diagrams_with_napkin(sections: list) -> list:
-    from services.napkin_service import generate_diagram
+    """
+    Multi-engine academic visual generator:
+    Attempts Qwen Image Generation first, falling back to Napkin AI for diagrams and schematics.
+    Wraps generated visuals in standard customizable figure markup recognized by the Writing Workspace replacer.
+    """
+    from services.visual_generator import generate_visual
     import re
+    import uuid
     
     updated_sections = []
+    fig_idx = 1
+
     for s in sections:
         content = s.get("content", "")
         if not content:
@@ -1763,19 +1771,24 @@ def replace_diagrams_with_napkin(sections: list) -> list:
             
         # 1. Detect and replace Mermaid code blocks
         def replace_mermaid(match):
+            nonlocal fig_idx
             mermaid_code = match.group(1).strip()
             prompt = (
-                f"Create a professional academic block diagram representing the following flow/system:\n\n"
-                f"{mermaid_code}"
+                f"Publication-grade academic system architecture diagram based on this flow:\n\n"
+                f"{mermaid_code}\n\n"
+                f"Render as a clean schematic block diagram, minimalist monochrome/slate tones, white background."
             )
-            img_path = generate_diagram(prompt)
+            img_path = generate_visual(prompt, visual_type="diagram")
             if img_path:
                 escaped_code = mermaid_code.replace('"', '&quot;').replace('\n', '&#10;')
+                curr_idx = fig_idx
+                fig_idx += 1
                 return (
-                    f'\n\n<div class="diagram-container text-center my-4" data-mermaid="{escaped_code}">\n'
-                    f'  <img src="{img_path}" alt="System Diagram" class="diagram-figure mx-auto shadow-sm" style="max-width: 100%; border: 1px solid #ddd; padding: 10px; background: #fff;" '
-                    f'onerror="this.style.display=\'none\'; const p=this.parentNode; if(p.dataset.mermaid && !p.querySelector(\'.mermaid\')){{ const d=document.createElement(\'div\'); d.className=\'mermaid\'; d.textContent=p.dataset.mermaid; p.appendChild(d); if(window.mermaid){{ window.mermaid.init(undefined, d); }} }}" />\n'
-                    f'</div>\n\n'
+                    f'\n\n<figure class="paper-figure custom-replaced-visual" data-visual-id="diagram-{uuid.uuid4().hex[:8]}" data-visual-type="diagram" data-original-html="{escaped_code}" style="text-align:center; margin:18pt auto; width:100%;">\n'
+                    f'  <img src="{img_path}" alt="System Architecture Diagram" class="diagram-figure mx-auto shadow-sm" style="max-width:100%; border:1px solid #ddd; padding:10px; background:#fff; display:block; margin:0 auto;" '
+                    f'onerror="this.style.display=\'none\'; const p=this.parentNode; if(p.dataset.originalHtml && !p.querySelector(\'.mermaid\')){{ const d=document.createElement(\'div\'); d.className=\'mermaid\'; d.textContent=p.dataset.originalHtml; p.appendChild(d); if(window.mermaid){{ window.mermaid.init(undefined, d); }} }}" />\n'
+                    f'  <figcaption class="figure-caption" style="font-size:8.5pt; color:#333; margin-top:6pt; text-align:center; font-style:italic;">Fig. {curr_idx}. System architecture and operational workflow.</figcaption>\n'
+                    f'</figure>\n\n'
                 )
             else:
                 return match.group(0)
@@ -1796,18 +1809,21 @@ def replace_diagrams_with_napkin(sections: list) -> list:
                     if len(ascii_block) >= 3:
                         ascii_text = "\n".join(ascii_block)
                         prompt = (
-                            f"Generate a professional system workflow schematic based on the following diagram structure:\n\n"
+                            f"Publication-grade academic system workflow schematic based on this layout:\n\n"
                             f"{ascii_text}\n\n"
-                            f"Render this as a clean, publication-grade academic diagram."
+                            f"Render as a clean, publication-grade academic flowchart."
                         )
-                        img_path = generate_diagram(prompt)
+                        img_path = generate_visual(prompt, visual_type="diagram")
                         if img_path:
                             escaped_ascii = ascii_text.replace('"', '&quot;').replace('\n', '&#10;')
+                            curr_idx = fig_idx
+                            fig_idx += 1
                             new_lines.append(
-                                f'\n\n<div class="diagram-container text-center my-4" data-ascii="{escaped_ascii}">\n'
-                                f'  <img src="{img_path}" alt="System Architecture Workflow" class="diagram-figure mx-auto shadow-sm" style="max-width: 100%; border: 1px solid #ddd; padding: 10px; background: #fff;" '
-                                f'onerror="this.style.display=\'none\'; const p=this.parentNode; if(p.dataset.ascii && !p.querySelector(\'pre\')){{ const pr=document.createElement(\'pre\'); const c=document.createElement(\'code\'); c.textContent=p.dataset.ascii; pr.appendChild(c); p.appendChild(pr); }}" />\n'
-                                f'</div>\n\n'
+                                f'\n\n<figure class="paper-figure custom-replaced-visual" data-visual-id="ascii-{uuid.uuid4().hex[:8]}" data-visual-type="diagram" data-original-html="{escaped_ascii}" style="text-align:center; margin:18pt auto; width:100%;">\n'
+                                f'  <img src="{img_path}" alt="System Workflow Diagram" class="diagram-figure mx-auto shadow-sm" style="max-width:100%; border:1px solid #ddd; padding:10px; background:#fff; display:block; margin:0 auto;" '
+                                f'onerror="this.style.display=\'none\'; const p=this.parentNode; if(p.dataset.originalHtml && !p.querySelector(\'pre\')){{ const pr=document.createElement(\'pre\'); const c=document.createElement(\'code\'); c.textContent=p.dataset.originalHtml; pr.appendChild(c); p.appendChild(pr); }}" />\n'
+                                f'  <figcaption class="figure-caption" style="font-size:8.5pt; color:#333; margin-top:6pt; text-align:center; font-style:italic;">Fig. {curr_idx}. System workflow execution schematic.</figcaption>\n'
+                                f'</figure>\n\n'
                             )
                         else:
                             new_lines.extend(ascii_block)
@@ -1820,18 +1836,21 @@ def replace_diagrams_with_napkin(sections: list) -> list:
             if len(ascii_block) >= 3:
                 ascii_text = "\n".join(ascii_block)
                 prompt = (
-                    f"Generate a professional system workflow schematic based on the following diagram structure:\n\n"
+                    f"Publication-grade academic system workflow schematic based on this layout:\n\n"
                     f"{ascii_text}\n\n"
-                    f"Render this as a clean, publication-grade academic diagram."
+                    f"Render as a clean, publication-grade academic flowchart."
                 )
-                img_path = generate_diagram(prompt)
+                img_path = generate_visual(prompt, visual_type="diagram")
                 if img_path:
                     escaped_ascii = ascii_text.replace('"', '&quot;').replace('\n', '&#10;')
+                    curr_idx = fig_idx
+                    fig_idx += 1
                     new_lines.append(
-                        f'\n\n<div class="diagram-container text-center my-4" data-ascii="{escaped_ascii}">\n'
-                        f'  <img src="{img_path}" alt="System Architecture Workflow" class="diagram-figure mx-auto shadow-sm" style="max-width: 100%; border: 1px solid #ddd; padding: 10px; background: #fff;" '
-                        f'onerror="this.style.display=\'none\'; const p=this.parentNode; if(p.dataset.ascii && !p.querySelector(\'pre\')){{ const pr=document.createElement(\'pre\'); const c=document.createElement(\'code\'); c.textContent=p.dataset.ascii; pr.appendChild(c); p.appendChild(pr); }}" />\n'
-                        f'</div>\n\n'
+                        f'\n\n<figure class="paper-figure custom-replaced-visual" data-visual-id="ascii-{uuid.uuid4().hex[:8]}" data-visual-type="diagram" data-original-html="{escaped_ascii}" style="text-align:center; margin:18pt auto; width:100%;">\n'
+                        f'  <img src="{img_path}" alt="System Workflow Diagram" class="diagram-figure mx-auto shadow-sm" style="max-width:100%; border:1px solid #ddd; padding:10px; background:#fff; display:block; margin:0 auto;" '
+                        f'onerror="this.style.display=\'none\'; const p=this.parentNode; if(p.dataset.originalHtml && !p.querySelector(\'pre\')){{ const pr=document.createElement(\'pre\'); const c=document.createElement(\'code\'); c.textContent=p.dataset.originalHtml; pr.appendChild(c); p.appendChild(pr); }}" />\n'
+                        f'  <figcaption class="figure-caption" style="font-size:8.5pt; color:#333; margin-top:6pt; text-align:center; font-style:italic;">Fig. {curr_idx}. System workflow execution schematic.</figcaption>\n'
+                        f'</figure>\n\n'
                     )
                 else:
                     new_lines.extend(ascii_block)
@@ -1951,12 +1970,12 @@ def writer_node(state: AgentWorkflowState) -> AgentWorkflowState:
         print(f"Writer fallback engaged: {e}")
         sections = generate_fallback_data("writing", state["project_id"], state["query"], state.get("pages", 5))
             
-    # Post-process: Replace ASCII art & Mermaid diagrams with Napkin AI visuals
+    # Post-process: Generate AI visuals (Qwen AI with Napkin fallback) for diagrams, tables, and formulas
     try:
-        print("[WriterNode] Processing diagrams via Napkin AI...")
+        print("[WriterNode] Processing visuals via Qwen AI & Napkin fallback...")
         sections = replace_diagrams_with_napkin(sections)
     except Exception as diagram_err:
-        print(f"[WriterNode] Napkin post-processing failed: {diagram_err}")
+        print(f"[WriterNode] Visual post-processing failed (non-fatal): {diagram_err}")
 
     # Post-process: FormaTeX content enhancement — clean tables, figures, and structure
     try:

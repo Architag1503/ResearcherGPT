@@ -610,3 +610,27 @@ export const exportProjectPaperPDF = async (req: Request, res: Response) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+/**
+ * Generates an academic visual (diagram, table, or formula) using Qwen AI / DashScope
+ * POST /api/projects/:projectId/generate-visual
+ */
+export const generateVisualWithQwen = async (req: Request, res: Response) => {
+  try {
+    const { prompt, visualType, rawContent } = req.body;
+    const aiRes = await axios.post(
+      `${AI_SERVICE_URL}/api/visuals/generate`,
+      {
+        prompt: prompt || 'Academic architecture diagram',
+        visual_type: visualType || 'diagram',
+        raw_content: rawContent || '',
+      },
+      { timeout: 60000 }
+    );
+
+    return res.status(200).json(aiRes.data);
+  } catch (error: any) {
+    console.error('[generateVisualWithQwen] Error:', error.message);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};

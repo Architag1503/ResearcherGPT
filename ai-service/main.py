@@ -682,6 +682,30 @@ def formatex_auto_correct(req: AutoCorrectRequest):
         print(f"Error in /api/formatex/auto-correct: {e}")
         return {"success": False, "error": str(e)}
 
+class GenerateVisualRequest(BaseModel):
+    prompt: str
+    visual_type: str = "diagram"  # "diagram" | "table" | "formula"
+    raw_content: Optional[str] = None
+    size: str = "1024*1024"
+
+@app.post("/api/visuals/generate")
+def api_generate_visual(req: GenerateVisualRequest):
+    """
+    Generates an academic visual (diagram, table figure, or formula figure)
+    using the Qwen AI engine with Napkin AI fallback.
+    """
+    try:
+        from services.visual_generator import generate_visual
+        effective_prompt = req.prompt or req.raw_content or "Academic system architecture diagram"
+        img_path = generate_visual(effective_prompt, visual_type=req.visual_type, size=req.size)
+        if img_path:
+            return {"success": True, "image_url": img_path, "visual_type": req.visual_type}
+        return {"success": False, "error": "Visual generation could not produce an image. You can upload or replace visuals manually in Writing Workspace."}
+    except Exception as e:
+        print(f"Error in /api/visuals/generate: {e}")
+        return {"success": False, "error": str(e)}
+
+
 class FormaTexRepairSectionsRequest(BaseModel):
     sections: List[Dict[str, Any]]
 
