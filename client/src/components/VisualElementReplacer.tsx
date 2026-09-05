@@ -374,6 +374,35 @@ export default function VisualElementReplacer({
       });
     }
 
+    // Standalone table captions (e.g., <div class="table-caption">TABLE I: ...</div> or <p><strong>TABLE I:...</strong></p> without <table>)
+    const standaloneCaptionRegex = /(?:<div[^>]*class=["'][^"']*table-caption[^"']*["'][^>]*>([\s\S]*?)<\/div>|<p[^>]*>\s*(?:<strong>)?(TABLE\s+[IVXLCDM\d]+[:\.\s][^<]*)(?:<\/strong>)?\s*<\/p>)/gi;
+    while ((match = standaloneCaptionRegex.exec(htmlContent)) !== null) {
+      const fullMatch = match[0];
+      // Skip if this caption is already part of an extracted table or replaced figure
+      if (list.some(t => t.currentHtml.includes(fullMatch) || fullMatch.includes(t.currentHtml))) continue;
+
+      tableCount++;
+      const captionFound = (match[1] || match[2] || '').replace(/<[^>]*>/g, '').trim();
+      const romanNum = toRoman(tableCount);
+      const tableName = captionFound || `Table ${romanNum}: Experiment Evaluation`;
+
+      list.push({
+        id: `table-caption-${tableCount}`,
+        type: 'table',
+        name: tableName,
+        caption: tableName,
+        currentHtml: fullMatch,
+        rawContent: fullMatch,
+        isReplaced: false,
+        recommendedResolution: {
+          width: 1200,
+          height: 600,
+          aspectRatio: '2:1',
+          description: 'Publication table graphic. 300 DPI, white background, crisp typography, clean horizontal rules.',
+        },
+      });
+    }
+
     // Markdown tables: matching consecutive lines starting with '|'
     const mdTableRegex = /(?:^|\n)(\|[^\n]+\|\n\|[-: |]+\|\n(?:\|[^\n]+\|\n?)+)/g;
     while ((match = mdTableRegex.exec(htmlContent)) !== null) {
@@ -533,6 +562,8 @@ export default function VisualElementReplacer({
       let finalImageUrl = staged.dataUrl || staged.previewUrl;
 
       // 2. Attempt background upload to cloud/server for CDN persistence
+      // ONLY override if server returns a genuine public HTTPS CDN URL (R2/S3)
+      // Never override with relative /uploads/ or localhost which 404s on Vercel!
       try {
         const formData = new FormData();
         formData.append('image', staged.file);
@@ -541,11 +572,8 @@ export default function VisualElementReplacer({
         });
         if (res.data?.url) {
           const serverUrl = res.data.url;
-          if (serverUrl.startsWith('http://') || serverUrl.startsWith('https://')) {
+          if (serverUrl.startsWith('https://') && !serverUrl.includes('localhost') && !serverUrl.includes('127.0.0.1')) {
             finalImageUrl = serverUrl;
-          } else {
-            const cleanPath = serverUrl.startsWith('/') ? serverUrl : `/${serverUrl}`;
-            finalImageUrl = `${API_URL}${cleanPath}`;
           }
         }
       } catch (uploadErr) {
@@ -592,8 +620,23 @@ export default function VisualElementReplacer({
       if (htmlContent.includes(item.currentHtml)) {
         updatedHtml = htmlContent.replace(item.currentHtml, replacementHtml.trim());
       } else {
-        const escaped = item.currentHtml.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        updatedHtml = htmlContent.replace(new RegExp(escaped, 'i'), replacementHtml.trim());
+        const escapedId = item.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const figureByIdRegex = new RegExp(`<figure[^>]*data-visual-id=["']${escapedId}["'][^>]*>[\\s\\S]*?<\\/figure>`, 'i');
+        if (figureByIdRegex.test(htmlContent)) {
+          updatedHtml = htmlContent.replace(figureByIdRegex, replacementHtml.trim());
+        } else if (item.currentSrc && !item.currentSrc.startsWith('data:')) {
+          const escapedSrc = item.currentSrc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const figureBySrcRegex = new RegExp(`<figure[^>]*>[\\s\\S]*?src=["']${escapedSrc}["'][\\s\\S]*?<\\/figure>`, 'i');
+          if (figureBySrcRegex.test(htmlContent)) {
+            updatedHtml = htmlContent.replace(figureBySrcRegex, replacementHtml.trim());
+          } else {
+            const escaped = item.currentHtml.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            updatedHtml = htmlContent.replace(new RegExp(escaped, 'i'), replacementHtml.trim());
+          }
+        } else {
+          const escaped = item.currentHtml.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          updatedHtml = htmlContent.replace(new RegExp(escaped, 'i'), replacementHtml.trim());
+        }
       }
       onUpdateHtml(updatedHtml);
 

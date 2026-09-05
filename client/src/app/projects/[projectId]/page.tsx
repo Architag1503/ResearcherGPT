@@ -176,6 +176,10 @@ const parseMarkdownToHTML = (markdown: string): string => {
   // Normalize line endings to LF
   let html = markdown.replace(/\r\n/g, '\n');
 
+  // Auto-heal any legacy corrupted table tags
+  html = html.replace(/<table[^>]*src=[\s\S]*?<\/table>/gi, '');
+  html = html.replace(/<table class="[&<]lt;?img[\s\S]*?<\/table>/gi, '');
+
   // Normalize uploads URLs dynamically
   html = html.replace(/src=["']\/?uploads\//g, `src="${API_URL}/uploads/`);
   html = html.replace(/src=["']https?:\/\/[^\/]+(:\d+)?\/uploads\//g, `src="${API_URL}/uploads/`);
@@ -819,6 +823,10 @@ const resolveAndFormatCitations = (html: string, databaseCitations: any[]): stri
 
 const formatPaperHTML = (rawHtml: string, format: string, databaseCitations: any[]): string => {
   let html = rawHtml;
+
+  // Auto-heal any legacy corrupted table tags
+  html = html.replace(/<table[^>]*src=[\s\S]*?<\/table>/gi, '');
+  html = html.replace(/<table class="[&<]lt;?img[\s\S]*?<\/table>/gi, '');
 
   // Normalize uploads URLs dynamically
   html = html.replace(/src=["']\/?uploads\//g, `src="${API_URL}/uploads/`);
@@ -2880,10 +2888,11 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
       {/* Main Workspace Frame */}
       <main className="flex-grow p-6 md:p-10 space-y-8 overflow-y-auto">
         
-        {/* Project Header */}
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-zinc-800/60 pb-6 w-full min-w-0">
+        {/* Project Header - Two vertical tiers expanding in Y-direction to eliminate X-overflow */}
+        <div className="flex flex-col gap-4 border-b border-zinc-800/60 pb-6 w-full">
+          {/* Tier 1: Project Title & Description */}
           {isEditingProject ? (
-            <div className="flex-grow max-w-2xl space-y-3">
+            <div className="w-full max-w-3xl space-y-3">
               <div className="space-y-1">
                 <label className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Project Name</label>
                 <input
@@ -2964,9 +2973,9 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
               </div>
             </div>
           ) : (
-            <div className="flex-grow min-w-0 max-w-full">
+            <div className="w-full">
               <div className="flex items-center gap-3">
-                <h1 className="text-xl md:text-2xl font-bold truncate text-zinc-100" title={project?.name}>
+                <h1 className="text-xl md:text-2xl font-bold text-zinc-100 tracking-tight" title={project?.name}>
                   {project?.name || 'Loading project...'}
                 </h1>
                 {project && (
@@ -2983,47 +2992,52 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                   </button>
                 )}
               </div>
-              <p className="text-zinc-500 text-xs mt-1 line-clamp-2 max-w-2xl">{project?.description || 'Loading workspace description.'}</p>
+              <p className="text-zinc-400 text-xs mt-1.5 max-w-4xl leading-relaxed">{project?.description || 'Loading workspace description.'}</p>
             </div>
           )}
 
-          {/* Quick Query Agent Trigger & Actions */}
-          <div className="flex flex-wrap items-center gap-2.5 max-w-full w-full xl:w-auto xl:justify-end shrink-0">
-            <select
-              value={selectedFormat}
-              onChange={(e) => setSelectedFormat(e.target.value)}
-              className="h-9 px-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-[11px] outline-none focus:border-indigo-500 text-zinc-300 font-medium shrink-0 cursor-pointer"
-            >
-              <option value="IEEE">IEEE Format</option>
-              <option value="ACM">ACM Format</option>
-              <option value="Springer">Springer LNCS</option>
-              <option value="Elsevier">Elsevier Harvard</option>
-              <option value="APA">APA 7th Style</option>
-              <option value="Harvard">Harvard Format</option>
-            </select>
-            <select
-              value={selectedPages}
-              onChange={(e) => setSelectedPages(parseInt(e.target.value))}
-              className="h-9 px-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-[11px] outline-none focus:border-indigo-500 text-zinc-300 font-medium shrink-0 cursor-pointer"
-            >
-              {Array.from({ length: 21 }, (_, i) => i + 5).map((num) => (
-                <option key={num} value={num}>{num} Pages (A4)</option>
-              ))}
-            </select>
-            <input
-              type="text"
-              placeholder="Query multi-agent graph..."
-              value={queryInput}
-              onChange={(e) => setQueryInput(e.target.value)}
-              className="flex-grow sm:flex-grow-0 sm:w-44 lg:w-48 h-9 px-3 bg-zinc-900 border border-zinc-800 rounded-lg text-xs outline-none focus:border-indigo-500 text-zinc-300 min-w-[130px]"
-            />
-            <button
-              onClick={handleTriggerAgent}
-              disabled={runAgentLoading || !queryInput.trim()}
-              className="px-3.5 h-9 rounded-lg bg-indigo-600 text-zinc-100 hover:bg-indigo-500 transition-colors flex items-center gap-1.5 font-medium text-xs disabled:opacity-40 whitespace-nowrap shrink-0 shadow-sm"
-            >
-              <Play className="w-3.5 h-3.5" /> Synthesize
-            </button>
+          {/* Tier 2: Dedicated Synthesis & Actions Bar (Full width, wraps cleanly, zero x-overflow) */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 w-full bg-zinc-900/40 p-2.5 rounded-xl border border-zinc-800/70">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <select
+                value={selectedFormat}
+                onChange={(e) => setSelectedFormat(e.target.value)}
+                className="h-9 px-3 bg-zinc-900 border border-zinc-800 rounded-lg text-xs outline-none focus:border-indigo-500 text-zinc-300 font-medium shrink-0 cursor-pointer shadow-sm"
+              >
+                <option value="IEEE">IEEE Format</option>
+                <option value="ACM">ACM Format</option>
+                <option value="Springer">Springer LNCS</option>
+                <option value="Elsevier">Elsevier Harvard</option>
+                <option value="APA">APA 7th Style</option>
+                <option value="Harvard">Harvard Format</option>
+              </select>
+              <select
+                value={selectedPages}
+                onChange={(e) => setSelectedPages(parseInt(e.target.value))}
+                className="h-9 px-3 bg-zinc-900 border border-zinc-800 rounded-lg text-xs outline-none focus:border-indigo-500 text-zinc-300 font-medium shrink-0 cursor-pointer shadow-sm"
+              >
+                {Array.from({ length: 21 }, (_, i) => i + 5).map((num) => (
+                  <option key={num} value={num}>{num} Pages (A4)</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 flex-grow max-w-xl min-w-[240px]">
+              <input
+                type="text"
+                placeholder="Query multi-agent graph..."
+                value={queryInput}
+                onChange={(e) => setQueryInput(e.target.value)}
+                className="w-full h-9 px-3 bg-zinc-900 border border-zinc-800 rounded-lg text-xs outline-none focus:border-indigo-500 text-zinc-300 shadow-sm"
+              />
+              <button
+                onClick={handleTriggerAgent}
+                disabled={runAgentLoading || !queryInput.trim()}
+                className="px-4 h-9 rounded-lg bg-indigo-600 text-zinc-100 hover:bg-indigo-500 transition-colors flex items-center gap-1.5 font-semibold text-xs disabled:opacity-40 whitespace-nowrap shrink-0 shadow-sm"
+              >
+                <Play className="w-3.5 h-3.5" /> Synthesize
+              </button>
+            </div>
 
             {savedPapers.length > 0 && (
               <button
@@ -3032,11 +3046,14 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                   setEditorMode('visuals');
                   setShowPreview(true);
                 }}
-                className="px-3.5 h-9 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/35 text-indigo-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm shrink-0"
+                className="px-4 h-9 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-200 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all shadow-sm shrink-0"
                 title="Replace diagrams, tables, and mathematical formulas"
               >
-                <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                <ImageIcon className="w-4 h-4 text-indigo-400" />
                 <span>Replace Visuals</span>
+                <span className="text-[10px] bg-indigo-500/25 text-indigo-300 px-1.5 py-0.5 rounded-full border border-indigo-400/25 font-mono">
+                  Visuals Hub
+                </span>
               </button>
             )}
           </div>
