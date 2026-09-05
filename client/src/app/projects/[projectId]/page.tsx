@@ -93,24 +93,53 @@ const commonVisualStyles = `
 
   .preview-paper .custom-replaced-table .table-caption,
   .preview-paper figure.paper-table figcaption,
-  .preview-paper figure.paper-table .table-caption {
+  .preview-paper figure.paper-table .table-caption,
+  .preview-paper .table-caption {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
     font-size: 8.5pt !important;
     font-weight: bold !important;
     text-align: center !important;
-    margin-bottom: 6pt !important;
+    margin: 0 auto 6pt auto !important;
     text-transform: uppercase !important;
     color: #000 !important;
     letter-spacing: 0.5px !important;
+    line-height: 1.35 !important;
+    word-break: normal !important;
+    white-space: normal !important;
+  }
+
+  .preview-paper .table-caption .table-num {
+    display: block !important;
+    font-size: 8.5pt !important;
+    font-weight: bold !important;
+    letter-spacing: 1px !important;
+    margin-bottom: 2pt !important;
+    text-align: center !important;
+  }
+
+  .preview-paper .table-caption .table-title {
+    display: block !important;
+    font-size: 8pt !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.4px !important;
+    text-align: center !important;
   }
 
   .preview-paper figure.paper-figure figcaption,
-  .preview-paper .custom-replaced-visual .figure-caption {
+  .preview-paper .custom-replaced-visual .figure-caption,
+  .preview-paper .figure-caption {
+    display: block !important;
+    width: 100% !important;
     font-size: 8.5pt !important;
     font-style: italic !important;
     text-align: center !important;
     margin-top: 6pt !important;
     margin-bottom: 8pt !important;
     color: #333 !important;
+    line-height: 1.3 !important;
   }
 
   .preview-paper .custom-replaced-formula,

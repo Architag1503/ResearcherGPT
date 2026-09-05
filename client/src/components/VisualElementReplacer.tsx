@@ -16,7 +16,9 @@ import {
   FileImage,
   Layers,
   X,
-  RotateCcw
+  RotateCcw,
+  Edit3,
+  Type
 } from 'lucide-react';
 import { getApiUrl } from '../utils/apiUrl';
 
@@ -57,6 +59,8 @@ export default function VisualElementReplacer({
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'diagram' | 'table' | 'formula'>('all');
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadSuccessId, setUploadSuccessId] = useState<string | null>(null);
+  const [customCaptions, setCustomCaptions] = useState<{ [id: string]: string }>({});
+  const [captionSuccessId, setCaptionSuccessId] = useState<string | null>(null);
   const [spanModes, setSpanModes] = useState<{ [id: string]: 'column' | 'wide' }>({});
   const [originalMarkupRegistry, setOriginalMarkupRegistry] = useState<{ [id: string]: string }>({});
   const [stagedFiles, setStagedFiles] = useState<{
@@ -67,6 +71,11 @@ export default function VisualElementReplacer({
       dimensions?: { width: number; height: number };
     };
   }>({});
+
+  // Clean HTML tags and collapse whitespace for readable caption text
+  const cleanCaptionFromHtml = (raw: string): string => {
+    return raw.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  };
 
   // Parse htmlContent to extract diagrams, tables, and formulas
   const elements = useMemo<VisualElement[]>(() => {
@@ -115,7 +124,7 @@ export default function VisualElementReplacer({
       if (kind === 'visual') {
         figCount++;
         const captionMatch = fullMatch.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i);
-        const caption = captionMatch ? captionMatch[1].replace(/<[^>]*>/g, '').trim() : `Fig ${figCount}: System Architecture Workflow`;
+        const caption = captionMatch ? cleanCaptionFromHtml(captionMatch[1]) : `Fig ${figCount}: System Architecture Workflow`;
         list.push({
           id: visualId,
           type: 'diagram',
@@ -136,7 +145,7 @@ export default function VisualElementReplacer({
       } else if (kind === 'table') {
         tableCount++;
         const captionMatch = fullMatch.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i);
-        const caption = captionMatch ? captionMatch[1].replace(/<[^>]*>/g, '').trim() : `Table ${toRoman(tableCount)}: Experiment Evaluation`;
+        const caption = captionMatch ? cleanCaptionFromHtml(captionMatch[1]) : `Table ${toRoman(tableCount)}: Experiment Evaluation`;
         list.push({
           id: visualId,
           type: 'table',
@@ -551,6 +560,119 @@ export default function VisualElementReplacer({
     reader.readAsDataURL(file);
   };
 
+  // Caption helper functions for custom editing & formatting
+  const getCaptionValue = (item: VisualElement) => {
+    return customCaptions[item.id] !== undefined ? customCaptions[item.id] : (item.caption || item.name);
+  };
+
+  const handleCaptionInputChange = (elementId: string, val: string) => {
+    setCustomCaptions(prev => ({ ...prev, [elementId]: val }));
+  };
+
+  const handleFormatPreset = (item: VisualElement, preset: 'ieee' | 'uppercase' | 'titlecase') => {
+    const current = getCaptionValue(item);
+    let updated = current;
+    if (preset === 'uppercase') {
+      updated = current.toUpperCase();
+    } else if (preset === 'titlecase') {
+      updated = current.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+    } else if (preset === 'ieee') {
+      if (item.type === 'table') {
+        const tblMatch = current.match(/^(?:TABLE\s+([IVXLCDM\d]+)|(?:Table\s+(\d+)))[:.\s-]*(.*)$/i);
+        if (tblMatch) {
+          const num = (tblMatch[1] || tblMatch[2]).toUpperCase();
+          const rest = (tblMatch[3] || '').trim().toUpperCase();
+          updated = `TABLE ${num}: ${rest}`;
+        } else {
+          updated = current.toUpperCase();
+        }
+      } else if (item.type === 'diagram') {
+        const figMatch = current.match(/^(?:FIG(?:URE)?\.?\s*(\d+))[:.\s-]*(.*)$/i);
+        if (figMatch) {
+          const num = figMatch[1];
+          const rest = (figMatch[2] || '').trim();
+          updated = `Fig. ${num}. ${rest}`;
+        }
+      }
+    }
+    setCustomCaptions(prev => ({ ...prev, [item.id]: updated }));
+  };
+
+  const handleApplyCaption = (item: VisualElement) => {
+    const newCaption = getCaptionValue(item).trim();
+    if (!newCaption) return;
+
+    let updatedHtml = htmlContent;
+    const escapedId = item.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const figureRegex = new RegExp(`(<figure[^>]*data-visual-id=["']${escapedId}["'][^>]*>)([\\s\\S]*?)(<\\/figure>)`, 'i');
+    const figureMatch = updatedHtml.match(figureRegex);
+
+    if (figureMatch) {
+      let inner = figureMatch[2];
+      if (item.type === 'table') {
+        const tblMatch = newCaption.match(/^(TABLE\s+[IVXLCDM\d]+)[:.\s]+(.*)$/i);
+        const captionInner = tblMatch
+          ? `<span class="table-num" style="display:block;text-align:center;font-weight:bold;margin-bottom:2pt;letter-spacing:0.5px;">${tblMatch[1].toUpperCase()}</span><span class="table-title" style="display:block;text-align:center;font-weight:bold;letter-spacing:0.3px;">${tblMatch[2].toUpperCase()}</span>`
+          : `<span class="table-title" style="display:block;text-align:center;font-weight:bold;letter-spacing:0.3px;">${newCaption.toUpperCase()}</span>`;
+        const newFigcaption = `<figcaption class="table-caption" style="font-size:8.5pt;color:#000;margin-bottom:6pt;text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;display:block;width:100%;max-width:100%;line-height:1.35;white-space:normal;word-break:normal;">${captionInner}</figcaption>`;
+
+        if (/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i.test(inner)) {
+          inner = inner.replace(/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i, newFigcaption);
+        } else {
+          inner = newFigcaption + '\n' + inner;
+        }
+      } else if (item.type === 'diagram') {
+        const newFigcaption = `<figcaption class="figure-caption" style="font-size:8.5pt;color:#333;margin-top:6pt;margin-bottom:12pt;text-align:center;font-style:italic;display:block;width:100%;max-width:100%;line-height:1.35;white-space:normal;">${newCaption}</figcaption>`;
+        if (/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i.test(inner)) {
+          inner = inner.replace(/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i, newFigcaption);
+        } else {
+          inner = inner + '\n' + newFigcaption;
+        }
+      } else if (item.type === 'formula') {
+        const eqNum = newCaption.replace(/[^0-9]/g, '') || '1';
+        const newFigcaption = `<figcaption class="equation-num" style="position:absolute;right:12px;font-size:9pt;font-family:'Times New Roman',serif;color:#333;font-style:normal;font-weight:normal;">(${eqNum})</figcaption>`;
+        if (/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i.test(inner)) {
+          inner = inner.replace(/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i, newFigcaption);
+        } else {
+          inner = inner + '\n' + newFigcaption;
+        }
+      }
+      updatedHtml = updatedHtml.replace(figureRegex, `$1${inner}$3`);
+    } else if (updatedHtml.includes(item.currentHtml)) {
+      if (/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i.test(item.currentHtml)) {
+        let updatedElement = item.currentHtml;
+        if (item.type === 'table') {
+          const tblMatch = newCaption.match(/^(TABLE\s+[IVXLCDM\d]+)[:.\s]+(.*)$/i);
+          const captionInner = tblMatch
+            ? `<span class="table-num" style="display:block;text-align:center;font-weight:bold;margin-bottom:2pt;letter-spacing:0.5px;">${tblMatch[1].toUpperCase()}</span><span class="table-title" style="display:block;text-align:center;font-weight:bold;letter-spacing:0.3px;">${tblMatch[2].toUpperCase()}</span>`
+            : `<span class="table-title" style="display:block;text-align:center;font-weight:bold;letter-spacing:0.3px;">${newCaption.toUpperCase()}</span>`;
+          updatedElement = updatedElement.replace(
+            /<figcaption[^>]*>[\s\S]*?<\/figcaption>/i,
+            `<figcaption class="table-caption" style="font-size:8.5pt;color:#000;margin-bottom:6pt;text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;display:block;width:100%;max-width:100%;line-height:1.35;white-space:normal;word-break:normal;">${captionInner}</figcaption>`
+          );
+        } else {
+          updatedElement = updatedElement.replace(
+            /<figcaption[^>]*>[\s\S]*?<\/figcaption>/i,
+            `<figcaption class="figure-caption" style="font-size:8.5pt;color:#333;margin-top:6pt;margin-bottom:12pt;text-align:center;font-style:italic;display:block;width:100%;max-width:100%;line-height:1.35;white-space:normal;">${newCaption}</figcaption>`
+          );
+        }
+        updatedHtml = updatedHtml.replace(item.currentHtml, updatedElement);
+      } else if (/<div[^>]*class=["'][^"']*table-caption[^"']*["'][^>]*>[\s\S]*?<\/div>/i.test(item.currentHtml)) {
+        const updatedElement = item.currentHtml.replace(
+          /<div[^>]*class=["'][^"']*table-caption[^"']*["'][^>]*>[\s\S]*?<\/div>/i,
+          `<div class="table-caption">${newCaption.toUpperCase()}</div>`
+        );
+        updatedHtml = updatedHtml.replace(item.currentHtml, updatedElement);
+      } else if (item.currentHtml.startsWith('<p>') && /TABLE\s+[IVXLCDM\d]+/i.test(item.currentHtml)) {
+        updatedHtml = updatedHtml.replace(item.currentHtml, `<p><strong>${newCaption.toUpperCase()}</strong></p>`);
+      }
+    }
+
+    onUpdateHtml(updatedHtml);
+    setCaptionSuccessId(item.id);
+    setTimeout(() => setCaptionSuccessId(null), 3000);
+  };
+
   // Perform Image Replacement across all 3 visual asset types
   const handleReplaceElement = async (item: VisualElement) => {
     const staged = stagedFiles[item.id];
@@ -583,7 +705,7 @@ export default function VisualElementReplacer({
 
       // 4. Build semantic HTML5 <figure> markup (cannot be cut off by non-greedy regex)
       let replacementHtml = '';
-      const cleanCaption = item.caption || item.name;
+      const cleanCaption = getCaptionValue(item).trim();
       const spanMode = spanModes[item.id] || 'column';
       const spanStyle = spanMode === 'wide' ? 'column-span:all;-webkit-column-span:all;' : '';
       const originalToPreserve = originalMarkupRegistry[item.id] || item.originalRawHtml || item.rawContent || item.currentHtml;
@@ -593,16 +715,23 @@ export default function VisualElementReplacer({
         replacementHtml = `
 <figure class="paper-figure custom-replaced-visual" data-visual-id="${item.id}" data-visual-type="diagram" data-span-mode="${spanMode}" data-original-html="${encodedOriginal}" style="text-align:center;margin:18pt auto;width:100%;max-width:100%;box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;${spanStyle}">
   <img src="${finalImageUrl}" alt="${cleanCaption}" class="diagram-figure mx-auto shadow-sm" style="max-width:100%;height:auto;display:block;margin:0 auto;border:1px solid #ddd;padding:6px;background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.1);" />
-  <figcaption class="figure-caption" style="font-size:8.5pt;color:#333;margin-top:6pt;margin-bottom:12pt;text-align:center;font-style:italic;">${cleanCaption}</figcaption>
+  <figcaption class="figure-caption" style="font-size:8.5pt;color:#333;margin-top:6pt;margin-bottom:12pt;text-align:center;font-style:italic;display:block;width:100%;max-width:100%;line-height:1.35;white-space:normal;">${cleanCaption}</figcaption>
 </figure>`;
       } else if (item.type === 'table') {
+        const tblMatch = cleanCaption.match(/^(TABLE\s+[IVXLCDM\d]+)[:.\s]+(.*)$/i);
+        let tableCaptionHtml = '';
+        if (tblMatch) {
+          tableCaptionHtml = `<span class="table-num" style="display:block;text-align:center;font-weight:bold;margin-bottom:2pt;letter-spacing:0.5px;">${tblMatch[1].toUpperCase()}</span><span class="table-title" style="display:block;text-align:center;font-weight:bold;letter-spacing:0.3px;">${tblMatch[2].toUpperCase()}</span>`;
+        } else {
+          tableCaptionHtml = `<span class="table-title" style="display:block;text-align:center;font-weight:bold;letter-spacing:0.3px;">${cleanCaption.toUpperCase()}</span>`;
+        }
         replacementHtml = `
 <figure class="paper-table custom-replaced-table" data-visual-id="${item.id}" data-visual-type="table" data-span-mode="${spanMode}" data-original-html="${encodedOriginal}" style="text-align:center;margin:18pt auto;width:100%;max-width:100%;box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;${spanStyle}">
-  <figcaption class="table-caption" style="font-size:8.5pt;color:#000;margin-bottom:6pt;text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">${cleanCaption}</figcaption>
+  <figcaption class="table-caption" style="font-size:8.5pt;color:#000;margin-bottom:6pt;text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;display:block;width:100%;max-width:100%;line-height:1.35;white-space:normal;word-break:normal;">${tableCaptionHtml}</figcaption>
   <img src="${finalImageUrl}" alt="${cleanCaption}" class="table-figure mx-auto shadow-sm" style="max-width:100%;height:auto;display:block;margin:0 auto;border:1px solid #ddd;padding:6px;background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.1);" />
 </figure>`;
       } else if (item.type === 'formula') {
-        const eqNum = item.caption.replace(/[^0-9]/g, '') || '1';
+        const eqNum = cleanCaption.replace(/[^0-9]/g, '') || '1';
         replacementHtml = `
 <figure class="paper-formula custom-replaced-formula" data-visual-id="${item.id}" data-visual-type="formula" data-original-html="${encodedOriginal}" style="text-align:center;margin:14pt auto;width:100%;max-width:100%;display:flex;align-items:center;justify-content:center;position:relative;break-inside:avoid;page-break-inside:avoid;box-sizing:border-box;padding:6px 0;">
   <img src="${finalImageUrl}" alt="${cleanCaption}" class="formula-figure" style="max-width:85%;max-height:130px;height:auto;object-fit:contain;display:inline-block;padding:4px;background:transparent;" />
@@ -867,9 +996,14 @@ export default function VisualElementReplacer({
                       </span>
                     </div>
 
-                    <div className="h-48 rounded-xl border border-zinc-800 bg-white/95 p-3 flex flex-col items-center justify-center overflow-hidden relative shadow-inner text-zinc-900">
+                    <div className="h-52 rounded-xl border border-zinc-800 bg-white/95 p-3.5 flex flex-col items-center justify-center overflow-hidden relative shadow-inner text-zinc-900">
                       {item.currentSrc ? (
                         <div className="w-full h-full flex flex-col items-center justify-center">
+                          {item.type === 'table' && (
+                            <div className="text-[10.5px] font-bold text-zinc-900 uppercase tracking-wide mb-1 text-center line-clamp-2 px-2">
+                              {getCaptionValue(item)}
+                            </div>
+                          )}
                           <img
                             src={
                               item.currentSrc.startsWith('http') || item.currentSrc.startsWith('data:')
@@ -877,11 +1011,13 @@ export default function VisualElementReplacer({
                                 : `${API_URL}/${item.currentSrc.replace(/^\//, '')}`
                             }
                             alt={item.caption}
-                            className="max-h-36 max-w-full object-contain rounded"
+                            className="max-h-32 max-w-full object-contain rounded"
                           />
-                          <p className="text-[10px] text-zinc-500 italic mt-1 truncate max-w-full text-center">
-                            {item.caption}
-                          </p>
+                          {item.type !== 'table' && (
+                            <p className="text-[10px] text-zinc-600 italic mt-1.5 truncate max-w-full text-center px-2">
+                              {getCaptionValue(item)}
+                            </p>
+                          )}
                         </div>
                       ) : item.type === 'table' ? (
                         <div className="w-full h-full overflow-auto text-xs p-1">
@@ -905,6 +1041,71 @@ export default function VisualElementReplacer({
 
                   {/* Right Column: Upload Box & Recommended Resolution */}
                   <div className="space-y-3">
+                    {/* Caption & Heading Text Editor */}
+                    <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                          <Type className="w-3.5 h-3.5 text-indigo-400" /> Caption & Heading Text
+                        </span>
+                        {/* Quick format presets */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleFormatPreset(item, 'ieee')}
+                            className="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-colors"
+                            title="Format as IEEE academic standard (TABLE I: TITLE / Fig. 1. Title)"
+                          >
+                            IEEE Preset
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleFormatPreset(item, 'uppercase')}
+                            className="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-colors"
+                            title="Convert caption text to ALL CAPS"
+                          >
+                            ALL CAPS
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-grow">
+                          <input
+                            type="text"
+                            value={getCaptionValue(item)}
+                            onChange={(e) => handleCaptionInputChange(item.id, e.target.value)}
+                            placeholder={item.type === 'table' ? 'e.g. TABLE I: EXPERIMENTAL EVALUATION' : 'e.g. Fig. 1: System Workflow'}
+                            className="w-full h-8 px-3 rounded-lg text-xs bg-zinc-900/90 text-zinc-200 border border-zinc-700/80 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-zinc-500"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyCaption(item)}
+                          className={`h-8 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm shrink-0 ${
+                            captionSuccessId === item.id
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700'
+                          }`}
+                          title="Save this caption text directly to paper"
+                        >
+                          {captionSuccessId === item.id ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-white" /> Saved!
+                            </>
+                          ) : (
+                            <>
+                              <Edit3 className="w-3 h-3 text-indigo-400" /> Apply
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 leading-tight">
+                        {item.type === 'table'
+                          ? 'Academic tables render 2-tier heading: TABLE number on line 1, TITLE on line 2.'
+                          : 'Captions display centered directly below figures and diagrams in standard IEEE style.'}
+                      </p>
+                    </div>
+
                     {/* Recommended Resolution Box */}
                     <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
                       <div className="flex items-center justify-between">
