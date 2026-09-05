@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useProjectStore } from '../../store/projectStore';
 import axios from 'axios';
-import { ArrowLeft, Cpu, RefreshCw, FileText, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Cpu, RefreshCw, FileText, CheckCircle, Image as ImageIcon } from 'lucide-react';
 import { getApiUrl } from '../../utils/apiUrl';
 
 const API_URL = getApiUrl();
@@ -145,12 +145,22 @@ export default function PaperGeneratorPage() {
           ) : (
             <div className="space-y-3">
               {papers.map((p, idx) => (
-                <div key={idx} className="p-3 rounded-lg border border-zinc-850 bg-zinc-900/20 flex items-start gap-2">
-                  <FileText className="w-4 h-4 text-zinc-500 mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-zinc-200 truncate">{p.title}</p>
-                    <p className="text-[10px] text-zinc-500">{p.createdAt}</p>
+                <div key={idx} className="p-3 rounded-lg border border-zinc-850 bg-zinc-900/20 flex flex-col gap-2">
+                  <div className="flex items-start gap-2">
+                    <FileText className="w-4 h-4 text-zinc-500 mt-0.5 shrink-0" />
+                    <div className="min-w-0 flex-grow">
+                      <p className="text-xs font-semibold text-zinc-200 truncate">{p.title || 'Untitled Manuscript'}</p>
+                      <p className="text-[10px] text-zinc-500">{new Date(p.createdAt).toLocaleDateString()}</p>
+                    </div>
                   </div>
+                  {activeProject && (
+                    <Link
+                      href={`/projects/${activeProject._id}?tab=editor&mode=visuals&paperId=${p._id}`}
+                      className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1.5 pt-1 border-t border-zinc-800/60"
+                    >
+                      <ImageIcon className="w-3 h-3" /> Open in Workspace & Replace Visuals &rarr;
+                    </Link>
+                  )}
                 </div>
               ))}
             </div>

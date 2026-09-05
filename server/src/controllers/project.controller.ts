@@ -536,11 +536,10 @@ export const exportProjectPaperPDF = async (req: Request, res: Response) => {
     // --- FALLBACK: Local Chromium Print-to-PDF ---
     console.log('[exportProjectPaperPDF] Initiating local Chromium print-to-pdf fallback...');
     
-    // Convert absolute uploads URL to relative uploads/ paths
-    let processedHtml = htmlContent.replace(
-      /https?:\/\/[^\/]+(:\d+)?\/uploads\//g,
-      'uploads/'
-    );
+    // Convert absolute and relative uploads URL to relative uploads/ paths
+    let processedHtml = htmlContent
+      .replace(/https?:\/\/[^\/]+(:\d+)?\/uploads\//g, 'uploads/')
+      .replace(/src=["']\/uploads\//g, 'src="uploads/');
 
     // Get the absolute base path for file:// origin in Chromium
     const uploadsPath = path.resolve('uploads');

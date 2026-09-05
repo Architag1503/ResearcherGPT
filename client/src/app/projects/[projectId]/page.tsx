@@ -7,16 +7,108 @@ import { motion } from 'framer-motion';
 import {
   Upload, FileText, MessageSquare, GitBranch, Table, Bookmark,
   AlertTriangle, Play, RefreshCw, Layers, Edit, CheckCircle, Trash2, Download, Shield,
-  GraduationCap, ChevronLeft, ChevronRight, Plus
+  GraduationCap, ChevronLeft, ChevronRight, Plus, Image as ImageIcon
 } from 'lucide-react';
 
 import ChatWindow from '../../../components/ChatWindow';
 import TipTapEditor from '../../../components/TipTapEditor';
 import EvidencePanel from '../../../components/EvidencePanel';
 import KnowledgeGraph3D from '../../../components/KnowledgeGraph3D';
+import VisualElementReplacer from '../../../components/VisualElementReplacer';
 import { getApiUrl } from '../../../utils/apiUrl';
 
 const API_URL = getApiUrl();
+
+const commonVisualStyles = `
+  /* Responsive visual element sizing & positioning */
+  .preview-paper .custom-replaced-visual,
+  .preview-paper .custom-replaced-table,
+  .preview-paper .custom-replaced-formula,
+  .preview-paper .diagram-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 16pt auto !important;
+    text-align: center !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    clear: both !important;
+  }
+
+  .preview-paper .custom-replaced-visual[data-span-mode="wide"],
+  .preview-paper .custom-replaced-table[data-span-mode="wide"],
+  .preview-paper .diagram-container[data-span-mode="wide"] {
+    column-span: all !important;
+    -webkit-column-span: all !important;
+  }
+
+  .preview-paper .custom-replaced-visual img,
+  .preview-paper .diagram-container img,
+  .preview-paper .table-figure,
+  .preview-paper img.diagram-figure {
+    display: block !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin: 0 auto !important;
+    object-fit: contain !important;
+    border: 1px solid #ddd !important;
+    padding: 6px !important;
+    background: #fff !important;
+    box-sizing: border-box !important;
+    border-radius: 4px !important;
+  }
+
+  .preview-paper .custom-replaced-table {
+    margin: 18pt auto !important;
+  }
+
+  .preview-paper .custom-replaced-table .table-caption {
+    font-size: 8.5pt !important;
+    font-weight: bold !important;
+    text-align: center !important;
+    margin-bottom: 6pt !important;
+    text-transform: uppercase !important;
+    color: #000 !important;
+  }
+
+  .preview-paper .custom-replaced-formula {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 14pt auto !important;
+    padding: 6px 0 !important;
+    box-sizing: border-box !important;
+    break-inside: avoid !important;
+  }
+
+  .preview-paper .custom-replaced-formula img {
+    display: inline-block !important;
+    max-width: 85% !important;
+    max-height: 120px !important;
+    height: auto !important;
+    object-fit: contain !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 2px !important;
+  }
+
+  .preview-paper .custom-replaced-formula .equation-num {
+    position: absolute !important;
+    right: 8px !important;
+    font-size: 9pt !important;
+    font-family: 'Times New Roman', serif !important;
+    color: #333 !important;
+  }
+
+  .preview-paper table {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    box-sizing: border-box !important;
+  }
+`;
 
 const tabItems = [
   { id: 'papers', label: 'Papers & Upload', icon: Upload },
@@ -1243,6 +1335,7 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
   const [editCitationPublisher, setEditCitationPublisher] = useState<string>('');
   const [editCitationDoi, setEditCitationDoi] = useState<string>('');
   const [showPreview, setShowPreview] = useState(false);
+  const [editorMode, setEditorMode] = useState<'editor' | 'visuals'>('editor');
 
   const [editingGapId, setEditingGapId] = useState<string | null>(null);
   const [editGapTitle, setEditGapTitle] = useState<string>('');
@@ -1475,7 +1568,24 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
     }
   };
 
-  const fetchSavedPapers = async () => {
+  const handleLoadPaperForEdit = (paper: any) => {
+    if (!paper) return;
+    setEditingPaperId(paper._id || null);
+    setEditingPaperTitle(paper.title || 'Untitled Research Manuscript');
+    let text = '';
+    if (paper.sections && Array.isArray(paper.sections)) {
+      text = paper.sections.map((s: any) => {
+        const cleanHeading = (s.heading || '').replace(/^#+\s*/, '').trim();
+        return `<h2>${cleanHeading}</h2>${parseMarkdownToHTML(s.content)}`;
+      }).join('\n');
+    } else if (paper.content) {
+      text = paper.content;
+    }
+    setEditorDoc(text);
+    setPreviewPaperContent(null); // Return preview window to editor tracking
+  };
+
+  const fetchSavedPapers = async (targetPaperId?: string) => {
     try {
       const apiBase = getApiUrl();
       const res = await axios.get(`${apiBase}/api/projects/${projectId}/generated-papers`, {
@@ -1484,16 +1594,22 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
       const papers = Array.isArray(res.data) ? res.data : [];
       setSavedPapers(papers);
       
-      // Load first paper by default if none is active
-      if (papers.length > 0 && !editingPaperId && !editorDoc) {
-        const latest = papers[0];
-        setEditingPaperId(latest._id);
-        setEditingPaperTitle(latest.title);
-        const text = latest.sections?.map((s: any) => {
-          const cleanHeading = (s.heading || '').replace(/^#+\s*/, '').trim();
-          return `<h2>${cleanHeading}</h2>${parseMarkdownToHTML(s.content)}`;
-        }).join('\n') || '';
-        setEditorDoc(text);
+      if (papers.length > 0) {
+        if (targetPaperId) {
+          const target = papers.find((p: any) => p._id === targetPaperId);
+          if (target) {
+            handleLoadPaperForEdit(target);
+            return;
+          }
+        }
+
+        // Auto-load paper if none is active or editorDoc is empty
+        if (!editingPaperId || !editorDoc) {
+          const toLoad = editingPaperId
+            ? (papers.find((p: any) => p._id === editingPaperId) || papers[0])
+            : papers[0];
+          handleLoadPaperForEdit(toLoad);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch saved papers:', err);
@@ -1512,17 +1628,6 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
     } catch (err) {
       console.error('Failed to delete saved paper:', err);
     }
-  };
-
-  const handleLoadPaperForEdit = (paper: any) => {
-    setEditingPaperId(paper._id);
-    setEditingPaperTitle(paper.title);
-    const text = paper.sections?.map((s: any) => {
-      const cleanHeading = (s.heading || '').replace(/^#+\s*/, '').trim();
-      return `<h2>${cleanHeading}</h2>${parseMarkdownToHTML(s.content)}`;
-    }).join('\n') || '';
-    setEditorDoc(text);
-    setPreviewPaperContent(null); // Return preview window to editor tracking
   };
 
   const handlePreviewPaper = (paper: any) => {
@@ -2174,6 +2279,7 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
           }
         `;
       }
+      formatCSS += commonVisualStyles;
 
       const formattedHtml = formatPaperHTML(editorDoc, selectedFormat, citations);
       const cleanedEditorDoc = cleanMathHTML(formattedHtml);
@@ -2472,6 +2578,27 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
   useEffect(() => {
     loadProjectData();
 
+    // Check URL parameters for tab, mode, and target paper
+    let targetPaperId: string | undefined = undefined;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      const modeParam = urlParams.get('mode');
+      const paperIdParam = urlParams.get('paperId');
+
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+      if (modeParam === 'visuals' || modeParam === 'editor') {
+        setEditorMode(modeParam as 'editor' | 'visuals');
+      }
+      if (paperIdParam) {
+        targetPaperId = paperIdParam;
+      }
+    }
+
+    fetchSavedPapers(targetPaperId);
+
     // Load KaTeX CSS
     if (!document.getElementById('katex-css')) {
       const link = document.createElement('link');
@@ -2669,7 +2796,7 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
       </div>
 
       {/* Side Tabs Navigation Bar */}
-      <aside className="w-16 hover:w-64 border-r border-zinc-800/80 bg-zinc-950 p-4 space-y-6 flex flex-col justify-between hidden md:flex transition-all duration-300 ease-in-out group overflow-hidden flex-shrink-0">
+      <aside className="w-16 hover:w-64 border-r border-zinc-800/80 bg-zinc-950 p-4 space-y-6 flex flex-col justify-between hidden md:flex transition-all duration-300 ease-in-out group overflow-y-auto scrollbar-none flex-shrink-0">
         <div className="space-y-6">
           <div className="flex items-center border-b border-zinc-800 pb-4 h-12">
             <Link href="/dashboard" className="flex items-center">
@@ -2862,6 +2989,20 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
             >
               <Play className="w-3.5 h-3.5" /> Synthesize
             </button>
+
+            {savedPapers.length > 0 && (
+              <button
+                onClick={() => {
+                  setActiveTab('editor');
+                  setEditorMode('visuals');
+                }}
+                className="px-3.5 h-9 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/35 text-indigo-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm shrink-0"
+                title="Replace diagrams, tables, and mathematical formulas"
+              >
+                <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="hidden sm:inline">Replace Visuals</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -4572,17 +4713,44 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                             </div>
                           </div>
                         )}
+                        {(() => {
+                          const allContent = paper.sections?.map((s: any) => s.content || '').join('\n') || '';
+                          const diagMatches = (allContent.match(/!\[|<img|diagram-container/gi) || []).length;
+                          const tableMatches = (allContent.match(/<table|\|.*\|/gi) || []).length > 0 ? (allContent.match(/<table/gi) || []).length || 1 : 0;
+                          const formulaMatches = (allContent.match(/\$\$|\\\[|\\begin\{equation/gi) || []).length;
+                          const total = diagMatches + tableMatches + formulaMatches;
+                          return total > 0 ? (
+                            <div className="pt-2">
+                              <span className="inline-flex items-center gap-1 text-[9px] bg-amber-500/10 border border-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-mono">
+                                <ImageIcon className="w-2.5 h-2.5" />
+                                {diagMatches} Fig{diagMatches === 1 ? '' : 's'} • {tableMatches} Tab • {formulaMatches} Eq
+                              </span>
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
 
-                      <div className="flex items-center gap-3 pt-3 border-t border-zinc-850 justify-end">
+                      <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-zinc-850 justify-end">
                         <button
                           onClick={() => {
                             handleLoadPaperForEdit(paper);
                             setActiveTab('editor');
+                            setEditorMode('visuals');
                           }}
-                          className="px-3 py-1.5 rounded bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-400 text-xs font-semibold transition-colors"
+                          className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-950/40"
+                          title="Replace diagrams, tables, and math formulas with custom images"
                         >
-                          Edit
+                          <ImageIcon className="w-3.5 h-3.5" /> Replace Visuals
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleLoadPaperForEdit(paper);
+                            setActiveTab('editor');
+                            setEditorMode('editor');
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition-colors"
+                        >
+                          Canvas
                         </button>
                         <button
                           onClick={() => {
@@ -4590,15 +4758,15 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                               const cleanHeading = (s.heading || '').replace(/^#+\s*/, '').trim();
                               return `<h2>${cleanHeading}</h2>${parseMarkdownToHTML(s.content)}`;
                             }).join('\n') || '';
-                            setPreviewPaperModal({ title: paper.title, content: text });
+                            setPreviewPaperModal({ ...paper, content: text });
                           }}
-                          className="px-3 py-1.5 rounded bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-400 text-xs font-semibold transition-colors"
+                          className="px-2.5 py-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-400 text-xs font-semibold transition-colors"
                         >
                           Preview
                         </button>
                         <button
                           onClick={() => handleDeleteSavedPaper(paper._id)}
-                          className="px-3 py-1.5 rounded bg-red-650/10 hover:bg-red-650/20 border border-red-500/15 text-red-400 text-xs font-semibold transition-colors"
+                          className="px-2.5 py-1.5 rounded-lg bg-red-650/10 hover:bg-red-650/20 border border-red-500/15 text-red-400 text-xs font-semibold transition-colors"
                         >
                           Delete
                         </button>
@@ -5033,11 +5201,87 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
           {activeTab === 'editor' && (
             <div className={`grid grid-cols-1 gap-6 ${showPreview ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
               
-              {/* TipTap Editor */}
+              {/* TipTap Editor or Visual Element Replacer */}
               <div className={`space-y-4 ${showPreview ? 'lg:col-span-1' : 'lg:col-span-2'}`}>
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-base">Notion-like Writing Canvas</h3>
+                
+                {/* Manuscript Control & Switcher Bar */}
+                <div className="p-3 bg-zinc-950/80 border border-zinc-800/90 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-sm">
+                  <div className="flex items-center gap-2 flex-grow min-w-[200px]">
+                    <FileText className="w-4 h-4 text-indigo-400 shrink-0" />
+                    <span className="text-xs font-semibold text-zinc-400 shrink-0">Manuscript:</span>
+                    {savedPapers.length > 0 ? (
+                      <select
+                        value={editingPaperId || (savedPapers[0]?._id || '')}
+                        onChange={(e) => {
+                          const selected = savedPapers.find((p: any) => p._id === e.target.value);
+                          if (selected) handleLoadPaperForEdit(selected);
+                        }}
+                        className="bg-zinc-900 border border-zinc-750 text-zinc-200 text-xs font-semibold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500 max-w-sm truncate"
+                      >
+                        {savedPapers.map((p: any) => (
+                          <option key={p._id} value={p._id}>
+                            {p.title || 'Untitled Research Manuscript'}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-xs text-zinc-500 italic">No saved papers in this project yet</span>
+                    )}
+                  </div>
+
+                  {/* Detected Elements Badge */}
+                  {savedPapers.length > 0 && editorDoc && (
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const diagMatches = (editorDoc.match(/!\[|<img|diagram-container/gi) || []).length;
+                        const tableMatches = (editorDoc.match(/<table|\|.*\|/gi) || []).length > 0 ? (editorDoc.match(/<table/gi) || []).length || 1 : 0;
+                        const formulaMatches = (editorDoc.match(/\$\$|\\\[|\\begin\{equation/gi) || []).length;
+                        const total = diagMatches + tableMatches + formulaMatches;
+                        return total > 0 ? (
+                          <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 px-2.5 py-1 rounded-full font-medium flex items-center gap-1.5">
+                            <ImageIcon className="w-3 h-3 text-indigo-400" />
+                            {total} Visual Asset{total === 1 ? '' : 's'} Ready to Replace
+                          </span>
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Workspace Toolbar */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
+                    <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl p-1 shadow-inner">
+                      <button
+                        type="button"
+                        onClick={() => setEditorMode('editor')}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                          editorMode === 'editor'
+                            ? 'bg-zinc-800 text-indigo-300 shadow-sm border border-zinc-700/60'
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        <Edit className="w-3.5 h-3.5 text-indigo-400" /> Writing Canvas
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditorMode('visuals')}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+                          editorMode === 'visuals'
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/60'
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        <ImageIcon className="w-3.5 h-3.5 text-indigo-300" />
+                        <span>Replace Visuals</span>
+                        <span className="text-[9.5px] bg-indigo-500/30 text-indigo-200 px-1.5 py-0.5 rounded-full border border-indigo-400/30 font-mono">
+                          Diagrams &bull; Tables &bull; Math
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => setShowPreview(!showPreview)}
                       className={`px-3.5 h-8 rounded text-xs font-semibold transition-colors flex items-center gap-1.5 border ${
@@ -5092,13 +5336,47 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                     </button>
                     <button
                       onClick={handleSaveChanges}
-                      className="px-4 h-8 rounded bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-zinc-100 transition-colors"
+                      className="px-4 h-8 rounded bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-zinc-100 transition-colors shadow-sm"
                     >
                       Save Changes
                     </button>
                   </div>
                 </div>
-                <TipTapEditor content={editorDoc} onChange={setEditorDoc} />
+
+                {editorMode === 'editor' ? (
+                  <TipTapEditor content={editorDoc} onChange={setEditorDoc} />
+                ) : (
+                  <div className="min-h-[550px] h-[calc(100vh-280px)]">
+                    {!editorDoc && savedPapers.length > 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full p-12 bg-zinc-950 border border-zinc-800 rounded-2xl text-center space-y-4">
+                        <FileText className="w-12 h-12 text-indigo-400" />
+                        <h4 className="text-base font-bold text-zinc-200">Load a Manuscript to Replace Visuals</h4>
+                        <p className="text-xs text-zinc-400 max-w-md">
+                          You have {savedPapers.length} saved research paper draft{savedPapers.length === 1 ? '' : 's'} in this project. Click below to load your manuscript into the workspace.
+                        </p>
+                        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                          {savedPapers.map((p: any) => (
+                            <button
+                              key={p._id}
+                              onClick={() => handleLoadPaperForEdit(p)}
+                              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                            >
+                              <FileText className="w-3.5 h-3.5" /> Load "{p.title || 'Untitled'}"
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <VisualElementReplacer
+                        htmlContent={editorDoc}
+                        onUpdateHtml={(newHtml) => {
+                          setEditorDoc(newHtml);
+                        }}
+                        format={selectedFormat}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Side Panels: LivePreview or Claim Evidence checker */}
@@ -5217,12 +5495,25 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                   <option value="APA">APA Template</option>
                 </select>
               </div>
-              <button 
-                onClick={() => setPreviewPaperModal(null)}
-                className="px-4 py-1.5 bg-zinc-800 hover:bg-zinc-755 text-zinc-300 hover:text-zinc-100 text-xs font-semibold rounded-lg transition-colors border border-zinc-750"
-              >
-                Close Preview
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    handleLoadPaperForEdit(previewPaperModal);
+                    setActiveTab('editor');
+                    setEditorMode('visuals');
+                    setPreviewPaperModal(null);
+                  }}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  <ImageIcon className="w-3.5 h-3.5" /> Replace Visuals in Workspace
+                </button>
+                <button 
+                  onClick={() => setPreviewPaperModal(null)}
+                  className="px-4 py-1.5 bg-zinc-800 hover:bg-zinc-755 text-zinc-300 hover:text-zinc-100 text-xs font-semibold rounded-lg transition-colors border border-zinc-750"
+                >
+                  Close Preview
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -339,3 +339,25 @@ export const getPaperPdf = async (req: Request, res: Response) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+export const uploadVisualImage = async (req: Request, res: Response) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: 'No image file uploaded' });
+    }
+
+    const relativeUrl = `uploads/${file.filename}`;
+    return res.status(200).json({
+      success: true,
+      url: `/${relativeUrl}`,
+      filename: file.filename,
+      size: file.size,
+      mimetype: file.mimetype,
+    });
+  } catch (error: any) {
+    console.error('[uploadVisualImage] Error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
