@@ -16,6 +16,7 @@ import EvidencePanel from '../../../components/EvidencePanel';
 import KnowledgeGraph3D from '../../../components/KnowledgeGraph3D';
 import VisualElementReplacer from '../../../components/VisualElementReplacer';
 import { getApiUrl } from '../../../utils/apiUrl';
+import katex from 'katex';
 
 const API_URL = getApiUrl();
 
@@ -252,8 +253,11 @@ const parseMarkdownToHTML = (markdown: string): string => {
   html = html.replace(/src=["']\/?uploads\//g, `src="${API_URL}/uploads/`);
   html = html.replace(/src=["']https?:\/\/[^\/]+(:\d+)?\/uploads\//g, `src="${API_URL}/uploads/`);
 
-  // If the content is already HTML, do not convert
+  // If the content is already HTML, still convert any lingering markdown bold and italic markers
   if (/<p>|<table|<ul>|<li>|<strong>|<em>|<code>|<figure|<div|<img/i.test(html)) {
+    html = html.replace(/\*\*\*([^\*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+    html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/(?<!\*)\*([^\*\n<]+)\*(?!\*)/g, '<em>$1</em>');
     return html;
   }
 
@@ -444,6 +448,10 @@ const cleanMathHTML = (html: string): string => {
   if (!html) return '';
   let clean = html;
 
+  // Heal unbalanced dollar math delimiters: $$S_t$ -> $S_t$, $S_t$$ -> $S_t$
+  clean = clean.replace(/\$\$([A-Za-z0-9_{}\\\+\-\*\/\^\(\)]+)\$/g, '$$$1$$');
+  clean = clean.replace(/\$([A-Za-z0-9_{}\\\+\-\*\/\^\(\)]+)\$\$/g, '$$$1$$');
+
   // Clean double dollar blocks ($$ ... $$)
   clean = clean.replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
     const cleanMath = math
@@ -456,18 +464,18 @@ const cleanMathHTML = (html: string): string => {
     return `\$\$${cleanMath}\$\$`;
   });
 
-  // Clean single dollar inline math ($ ... $)
-  clean = clean.replace(/\$([^\$]+?)\$/g, (match, math) => {
-    if (math.includes('\\') || math.includes('_') || math.includes('^')) {
-      const cleanMath = math
-        .replace(/<br\s*\/?>/gi, ' ')
-        .replace(/<[^>]*>/g, '')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>');
-      return `\$${cleanMath}\$`;
-    }
-    return match;
+  // Clean single dollar inline math ($ ... $) including single variables like $t$, $f$, $S_t$
+  clean = clean.replace(/\$([^\$\n]+?)\$/g, (match, math) => {
+    // Avoid matching currency like $100 or $5.99
+    if (/^\d+(\.\d+)?$/.test(math.trim())) return match;
+    const cleanMath = math
+      .replace(/<br\s*\/?>/gi, ' ')
+      .replace(/<[^>]*>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .trim();
+    return `\$${cleanMath}\$`;
   });
 
   return clean;
@@ -977,7 +985,127 @@ const formatPaperHTML = (rawHtml: string, format: string, databaseCitations: any
   // 6. Intelligent IEEE 2-tier table formatting & visual caption normalization
   html = formatAcademicVisualCaptions(html);
 
+  // 7. Deep academic formatting engine (Headings to Roman, markdown bolding, KaTeX native rendering)
+  html = deepAcademicFormatEngine(html, format, { renderKaTeX: true });
+
   return html;
+};
+
+const deepAcademicFormatEngine = (
+  html: string,
+  format: string = 'IEEE',
+  options: { renderKaTeX?: boolean } = { renderKaTeX: false }
+): string => {
+  if (!html) return '';
+  let clean = html;
+
+  // Auto-heal any legacy corrupted table tags
+  clean = clean.replace(/<table[^>]*src=[\s\S]*?<\/table>/gi, '');
+  clean = clean.replace(/<table class="[&<]lt;?img[\s\S]*?<\/table>/gi, '');
+
+  // 1. Convert markdown bold and italic everywhere in HTML (including table cells)
+  clean = clean.replace(/\*\*\*([^\*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+  clean = clean.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+  clean = clean.replace(/(?<!\*)\*([^\*\n<]+)\*(?!\*)/g, '<em>$1</em>');
+
+  // 2. Heal unbalanced and malformed dollar math delimiters: $$S_t$ -> $S_t$, $S_t$$ -> $S_t$
+  clean = clean.replace(/\$\$([A-Za-z0-9_{}\\\+\-\*\/\^\(\)]+)\$/g, '$$$1$$');
+  clean = clean.replace(/\$([A-Za-z0-9_{}\\\+\-\*\/\^\(\)]+)\$\$/g, '$$$1$$');
+
+  // 3. Format headings for academic standards (IEEE, ACM, APA, etc.)
+  const standardUnnumbered = ['abstract', 'keywords', 'acknowledgment', 'acknowledgments', 'references', 'appendix'];
+
+  clean = clean.replace(/<h([2-4])([^>]*)>([\s\S]*?)<\/h\1>/gi, (match, level, attrs, textContent) => {
+    let rawText = textContent.replace(/<[^>]*>/g, '').trim();
+    rawText = rawText.replace(/^#+\s*/, '');
+    const lower = rawText.toLowerCase();
+
+    if (standardUnnumbered.includes(lower)) {
+      if (format === 'IEEE' || format === 'ACM') {
+        return `<h${level}${attrs}>${rawText.toUpperCase()}</h${level}>`;
+      }
+      return match;
+    }
+
+    if (format === 'IEEE') {
+      if (level === '2') {
+        // Check if already Roman e.g. "VII. METHODOLOGY"
+        const romanMatch = rawText.match(/^([IVXLCDM]+)\.?\s*(.*)$/i);
+        if (romanMatch) {
+          return `<h2${attrs}>${romanMatch[1].toUpperCase()}. ${romanMatch[2].trim().toUpperCase()}</h2>`;
+        }
+        // Match arabic number e.g. "7. Methodology" or "10. Results and Evaluation"
+        const numMatch = rawText.match(/^(\d+)\.?\s*(.*)$/);
+        if (numMatch) {
+          const num = parseInt(numMatch[1], 10);
+          const roman = toRomanGlobal(num);
+          const title = numMatch[2].trim().toUpperCase();
+          return `<h2${attrs}>${roman}. ${title}</h2>`;
+        }
+        return `<h2${attrs}>${rawText.toUpperCase()}</h2>`;
+      } else if (level === '3') {
+        // Subheading e.g. "7.1 Overview" or "A. Overview"
+        const subMatch = rawText.match(/^(\d+)\.(\d+)\.?\s*(.*)$/);
+        if (subMatch) {
+          const letter = String.fromCharCode(64 + parseInt(subMatch[2], 10));
+          return `<h3${attrs}>${letter}. ${subMatch[3].trim()}</h3>`;
+        }
+        return `<h3${attrs}>${rawText}</h3>`;
+      } else if (level === '4') {
+        const subSubMatch = rawText.match(/^(\d+)\.(\d+)\.(\d+)\.?\s*(.*)$/);
+        if (subSubMatch) {
+          return `<h4${attrs}>${subSubMatch[3]}) ${subSubMatch[4].trim()}</h4>`;
+        }
+        return `<h4${attrs}>${rawText}</h4>`;
+      }
+    } else if (format === 'ACM') {
+      if (level === '2') {
+        const numMatch = rawText.match(/^(\d+)\.?\s*(.*)$/);
+        if (numMatch) {
+          return `<h2${attrs}>${numMatch[1]} ${numMatch[2].trim().toUpperCase()}</h2>`;
+        }
+        return `<h2${attrs}>${rawText.toUpperCase()}</h2>`;
+      }
+    } else if (format === 'APA') {
+      const cleanTitle = rawText.replace(/^\d+(\.\d+)*\.?\s*/, '').trim();
+      return `<h${level}${attrs}>${cleanTitle}</h${level}>`;
+    }
+
+    return match;
+  });
+
+  // 4. Two-tier IEEE Table Captions & Figure Captions
+  clean = formatAcademicVisualCaptions(clean);
+
+  // 5. Math processing
+  if (options.renderKaTeX) {
+    // Render block math $$...$$
+    clean = clean.replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
+      try {
+        const cleanMath = repairLatex(math.replace(/<[^>]*>/g, '').trim());
+        return `<div class="katex-display my-3 text-center overflow-x-auto">${katex.renderToString(cleanMath, { displayMode: true, throwOnError: false })}</div>`;
+      } catch (e) {
+        return match;
+      }
+    });
+
+    // Render inline math $...$
+    clean = clean.replace(/\$([^\$\n]+?)\$/g, (match, math) => {
+      // Avoid matching currency like $100 or $5.99
+      if (/^\d+(\.\d+)?$/.test(math.trim())) return match;
+      try {
+        const cleanMath = math.replace(/<[^>]*>/g, '').trim();
+        return katex.renderToString(cleanMath, { displayMode: false, throwOnError: false });
+      } catch (e) {
+        return match;
+      }
+    });
+  } else {
+    // In editor mode, keep math delimiters clean and well-formed
+    clean = cleanMathHTML(clean);
+  }
+
+  return clean;
 };
 
 function AgentStepProgress({ step }: { step: any }) {
@@ -1878,23 +2006,60 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
     if (isCorrecting || !editorDoc) return;
     setIsCorrecting(true);
     try {
-      // 1. First run the built-in deep academic formatter for instant table 2-tier & caption healing
-      let updatedHtml = formatAcademicVisualCaptions(editorDoc);
-      updatedHtml = cleanMathHTML(updatedHtml);
+      // 1. Run the deep academic formatting engine on editorDoc (heals headings, bolding, math, and tables)
+      let updatedHtml = deepAcademicFormatEngine(editorDoc, selectedFormat, { renderKaTeX: false });
 
       // 2. Also try external FormaTeX service for advanced math if available
       try {
         const res = await axios.post(`${API_URL}/api/formatex/auto-correct`, { htmlContent: updatedHtml }, { timeout: 6000 });
         if (res.data && res.data.success && res.data.htmlContent) {
-          updatedHtml = formatAcademicVisualCaptions(res.data.htmlContent);
+          updatedHtml = deepAcademicFormatEngine(res.data.htmlContent, selectedFormat, { renderKaTeX: false });
         }
       } catch (e) {
-        // Fallback to local academic formatting
+        // Fallback to local deep academic formatting engine
+      }
+
+      // 3. Auto-persist to MongoDB if editing a paper draft so database stays completely in sync
+      if (editingPaperId) {
+        try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(updatedHtml, 'text/html');
+          const updatedSections: any[] = [];
+          let currentTitle = 'Introduction';
+          let currentHeading = '1. Introduction';
+          let currentContent = '';
+
+          Array.from(doc.body.children).forEach((child: any) => {
+            if (child.tagName === 'H2' || child.tagName === 'H1') {
+              if (currentContent) {
+                updatedSections.push({ title: currentTitle, heading: currentHeading, content: currentContent });
+              }
+              const raw = child.textContent?.trim() || '';
+              currentHeading = raw;
+              currentTitle = raw.replace(/^[IVXLCDM\d]+\.?\s*/i, '').trim();
+              currentContent = '';
+            } else {
+              currentContent += child.outerHTML;
+            }
+          });
+          if (currentContent) {
+            updatedSections.push({ title: currentTitle, heading: currentHeading, content: currentContent });
+          }
+
+          if (updatedSections.length > 0) {
+            await axios.put(`${API_URL}/api/projects/${projectId}/generated-papers/${editingPaperId}`, {
+              sections: updatedSections,
+              content: updatedHtml
+            });
+          }
+        } catch (persistErr) {
+          console.warn('[AI Corrector] Auto-persist formatted draft failed:', persistErr);
+        }
       }
 
       lastFormattedContentRef.current = updatedHtml;
       setEditorDoc(updatedHtml);
-      alert('Academic Formatting Engine: Successfully formatted all tables (IEEE 2-tier), figure captions, and mathematical formulas!');
+      alert(`Academic Formatting Engine: Successfully formatted manuscript to publication-grade ${selectedFormat} standards (Roman headings, IEEE 2-tier tables, markdown bolding, and mathematical notation)!`);
     } catch (err) {
       console.error('[AI Corrector] Manual correct failed:', err);
       alert('Academic Formatting Engine completed formatting.');
@@ -6682,6 +6847,12 @@ function LivePreview({ htmlContent, format, project, citations }: { htmlContent:
     };
 
     const timer = setTimeout(async () => {
+      // Run heading formatting and table processing immediately without waiting for CDN scripts
+      formatHeadingsLocal();
+      if (containerRef.current) {
+        await processFiguresAndTables(containerRef.current);
+      }
+
       if (!(window as any).plantumlEncoder && !document.getElementById('plantuml-encoder-js')) {
         const script = document.createElement('script');
         script.id = 'plantuml-encoder-js';
@@ -6710,7 +6881,7 @@ function LivePreview({ htmlContent, format, project, citations }: { htmlContent:
       };
 
       await checkAndRender();
-    }, 150);
+    }, 50);
 
     return () => clearTimeout(timer);
   }, [cleanedHtmlContent, format]);
