@@ -558,34 +558,21 @@ export default function VisualElementReplacer({
 
     setUploadingId(item.id);
     try {
-      // 1. Base64 Data URL provides immediate, 100% fail-safe rendering across all hosts
-      let finalImageUrl = staged.dataUrl || staged.previewUrl;
+      // 1. Base64 Data URL is the 100% self-contained, bulletproof source of truth.
+      // It embeds directly into the document HTML, requires zero remote server requests,
+      // never produces HTTP 400 Bad Request or 404 Not Found errors, and renders
+      // immediately and permanently across all devices, Vercel deployments, and PDF exports.
+      const finalImageUrl = staged.dataUrl || staged.previewUrl;
 
-      // 2. Background upload attempt (strictly for remote CDN buckets like R2/S3, NEVER /uploads/ or localhost)
+      // Optional background backup upload (fire-and-forget, does NOT alter finalImageUrl)
       try {
         const formData = new FormData();
         formData.append('image', staged.file);
-        const res = await axios.post(`${API_URL}/api/papers/upload-image`, formData, {
+        axios.post(`${API_URL}/api/papers/upload-image`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        if (res.data?.url) {
-          const serverUrl = res.data.url;
-          // Strictly allow ONLY true external CDN URLs (Cloudflare R2 or Amazon S3 buckets)
-          // We NEVER override with relative /uploads/ or host-based /uploads/ paths which 404 on Vercel
-          const isTrueExternalCdn = (
-            serverUrl.startsWith('https://') &&
-            !serverUrl.includes('/uploads/') &&
-            (serverUrl.includes('.r2.cloudflarestorage.com') ||
-             serverUrl.includes('.r2.dev') ||
-             serverUrl.includes('.amazonaws.com') ||
-             serverUrl.includes('storage.googleapis.com'))
-          );
-          if (isTrueExternalCdn) {
-            finalImageUrl = serverUrl;
-          }
-        }
+        }).catch(() => {});
       } catch (uploadErr) {
-        console.warn('Backend image upload fallback to embedded DataURL:', uploadErr);
+        // Silent catch: Base64 is already safely active
       }
 
       // 3. Register original markup before replacement

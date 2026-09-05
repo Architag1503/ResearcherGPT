@@ -368,8 +368,9 @@ export const uploadVisualImage = async (req: Request, res: Response) => {
         };
 
         await s3Client.send(new PutObjectCommand(uploadParams));
-        const endpoint = process.env.R2_PUBLIC_URL || process.env.R2_ENDPOINT || 'https://10daf3809212776719f5a55b3f6b0f6e.r2.cloudflarestorage.com';
-        finalUrl = `${endpoint}/${bucketName}/${key}`;
+        if (process.env.R2_PUBLIC_URL) {
+          finalUrl = `${process.env.R2_PUBLIC_URL.replace(/\/+$/, '')}/${key}`;
+        }
       } catch (r2Err: any) {
         console.warn('[uploadVisualImage] R2 upload failed, using direct host URL:', r2Err.message);
       }
