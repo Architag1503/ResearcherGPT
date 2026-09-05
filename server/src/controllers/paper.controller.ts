@@ -347,10 +347,46 @@ export const uploadVisualImage = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No image file uploaded' });
     }
 
+    const host = req.get('host') || 'localhost:5000';
+    const protocol = req.protocol || 'http';
     const relativeUrl = `uploads/${file.filename}`;
+    let finalUrl = `${protocol}://${host}/${relativeUrl}`;
+
+    // If R2 credentials exist, attempt upload to Cloudflare R2
+    const hasR2Creds = !!(process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY);
+    if (hasR2Creds) {
+      try {
+        const bucketName = process.env.R2_BUCKET_NAME || 'researcher-gpt';
+        const key = `visuals/${Date.now()}-${file.filename}`;
+        const fileContent = fs.readFileSync(file.path);
+
+        const uploadParams = {
+          Bucket: bucketName,
+          Key: key,
+          Body: fileContent,
+          ContentType: file.mimetype || 'image/png',
+        };
+
+        await s3Client.send(new PutObjectCommand(uploadParams));
+        const endpoint = process.env.R2_PUBLIC_URL || process.env.R2_ENDPOINT || 'https://10daf3809212776719f5a55b3f6b0f6e.r2.cloudflarestorage.com';
+        finalUrl = `${endpoint}/${bucketName}/${key}`;
+      } catch (r2Err: any) {
+        console.warn('[uploadVisualImage] R2 upload failed, using direct host URL:', r2Err.message);
+      }
+    }
+
+    // Convert to base64 Data URL so the frontend can also use it losslessly
+    let base64Url: string | undefined = undefined;
+    try {
+      const buffer = fs.readFileSync(file.path);
+      base64Url = `data:${file.mimetype || 'image/png'};base64,${buffer.toString('base64')}`;
+    } catch (b64Err) {}
+
     return res.status(200).json({
       success: true,
-      url: `/${relativeUrl}`,
+      url: finalUrl,
+      relativeUrl: `/${relativeUrl}`,
+      dataUrl: base64Url,
       filename: file.filename,
       size: file.size,
       mimetype: file.mimetype,

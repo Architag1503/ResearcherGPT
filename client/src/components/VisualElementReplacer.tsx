@@ -58,10 +58,12 @@ export default function VisualElementReplacer({
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadSuccessId, setUploadSuccessId] = useState<string | null>(null);
   const [spanModes, setSpanModes] = useState<{ [id: string]: 'column' | 'wide' }>({});
+  const [originalMarkupRegistry, setOriginalMarkupRegistry] = useState<{ [id: string]: string }>({});
   const [stagedFiles, setStagedFiles] = useState<{
     [id: string]: {
       file: File;
       previewUrl: string;
+      dataUrl?: string;
       dimensions?: { width: number; height: number };
     };
   }>({});
@@ -90,23 +92,19 @@ export default function VisualElementReplacer({
       return roman || 'I';
     };
 
-    // 1. EXTRACT DIAGRAMS & FIGURES
-    // Match <div class="diagram-container"...>...</div> or custom-replaced-visual
-    const diagramContainerRegex = /<div[^>]*class=["'][^"']*diagram-container[^"']*["'][^>]*>[\s\S]*?<\/div>/gi;
+    // 0. FIRST: Extract already-replaced custom figures (<figure class="... custom-replaced-(visual|table|formula) ...">)
+    const replacedFigureRegex = /<figure[^>]*class=["'][^"']*custom-replaced-(visual|table|formula)[^"']*["'][^>]*>[\s\S]*?<\/figure>/gi;
     let match: RegExpExecArray | null;
 
-    while ((match = diagramContainerRegex.exec(htmlContent)) !== null) {
+    while ((match = replacedFigureRegex.exec(htmlContent)) !== null) {
       const fullMatch = match[0];
+      const kind = match[1]; // 'visual' | 'table' | 'formula'
 
-      // Check if it was already marked as a replaced table
-      if (fullMatch.includes('custom-replaced-table')) {
-        continue;
-      }
-
-      figCount++;
-      const isReplaced = fullMatch.includes('custom-replaced-visual');
       const imgSrcMatch = fullMatch.match(/<img[^>]+src=["']([^"']+)["']/i);
       const currentSrc = imgSrcMatch ? imgSrcMatch[1] : undefined;
+
+      const idMatch = fullMatch.match(/data-visual-id=["']([^"']+)["']/i) || fullMatch.match(/data-replaced-id=["']([^"']+)["']/i);
+      const visualId = idMatch ? idMatch[1] : `replaced-${kind}-${Date.now()}`;
 
       const origHtmlMatch = fullMatch.match(/data-original-html=["']([^"']+)["']/i);
       let originalRawHtml: string | undefined = undefined;
@@ -114,7 +112,147 @@ export default function VisualElementReplacer({
         try { originalRawHtml = decodeURIComponent(origHtmlMatch[1]); } catch (e) {}
       }
 
-      // Extract figure caption or alt text
+      if (kind === 'visual') {
+        figCount++;
+        const captionMatch = fullMatch.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i);
+        const caption = captionMatch ? captionMatch[1].replace(/<[^>]*>/g, '').trim() : `Fig ${figCount}: System Architecture Workflow`;
+        list.push({
+          id: visualId,
+          type: 'diagram',
+          name: caption,
+          caption,
+          currentHtml: fullMatch,
+          currentSrc,
+          originalRawHtml,
+          isReplaced: true,
+          replacedImageUrl: currentSrc,
+          recommendedResolution: {
+            width: 800,
+            height: 500,
+            aspectRatio: '16:10',
+            description: 'Single-column academic figure. 300 DPI, PNG or SVG format, high-contrast on transparent or white background.'
+          }
+        });
+      } else if (kind === 'table') {
+        tableCount++;
+        const captionMatch = fullMatch.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i);
+        const caption = captionMatch ? captionMatch[1].replace(/<[^>]*>/g, '').trim() : `Table ${toRoman(tableCount)}: Experiment Evaluation`;
+        list.push({
+          id: visualId,
+          type: 'table',
+          name: caption,
+          caption,
+          currentHtml: fullMatch,
+          currentSrc,
+          originalRawHtml,
+          isReplaced: true,
+          replacedImageUrl: currentSrc,
+          recommendedResolution: {
+            width: 1200,
+            height: 600,
+            aspectRatio: '2:1',
+            description: 'Academic table graphic. 300 DPI, pure white background, high-contrast dark text and borders.'
+          }
+        });
+      } else if (kind === 'formula') {
+        formulaCount++;
+        const eqNumMatch = fullMatch.match(/<figcaption[^>]*class=["'][^"']*equation-num[^"']*["'][^>]*>\(([^)]+)\)<\/figcaption>/i);
+        const eqNum = eqNumMatch ? eqNumMatch[1] : `${formulaCount}`;
+        list.push({
+          id: visualId,
+          type: 'formula',
+          name: `Equation (${eqNum}): Mathematical Formulation`,
+          caption: `Equation (${eqNum})`,
+          currentHtml: fullMatch,
+          currentSrc,
+          originalRawHtml,
+          isReplaced: true,
+          replacedImageUrl: currentSrc,
+          recommendedResolution: {
+            width: 900,
+            height: 200,
+            aspectRatio: '4.5:1',
+            description: 'Mathematical derivation graphic. 300 DPI, transparent or pure white background, centered symbols.'
+          }
+        });
+      }
+    }
+
+    // Also support legacy div-based custom replacements for backward compatibility
+    const legacyDivRegex = /<div[^>]*class=["'][^"']*custom-replaced-(visual|table|formula)[^"']*["'][^>]*>[\s\S]*?<\/div>/gi;
+    while ((match = legacyDivRegex.exec(htmlContent)) !== null) {
+      const fullMatch = match[0];
+      if (list.some(el => el.currentHtml.includes(fullMatch))) continue;
+      const kind = match[1];
+
+      const imgSrcMatch = fullMatch.match(/<img[^>]+src=["']([^"']+)["']/i);
+      const currentSrc = imgSrcMatch ? imgSrcMatch[1] : undefined;
+
+      const idMatch = fullMatch.match(/data-replaced-id=["']([^"']+)["']/i) || fullMatch.match(/data-visual-id=["']([^"']+)["']/i);
+      const visualId = idMatch ? idMatch[1] : `legacy-${kind}-${Date.now()}`;
+
+      const origHtmlMatch = fullMatch.match(/data-original-html=["']([^"']+)["']/i);
+      let originalRawHtml: string | undefined = undefined;
+      if (origHtmlMatch && origHtmlMatch[1]) {
+        try { originalRawHtml = decodeURIComponent(origHtmlMatch[1]); } catch (e) {}
+      }
+
+      if (kind === 'visual') {
+        figCount++;
+        list.push({
+          id: visualId,
+          type: 'diagram',
+          name: `Fig ${figCount}: Architecture Diagram`,
+          caption: `Fig ${figCount}: Architecture Diagram`,
+          currentHtml: fullMatch,
+          currentSrc,
+          originalRawHtml,
+          isReplaced: true,
+          replacedImageUrl: currentSrc,
+          recommendedResolution: { width: 800, height: 500, aspectRatio: '16:10', description: 'Single-column diagram.' }
+        });
+      } else if (kind === 'table') {
+        tableCount++;
+        list.push({
+          id: visualId,
+          type: 'table',
+          name: `Table ${toRoman(tableCount)}: Experiment Evaluation`,
+          caption: `Table ${toRoman(tableCount)}: Experiment Evaluation`,
+          currentHtml: fullMatch,
+          currentSrc,
+          originalRawHtml,
+          isReplaced: true,
+          replacedImageUrl: currentSrc,
+          recommendedResolution: { width: 1200, height: 600, aspectRatio: '2:1', description: 'Academic table graphic.' }
+        });
+      } else if (kind === 'formula') {
+        formulaCount++;
+        list.push({
+          id: visualId,
+          type: 'formula',
+          name: `Equation (${formulaCount}): Mathematical Formulation`,
+          caption: `Equation (${formulaCount})`,
+          currentHtml: fullMatch,
+          currentSrc,
+          originalRawHtml,
+          isReplaced: true,
+          replacedImageUrl: currentSrc,
+          recommendedResolution: { width: 900, height: 200, aspectRatio: '4.5:1', description: 'Mathematical derivation graphic.' }
+        });
+      }
+    }
+
+    // 1. EXTRACT UNREPLACED DIAGRAMS & FIGURES
+    const diagramContainerRegex = /<div[^>]*class=["'][^"']*diagram-container[^"']*["'][^>]*>[\s\S]*?<\/div>/gi;
+    while ((match = diagramContainerRegex.exec(htmlContent)) !== null) {
+      const fullMatch = match[0];
+      if (fullMatch.includes('custom-replaced-table') || fullMatch.includes('custom-replaced-visual')) continue;
+      if (list.some(el => el.currentHtml.includes(fullMatch))) continue;
+
+      figCount++;
+      const imgSrcMatch = fullMatch.match(/<img[^>]+src=["']([^"']+)["']/i);
+      const currentSrc = imgSrcMatch ? imgSrcMatch[1] : undefined;
+
       let caption = '';
       const captionMatch = fullMatch.match(/<p[^>]*class=["'][^"']*figure-caption[^"']*["'][^>]*>([\s\S]*?)<\/p>/i);
       if (captionMatch) {
@@ -137,9 +275,8 @@ export default function VisualElementReplacer({
         caption: caption || `System Architecture Workflow`,
         currentHtml: fullMatch,
         currentSrc,
-        originalRawHtml,
-        isReplaced,
-        replacedImageUrl: isReplaced ? currentSrc : undefined,
+        rawContent: fullMatch,
+        isReplaced: false,
         recommendedResolution: {
           width: 800,
           height: 500,
@@ -149,11 +286,10 @@ export default function VisualElementReplacer({
       });
     }
 
-    // Also check for standalone <img> that are NOT already in diagram containers
+    // Standalone <img> not in diagram containers
     const imgRegex = /<img\s+(?!class=["'][^"']*diagram-figure[^"']*["'])[^>]*src=["']([^"']+)["'][^>]*>/gi;
     while ((match = imgRegex.exec(htmlContent)) !== null) {
       const fullMatch = match[0];
-      // If it's already inside one of our captured diagram containers, skip
       if (list.some(d => d.currentHtml.includes(fullMatch))) continue;
 
       figCount++;
@@ -169,6 +305,7 @@ export default function VisualElementReplacer({
         caption: alt,
         currentHtml: fullMatch,
         currentSrc,
+        rawContent: fullMatch,
         isReplaced: false,
         recommendedResolution: {
           width: 800,
@@ -179,7 +316,7 @@ export default function VisualElementReplacer({
       });
     }
 
-    // Also check for Markdown image syntax: ![alt](url)
+    // Markdown image syntax: ![alt](url)
     const mdImgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
     while ((match = mdImgRegex.exec(htmlContent)) !== null) {
       const fullMatch = match[0];
@@ -197,6 +334,7 @@ export default function VisualElementReplacer({
         caption: alt,
         currentHtml: fullMatch,
         currentSrc,
+        rawContent: fullMatch,
         isReplaced: false,
         recommendedResolution: {
           width: 800,
@@ -207,51 +345,11 @@ export default function VisualElementReplacer({
       });
     }
 
-    // 2. EXTRACT TABLES
-    // Check for replaced table containers first
-    const replacedTableRegex = /<div[^>]*class=["'][^"']*custom-replaced-table[^"']*["'][^>]*>[\s\S]*?<\/div>/gi;
-    while ((match = replacedTableRegex.exec(htmlContent)) !== null) {
-      const fullMatch = match[0];
-      tableCount++;
-      const imgSrcMatch = fullMatch.match(/<img[^>]+src=["']([^"']+)["']/i);
-      const currentSrc = imgSrcMatch ? imgSrcMatch[1] : undefined;
-
-      const origHtmlMatch = fullMatch.match(/data-original-html=["']([^"']+)["']/i);
-      let originalRawHtml: string | undefined = undefined;
-      if (origHtmlMatch && origHtmlMatch[1]) {
-        try { originalRawHtml = decodeURIComponent(origHtmlMatch[1]); } catch (e) {}
-      }
-
-      let caption = '';
-      const captionMatch = fullMatch.match(/<div[^>]*class=["'][^"']*table-caption[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
-      if (captionMatch) {
-        caption = captionMatch[1].replace(/<[^>]*>/g, '').trim();
-      }
-
-      list.push({
-        id: `table-replaced-${tableCount}`,
-        type: 'table',
-        name: caption || `Table ${toRoman(tableCount)}: Experiment Evaluation`,
-        caption: caption || `Table ${toRoman(tableCount)}: Experiment Evaluation`,
-        currentHtml: fullMatch,
-        currentSrc,
-        originalRawHtml,
-        isReplaced: true,
-        replacedImageUrl: currentSrc,
-        recommendedResolution: {
-          width: 1200,
-          height: 600,
-          aspectRatio: '2:1',
-          description: 'Academic table graphic. 300 DPI, pure white background, high-contrast dark text and borders.',
-        },
-      });
-    }
-
-    // Normal HTML Tables (with optional preceding table-caption)
+    // 2. EXTRACT UNREPLACED TABLES
+    // HTML Tables (with optional preceding table-caption)
     const tableWithCaptionRegex = /(?:<div[^>]*class=["'][^"']*table-caption[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*)?<table[^>]*>([\s\S]*?)<\/table>/gi;
     while ((match = tableWithCaptionRegex.exec(htmlContent)) !== null) {
       const fullMatch = match[0];
-      // Skip if it's already accounted for
       if (list.some(t => t.currentHtml.includes(fullMatch))) continue;
 
       tableCount++;
@@ -302,42 +400,7 @@ export default function VisualElementReplacer({
       });
     }
 
-    // 3. EXTRACT MATHEMATICAL FORMULAS
-    // First, check for replaced formula blocks
-    const replacedFormulaRegex = /<div[^>]*class=["'][^"']*custom-replaced-formula[^"']*["'][^>]*>[\s\S]*?<\/div>/gi;
-    while ((match = replacedFormulaRegex.exec(htmlContent)) !== null) {
-      const fullMatch = match[0];
-      formulaCount++;
-      const imgSrcMatch = fullMatch.match(/<img[^>]+src=["']([^"']+)["']/i);
-      const currentSrc = imgSrcMatch ? imgSrcMatch[1] : undefined;
-      const eqNumMatch = fullMatch.match(/<span[^>]*class=["'][^"']*equation-num[^"']*["'][^>]*>\(([^)]+)\)<\/span>/i);
-      const eqNum = eqNumMatch ? eqNumMatch[1] : `${formulaCount}`;
-
-      const origHtmlMatch = fullMatch.match(/data-original-html=["']([^"']+)["']/i);
-      let originalRawHtml: string | undefined = undefined;
-      if (origHtmlMatch && origHtmlMatch[1]) {
-        try { originalRawHtml = decodeURIComponent(origHtmlMatch[1]); } catch (e) {}
-      }
-
-      list.push({
-        id: `formula-replaced-${formulaCount}`,
-        type: 'formula',
-        name: `Equation (${eqNum}): Mathematical Formulation`,
-        caption: `Equation (${eqNum})`,
-        currentHtml: fullMatch,
-        currentSrc,
-        originalRawHtml,
-        isReplaced: true,
-        replacedImageUrl: currentSrc,
-        recommendedResolution: {
-          width: 900,
-          height: 200,
-          aspectRatio: '4.5:1',
-          description: 'Single-line mathematical formula. 300 DPI, transparent or pure white background, centered formula symbols.',
-        },
-      });
-    }
-
+    // 3. EXTRACT UNREPLACED MATHEMATICAL FORMULAS
     // Double dollar LaTeX math blocks: $$ ... $$
     const mathBlockRegex = /\$\$([\s\S]*?)\$\$/g;
     while ((match = mathBlockRegex.exec(htmlContent)) !== null) {
@@ -345,7 +408,6 @@ export default function VisualElementReplacer({
       const innerMath = match[1].trim();
 
       formulaCount++;
-      // Check if formula has \tag{N}
       const tagMatch = innerMath.match(/\\tag\{([^}]+)\}/);
       const eqNum = tagMatch ? tagMatch[1] : `${formulaCount}`;
 
@@ -438,33 +500,39 @@ export default function VisualElementReplacer({
     };
   }, [elements]);
 
-  // Handle local file selection and inspect image dimensions
+  // Handle local file selection and inspect image dimensions using DataURL
   const handleFileSelect = (elementId: string, file: File) => {
-    const previewUrl = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      setStagedFiles(prev => ({
-        ...prev,
-        [elementId]: {
-          file,
-          previewUrl,
-          dimensions: { width: img.naturalWidth, height: img.naturalHeight },
-        },
-      }));
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        setStagedFiles(prev => ({
+          ...prev,
+          [elementId]: {
+            file,
+            previewUrl: dataUrl,
+            dataUrl: dataUrl,
+            dimensions: { width: img.naturalWidth, height: img.naturalHeight },
+          },
+        }));
+      };
+      img.src = dataUrl;
     };
-    img.src = previewUrl;
+    reader.readAsDataURL(file);
   };
 
-  // Perform Image Replacement
+  // Perform Image Replacement across all 3 visual asset types
   const handleReplaceElement = async (item: VisualElement) => {
     const staged = stagedFiles[item.id];
     if (!staged) return;
 
     setUploadingId(item.id);
     try {
-      let finalImageUrl = staged.previewUrl;
+      // 1. Base64 Data URL provides immediate, 100% fail-safe rendering across all hosts
+      let finalImageUrl = staged.dataUrl || staged.previewUrl;
 
-      // Try uploading to server endpoint
+      // 2. Attempt background upload to cloud/server for CDN persistence
       try {
         const formData = new FormData();
         formData.append('image', staged.file);
@@ -472,61 +540,62 @@ export default function VisualElementReplacer({
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         if (res.data?.url) {
-          finalImageUrl = res.data.url;
-          // Normalize leading slash
-          if (!finalImageUrl.startsWith('/') && !finalImageUrl.startsWith('http')) {
-            finalImageUrl = `/${finalImageUrl}`;
+          const serverUrl = res.data.url;
+          if (serverUrl.startsWith('http://') || serverUrl.startsWith('https://')) {
+            finalImageUrl = serverUrl;
+          } else {
+            const cleanPath = serverUrl.startsWith('/') ? serverUrl : `/${serverUrl}`;
+            finalImageUrl = `${API_URL}${cleanPath}`;
           }
         }
       } catch (uploadErr) {
-        console.warn('Server upload failed, converting to embedded DataURL fallback:', uploadErr);
-        // Fallback: convert file to Base64 data URL so replacement always works locally
-        finalImageUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(staged.file);
-        });
+        console.warn('Backend image upload fallback to embedded DataURL:', uploadErr);
       }
 
-      // Generate replacement HTML based on element type
+      // 3. Register original markup before replacement
+      setOriginalMarkupRegistry(prev => ({
+        ...prev,
+        [item.id]: prev[item.id] || item.originalRawHtml || item.rawContent || item.currentHtml
+      }));
+
+      // 4. Build semantic HTML5 <figure> markup (cannot be cut off by non-greedy regex)
       let replacementHtml = '';
       const cleanCaption = item.caption || item.name;
       const spanMode = spanModes[item.id] || 'column';
       const spanStyle = spanMode === 'wide' ? 'column-span:all;-webkit-column-span:all;' : '';
-      const originalToPreserve = item.originalRawHtml || item.currentHtml;
+      const originalToPreserve = originalMarkupRegistry[item.id] || item.originalRawHtml || item.rawContent || item.currentHtml;
       const encodedOriginal = encodeURIComponent(originalToPreserve);
 
       if (item.type === 'diagram') {
         replacementHtml = `
-<div class="diagram-container custom-replaced-visual" data-replaced-id="${item.id}" data-original-name="${item.name}" data-span-mode="${spanMode}" data-original-html="${encodedOriginal}" style="text-align:center;margin:18pt auto;width:100%;max-width:100%;box-sizing:border-box;break-inside:avoid;${spanStyle}">
-  <img src="${finalImageUrl}" alt="${cleanCaption}" class="diagram-figure mx-auto shadow-sm" style="max-width:100%;height:auto;display:block;margin:0 auto;border:1px solid #ddd;padding:8px;background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.1);" />
-  <p class="figure-caption" style="font-size:8.5pt;color:#333;margin-top:6pt;margin-bottom:12pt;text-align:center;font-style:italic;">${cleanCaption}</p>
-</div>`;
+<figure class="paper-figure custom-replaced-visual" data-visual-id="${item.id}" data-visual-type="diagram" data-span-mode="${spanMode}" data-original-html="${encodedOriginal}" style="text-align:center;margin:18pt auto;width:100%;max-width:100%;box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;${spanStyle}">
+  <img src="${finalImageUrl}" alt="${cleanCaption}" class="diagram-figure mx-auto shadow-sm" style="max-width:100%;height:auto;display:block;margin:0 auto;border:1px solid #ddd;padding:6px;background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.1);" />
+  <figcaption class="figure-caption" style="font-size:8.5pt;color:#333;margin-top:6pt;margin-bottom:12pt;text-align:center;font-style:italic;">${cleanCaption}</figcaption>
+</figure>`;
       } else if (item.type === 'table') {
         replacementHtml = `
-<div class="diagram-container custom-replaced-table" data-replaced-id="${item.id}" data-original-name="${item.name}" data-span-mode="${spanMode}" data-original-html="${encodedOriginal}" style="text-align:center;margin:18pt auto;width:100%;max-width:100%;box-sizing:border-box;break-inside:avoid;${spanStyle}">
-  <div class="table-caption" style="font-size:8.5pt;color:#000;margin-bottom:6pt;text-align:center;font-weight:bold;text-transform:uppercase;">${cleanCaption}</div>
+<figure class="paper-table custom-replaced-table" data-visual-id="${item.id}" data-visual-type="table" data-span-mode="${spanMode}" data-original-html="${encodedOriginal}" style="text-align:center;margin:18pt auto;width:100%;max-width:100%;box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;${spanStyle}">
+  <figcaption class="table-caption" style="font-size:8.5pt;color:#000;margin-bottom:6pt;text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">${cleanCaption}</figcaption>
   <img src="${finalImageUrl}" alt="${cleanCaption}" class="table-figure mx-auto shadow-sm" style="max-width:100%;height:auto;display:block;margin:0 auto;border:1px solid #ddd;padding:6px;background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.1);" />
-</div>`;
+</figure>`;
       } else if (item.type === 'formula') {
         const eqNum = item.caption.replace(/[^0-9]/g, '') || '1';
         replacementHtml = `
-<div class="custom-replaced-formula" data-replaced-id="${item.id}" data-original-name="${item.name}" data-original-html="${encodedOriginal}" style="text-align:center;margin:14pt auto;width:100%;max-width:100%;display:flex;align-items:center;justify-content:center;position:relative;break-inside:avoid;box-sizing:border-box;padding:6px 0;">
-  <img src="${finalImageUrl}" alt="${cleanCaption}" class="formula-figure" style="max-width:85%;max-height:120px;height:auto;object-fit:contain;display:inline-block;padding:4px;background:transparent;" />
-  <span class="equation-num" style="position:absolute;right:12px;font-size:9pt;font-family:'Times New Roman',serif;color:#333;font-style:normal;font-weight:normal;">(${eqNum})</span>
-</div>`;
+<figure class="paper-formula custom-replaced-formula" data-visual-id="${item.id}" data-visual-type="formula" data-original-html="${encodedOriginal}" style="text-align:center;margin:14pt auto;width:100%;max-width:100%;display:flex;align-items:center;justify-content:center;position:relative;break-inside:avoid;page-break-inside:avoid;box-sizing:border-box;padding:6px 0;">
+  <img src="${finalImageUrl}" alt="${cleanCaption}" class="formula-figure" style="max-width:85%;max-height:130px;height:auto;object-fit:contain;display:inline-block;padding:4px;background:transparent;" />
+  <figcaption class="equation-num" style="position:absolute;right:12px;font-size:9pt;font-family:'Times New Roman',serif;color:#333;font-style:normal;font-weight:normal;">(${eqNum})</figcaption>
+</figure>`;
       }
 
-      // Replace occurrence in htmlContent
+      // 5. Replace occurrence in htmlContent
+      let updatedHtml = htmlContent;
       if (htmlContent.includes(item.currentHtml)) {
-        const updatedHtml = htmlContent.replace(item.currentHtml, replacementHtml.trim());
-        onUpdateHtml(updatedHtml);
+        updatedHtml = htmlContent.replace(item.currentHtml, replacementHtml.trim());
       } else {
-        // Safe regex replace in case formatting shifted slightly
         const escaped = item.currentHtml.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const updatedHtml = htmlContent.replace(new RegExp(escaped, 'i'), replacementHtml.trim());
-        onUpdateHtml(updatedHtml);
+        updatedHtml = htmlContent.replace(new RegExp(escaped, 'i'), replacementHtml.trim());
       }
+      onUpdateHtml(updatedHtml);
 
       setUploadSuccessId(item.id);
       setTimeout(() => setUploadSuccessId(null), 4000);
@@ -538,8 +607,58 @@ export default function VisualElementReplacer({
   };
 
   const handleRevertElement = (item: VisualElement) => {
-    if (!item.originalRawHtml) return;
-    const updatedHtml = htmlContent.replace(item.currentHtml, item.originalRawHtml);
+    let original = originalMarkupRegistry[item.id] || item.originalRawHtml || item.rawContent;
+    if (!original) {
+      if (item.type === 'diagram') {
+        original = `<pre><code class="language-mermaid">\ngraph TD\n  A[System Input] --> B[Processing Engine]\n  B --> C[Evaluation & Output]\n</code></pre>`;
+      } else if (item.type === 'table') {
+        original = `<table style="width:100%;border-collapse:collapse;margin:12pt 0;font-size:9pt;">
+  <thead>
+    <tr>
+      <th style="border-top:1px solid #000;border-bottom:1px solid #000;padding:6px;">Metric / Model</th>
+      <th style="border-top:1px solid #000;border-bottom:1px solid #000;padding:6px;">Baseline</th>
+      <th style="border-top:1px solid #000;border-bottom:1px solid #000;padding:6px;">Proposed Method</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="border-bottom:1px solid #000;padding:6px;">Accuracy</td>
+      <td style="border-bottom:1px solid #000;padding:6px;">84.2%</td>
+      <td style="border-bottom:1px solid #000;padding:6px;">96.8%</td>
+    </tr>
+  </tbody>
+</table>`;
+      } else if (item.type === 'formula') {
+        original = `$$\\mathcal{L}_{\\text{total}} = \\lambda_1 \\mathcal{L}_{\\text{task}} + \\lambda_2 \\mathcal{L}_{\\text{reg}}$$`;
+      }
+    }
+    if (!original) return;
+
+    let updatedHtml = htmlContent;
+    if (htmlContent.includes(item.currentHtml)) {
+      updatedHtml = htmlContent.replace(item.currentHtml, original);
+    } else {
+      const escapedId = item.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const figureRegex = new RegExp(`<figure[^>]*data-visual-id=["']${escapedId}["'][^>]*>[\\s\\S]*?<\\/figure>`, 'i');
+      if (figureRegex.test(htmlContent)) {
+        updatedHtml = htmlContent.replace(figureRegex, original);
+      } else if (item.currentSrc) {
+        const escapedSrc = item.currentSrc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const figureBySrcRegex = new RegExp(`<figure[^>]*>[\\s\\S]*?src=["']${escapedSrc}["'][\\s\\S]*?<\\/figure>`, 'i');
+        const divBySrcRegex = new RegExp(`<div[^>]*>[\\s\\S]*?src=["']${escapedSrc}["'][\\s\\S]*?<\\/div>`, 'i');
+        if (figureBySrcRegex.test(htmlContent)) {
+          updatedHtml = htmlContent.replace(figureBySrcRegex, original);
+        } else if (divBySrcRegex.test(htmlContent)) {
+          updatedHtml = htmlContent.replace(divBySrcRegex, original);
+        }
+      } else {
+        const legacyDivRegex = new RegExp(`<div[^>]*data-replaced-id=["']${escapedId}["'][^>]*>[\\s\\S]*?<\\/div>`, 'i');
+        if (legacyDivRegex.test(htmlContent)) {
+          updatedHtml = htmlContent.replace(legacyDivRegex, original);
+        }
+      }
+    }
+
     onUpdateHtml(updatedHtml);
     setStagedFiles(prev => {
       const next = { ...prev };

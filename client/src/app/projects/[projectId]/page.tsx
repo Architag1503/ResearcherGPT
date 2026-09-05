@@ -24,6 +24,9 @@ const commonVisualStyles = `
   .preview-paper .custom-replaced-visual,
   .preview-paper .custom-replaced-table,
   .preview-paper .custom-replaced-formula,
+  .preview-paper figure.paper-figure,
+  .preview-paper figure.paper-table,
+  .preview-paper figure.paper-formula,
   .preview-paper .diagram-container {
     width: 100% !important;
     max-width: 100% !important;
@@ -37,12 +40,17 @@ const commonVisualStyles = `
 
   .preview-paper .custom-replaced-visual[data-span-mode="wide"],
   .preview-paper .custom-replaced-table[data-span-mode="wide"],
+  .preview-paper figure.paper-figure[data-span-mode="wide"],
+  .preview-paper figure.paper-table[data-span-mode="wide"],
   .preview-paper .diagram-container[data-span-mode="wide"] {
     column-span: all !important;
     -webkit-column-span: all !important;
   }
 
   .preview-paper .custom-replaced-visual img,
+  .preview-paper .custom-replaced-table img,
+  .preview-paper figure.paper-figure img,
+  .preview-paper figure.paper-table img,
   .preview-paper .diagram-container img,
   .preview-paper .table-figure,
   .preview-paper img.diagram-figure {
@@ -58,20 +66,35 @@ const commonVisualStyles = `
     border-radius: 4px !important;
   }
 
-  .preview-paper .custom-replaced-table {
+  .preview-paper .custom-replaced-table,
+  .preview-paper figure.paper-table {
     margin: 18pt auto !important;
   }
 
-  .preview-paper .custom-replaced-table .table-caption {
+  .preview-paper .custom-replaced-table .table-caption,
+  .preview-paper figure.paper-table figcaption,
+  .preview-paper figure.paper-table .table-caption {
     font-size: 8.5pt !important;
     font-weight: bold !important;
     text-align: center !important;
     margin-bottom: 6pt !important;
     text-transform: uppercase !important;
     color: #000 !important;
+    letter-spacing: 0.5px !important;
   }
 
-  .preview-paper .custom-replaced-formula {
+  .preview-paper figure.paper-figure figcaption,
+  .preview-paper .custom-replaced-visual .figure-caption {
+    font-size: 8.5pt !important;
+    font-style: italic !important;
+    text-align: center !important;
+    margin-top: 6pt !important;
+    margin-bottom: 8pt !important;
+    color: #333 !important;
+  }
+
+  .preview-paper .custom-replaced-formula,
+  .preview-paper figure.paper-formula {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -82,9 +105,11 @@ const commonVisualStyles = `
     padding: 6px 0 !important;
     box-sizing: border-box !important;
     break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
-  .preview-paper .custom-replaced-formula img {
+  .preview-paper .custom-replaced-formula img,
+  .preview-paper figure.paper-formula img {
     display: inline-block !important;
     max-width: 85% !important;
     max-height: 120px !important;
@@ -95,12 +120,16 @@ const commonVisualStyles = `
     padding: 2px !important;
   }
 
-  .preview-paper .custom-replaced-formula .equation-num {
+  .preview-paper .custom-replaced-formula .equation-num,
+  .preview-paper figure.paper-formula figcaption,
+  .preview-paper figure.paper-formula .equation-num {
     position: absolute !important;
     right: 8px !important;
     font-size: 9pt !important;
     font-family: 'Times New Roman', serif !important;
     color: #333 !important;
+    font-style: normal !important;
+    font-weight: normal !important;
   }
 
   .preview-paper table {
@@ -148,11 +177,11 @@ const parseMarkdownToHTML = (markdown: string): string => {
   let html = markdown.replace(/\r\n/g, '\n');
 
   // Normalize uploads URLs dynamically
-  html = html.replace(/src=["']uploads\//g, `src="${API_URL}/uploads/`);
+  html = html.replace(/src=["']\/?uploads\//g, `src="${API_URL}/uploads/`);
   html = html.replace(/src=["']https?:\/\/[^\/]+(:\d+)?\/uploads\//g, `src="${API_URL}/uploads/`);
 
   // If the content is already HTML, do not convert
-  if (/<p>|<table|<ul>|<li>|<strong>|<em>|<code>/i.test(html)) {
+  if (/<p>|<table|<ul>|<li>|<strong>|<em>|<code>|<figure|<div|<img/i.test(html)) {
     return html;
   }
 
@@ -792,7 +821,7 @@ const formatPaperHTML = (rawHtml: string, format: string, databaseCitations: any
   let html = rawHtml;
 
   // Normalize uploads URLs dynamically
-  html = html.replace(/src=["']uploads\//g, `src="${API_URL}/uploads/`);
+  html = html.replace(/src=["']\/?uploads\//g, `src="${API_URL}/uploads/`);
   html = html.replace(/src=["']https?:\/\/[^\/]+(:\d+)?\/uploads\//g, `src="${API_URL}/uploads/`);
 
   // 1. Convert optimization problems
@@ -1884,7 +1913,9 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
         } else {
           // Normalize image URLs to relative paths on save
           const uploadRegex = new RegExp(`src=["']https?://[^/]+(:\\d+)?/uploads/`, 'g');
-          const cleanedChildHtml = child.outerHTML.replace(uploadRegex, 'src="uploads/');
+          const cleanedChildHtml = child.outerHTML
+            .replace(uploadRegex, 'src="uploads/')
+            .replace(/src=["']\/uploads\//g, 'src="uploads/');
 
           if (currentSection) {
             currentSection.content += cleanedChildHtml;
@@ -1914,13 +1945,15 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
         outline: parsedSections.map(s => s.title)
       });
       
+      const savedId = editingPaperId || (res.data && res.data._id);
       if (!editingPaperId && res.data && res.data._id) {
         setEditingPaperId(res.data._id);
         setEditingPaperTitle(res.data.title);
       }
       
       setSavingState('success');
-      fetchSavedPapers();
+      setShowPreview(true);
+      fetchSavedPapers(savedId);
     } catch (err) {
       console.error('Failed to save manuscript:', err);
       setSavingState('error');
@@ -2848,7 +2881,7 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
       <main className="flex-grow p-6 md:p-10 space-y-8 overflow-y-auto">
         
         {/* Project Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/60 pb-6">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-zinc-800/60 pb-6 w-full min-w-0">
           {isEditingProject ? (
             <div className="flex-grow max-w-2xl space-y-3">
               <div className="space-y-1">
@@ -2931,9 +2964,11 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
               </div>
             </div>
           ) : (
-            <div className="flex-grow">
+            <div className="flex-grow min-w-0 max-w-full">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold">{project?.name || 'Loading project...'}</h1>
+                <h1 className="text-xl md:text-2xl font-bold truncate text-zinc-100" title={project?.name}>
+                  {project?.name || 'Loading project...'}
+                </h1>
                 {project && (
                   <button
                     onClick={() => {
@@ -2941,23 +2976,23 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                       setEditProjectDesc(project.description || '');
                       setIsEditingProject(true);
                     }}
-                    className="text-zinc-500 hover:text-zinc-300 transition-colors p-1"
+                    className="text-zinc-500 hover:text-zinc-300 transition-colors p-1 shrink-0"
                     title="Edit project details"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                 )}
               </div>
-              <p className="text-zinc-500 text-xs mt-1">{project?.description || 'Loading workspace description.'}</p>
+              <p className="text-zinc-500 text-xs mt-1 line-clamp-2 max-w-2xl">{project?.description || 'Loading workspace description.'}</p>
             </div>
           )}
 
-          {/* Quick Query Agent Trigger */}
-          <div className="flex items-center gap-2 max-w-xl w-full md:w-auto">
+          {/* Quick Query Agent Trigger & Actions */}
+          <div className="flex flex-wrap items-center gap-2.5 max-w-full w-full xl:w-auto xl:justify-end shrink-0">
             <select
               value={selectedFormat}
               onChange={(e) => setSelectedFormat(e.target.value)}
-              className="h-9 px-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[10px] outline-none focus:border-indigo-500 text-zinc-400 font-medium"
+              className="h-9 px-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-[11px] outline-none focus:border-indigo-500 text-zinc-300 font-medium shrink-0 cursor-pointer"
             >
               <option value="IEEE">IEEE Format</option>
               <option value="ACM">ACM Format</option>
@@ -2969,7 +3004,7 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
             <select
               value={selectedPages}
               onChange={(e) => setSelectedPages(parseInt(e.target.value))}
-              className="h-9 px-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[10px] outline-none focus:border-indigo-500 text-zinc-400 font-medium"
+              className="h-9 px-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-[11px] outline-none focus:border-indigo-500 text-zinc-300 font-medium shrink-0 cursor-pointer"
             >
               {Array.from({ length: 21 }, (_, i) => i + 5).map((num) => (
                 <option key={num} value={num}>{num} Pages (A4)</option>
@@ -2980,12 +3015,12 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
               placeholder="Query multi-agent graph..."
               value={queryInput}
               onChange={(e) => setQueryInput(e.target.value)}
-              className="flex-grow md:w-36 h-9 px-3 bg-zinc-900 border border-zinc-800 rounded-lg text-xs outline-none focus:border-indigo-500 text-zinc-300"
+              className="flex-grow sm:flex-grow-0 sm:w-44 lg:w-48 h-9 px-3 bg-zinc-900 border border-zinc-800 rounded-lg text-xs outline-none focus:border-indigo-500 text-zinc-300 min-w-[130px]"
             />
             <button
               onClick={handleTriggerAgent}
               disabled={runAgentLoading || !queryInput.trim()}
-              className="px-4 h-9 rounded-lg bg-indigo-600 text-zinc-100 hover:bg-indigo-500 transition-colors flex items-center gap-1.5 font-medium text-xs disabled:opacity-40 whitespace-nowrap"
+              className="px-3.5 h-9 rounded-lg bg-indigo-600 text-zinc-100 hover:bg-indigo-500 transition-colors flex items-center gap-1.5 font-medium text-xs disabled:opacity-40 whitespace-nowrap shrink-0 shadow-sm"
             >
               <Play className="w-3.5 h-3.5" /> Synthesize
             </button>
@@ -2995,12 +3030,13 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                 onClick={() => {
                   setActiveTab('editor');
                   setEditorMode('visuals');
+                  setShowPreview(true);
                 }}
                 className="px-3.5 h-9 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/35 text-indigo-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm shrink-0"
                 title="Replace diagrams, tables, and mathematical formulas"
               >
                 <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
-                <span className="hidden sm:inline">Replace Visuals</span>
+                <span>Replace Visuals</span>
               </button>
             )}
           </div>
@@ -4736,6 +4772,7 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                             handleLoadPaperForEdit(paper);
                             setActiveTab('editor');
                             setEditorMode('visuals');
+                            setShowPreview(true);
                           }}
                           className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-950/40"
                           title="Replace diagrams, tables, and math formulas with custom images"
@@ -5265,7 +5302,10 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                       </button>
                       <button
                         type="button"
-                        onClick={() => setEditorMode('visuals')}
+                        onClick={() => {
+                          setEditorMode('visuals');
+                          setShowPreview(true);
+                        }}
                         className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
                           editorMode === 'visuals'
                             ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/60'

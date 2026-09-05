@@ -3,7 +3,113 @@
 import { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { Node, mergeAttributes } from '@tiptap/core';
 import { Bold, Italic, Heading1, Heading2, List, ListOrdered, Undo, Redo } from 'lucide-react';
+
+const Figure = Node.create({
+  name: 'figure',
+  group: 'block',
+  content: 'block+',
+  defining: true,
+  isolating: true,
+  addAttributes() {
+    return {
+      class: { default: null },
+      'data-element-id': { default: null },
+      'data-element-type': { default: null },
+      'data-element-label': { default: null },
+      'data-custom-replaced': { default: null },
+      style: { default: null },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'figure',
+        getAttrs: (node) => {
+          if (!(node instanceof HTMLElement)) return {};
+          return {
+            class: node.getAttribute('class'),
+            'data-element-id': node.getAttribute('data-element-id'),
+            'data-element-type': node.getAttribute('data-element-type'),
+            'data-element-label': node.getAttribute('data-element-label'),
+            'data-custom-replaced': node.getAttribute('data-custom-replaced'),
+            style: node.getAttribute('style'),
+          };
+        },
+      },
+    ];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['figure', mergeAttributes(HTMLAttributes), 0];
+  },
+});
+
+const Figcaption = Node.create({
+  name: 'figcaption',
+  group: 'block',
+  content: 'inline*',
+  defining: true,
+  addAttributes() {
+    return {
+      class: { default: null },
+      style: { default: null },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'figcaption',
+        getAttrs: (node) => {
+          if (!(node instanceof HTMLElement)) return {};
+          return {
+            class: node.getAttribute('class'),
+            style: node.getAttribute('style'),
+          };
+        },
+      },
+    ];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['figcaption', mergeAttributes(HTMLAttributes), 0];
+  },
+});
+
+const CustomImage = Node.create({
+  name: 'customImage',
+  group: 'block',
+  inline: false,
+  atom: true,
+  addAttributes() {
+    return {
+      src: { default: null },
+      alt: { default: null },
+      class: { default: null },
+      style: { default: null },
+      loading: { default: 'lazy' },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'img',
+        getAttrs: (node) => {
+          if (!(node instanceof HTMLElement)) return {};
+          return {
+            src: node.getAttribute('src'),
+            alt: node.getAttribute('alt'),
+            class: node.getAttribute('class'),
+            style: node.getAttribute('style'),
+            loading: node.getAttribute('loading') || 'lazy',
+          };
+        },
+      },
+    ];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['img', mergeAttributes(HTMLAttributes)];
+  },
+});
 
 interface TipTapEditorProps {
   content: string;
@@ -12,7 +118,7 @@ interface TipTapEditorProps {
 
 export default function TipTapEditor({ content, onChange }: TipTapEditorProps) {
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, Figure, Figcaption, CustomImage],
     content: content || '<p>Start drafting your research paper outline or write observations here...</p>',
     onUpdate: ({ editor }) => {
       if (onChange) {
