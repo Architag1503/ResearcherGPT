@@ -15,6 +15,11 @@ const Figure = Node.create({
   addAttributes() {
     return {
       class: { default: null },
+      'data-visual-id': { default: null },
+      'data-visual-type': { default: null },
+      'data-span-mode': { default: null },
+      'data-original-html': { default: null },
+      'data-replaced-id': { default: null },
       'data-element-id': { default: null },
       'data-element-type': { default: null },
       'data-element-label': { default: null },
@@ -30,6 +35,11 @@ const Figure = Node.create({
           if (!(node instanceof HTMLElement)) return {};
           return {
             class: node.getAttribute('class'),
+            'data-visual-id': node.getAttribute('data-visual-id'),
+            'data-visual-type': node.getAttribute('data-visual-type'),
+            'data-span-mode': node.getAttribute('data-span-mode'),
+            'data-original-html': node.getAttribute('data-original-html'),
+            'data-replaced-id': node.getAttribute('data-replaced-id'),
             'data-element-id': node.getAttribute('data-element-id'),
             'data-element-type': node.getAttribute('data-element-type'),
             'data-element-label': node.getAttribute('data-element-label'),

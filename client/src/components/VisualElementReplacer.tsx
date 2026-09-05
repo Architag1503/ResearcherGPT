@@ -561,9 +561,7 @@ export default function VisualElementReplacer({
       // 1. Base64 Data URL provides immediate, 100% fail-safe rendering across all hosts
       let finalImageUrl = staged.dataUrl || staged.previewUrl;
 
-      // 2. Attempt background upload to cloud/server for CDN persistence
-      // ONLY override if server returns a genuine public HTTPS CDN URL (R2/S3)
-      // Never override with relative /uploads/ or localhost which 404s on Vercel!
+      // 2. Background upload attempt (strictly for remote CDN buckets like R2/S3, NEVER /uploads/ or localhost)
       try {
         const formData = new FormData();
         formData.append('image', staged.file);
@@ -572,7 +570,17 @@ export default function VisualElementReplacer({
         });
         if (res.data?.url) {
           const serverUrl = res.data.url;
-          if (serverUrl.startsWith('https://') && !serverUrl.includes('localhost') && !serverUrl.includes('127.0.0.1')) {
+          // Strictly allow ONLY true external CDN URLs (Cloudflare R2 or Amazon S3 buckets)
+          // We NEVER override with relative /uploads/ or host-based /uploads/ paths which 404 on Vercel
+          const isTrueExternalCdn = (
+            serverUrl.startsWith('https://') &&
+            !serverUrl.includes('/uploads/') &&
+            (serverUrl.includes('.r2.cloudflarestorage.com') ||
+             serverUrl.includes('.r2.dev') ||
+             serverUrl.includes('.amazonaws.com') ||
+             serverUrl.includes('storage.googleapis.com'))
+          );
+          if (isTrueExternalCdn) {
             finalImageUrl = serverUrl;
           }
         }

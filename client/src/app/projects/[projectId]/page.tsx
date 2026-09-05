@@ -31,10 +31,13 @@ const commonVisualStyles = `
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    margin: 16pt auto !important;
+    margin: 14pt auto !important;
     text-align: center !important;
     break-inside: avoid !important;
+    break-inside: avoid-column !important;
+    -webkit-column-break-inside: avoid !important;
     page-break-inside: avoid !important;
+    overflow: hidden !important;
     clear: both !important;
   }
 
@@ -45,6 +48,23 @@ const commonVisualStyles = `
   .preview-paper .diagram-container[data-span-mode="wide"] {
     column-span: all !important;
     -webkit-column-span: all !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    margin: 18pt 0 !important;
+    clear: both !important;
+  }
+
+  /* Prevent ASCII diagram and pre blocks from bleeding across columns */
+  .preview-paper pre,
+  .preview-paper code,
+  .preview-paper .diagram-container pre {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    white-space: pre !important;
+    font-size: 7pt !important;
+    line-height: 1.15 !important;
+    box-sizing: border-box !important;
   }
 
   .preview-paper .custom-replaced-visual img,
@@ -6352,6 +6372,16 @@ function LivePreview({ htmlContent, format, project, citations }: { htmlContent:
       // 2. Process table formatting and table numbering
       const tables = container.querySelectorAll("table");
       tables.forEach((table: any, idx) => {
+        // Skip tables already inside custom figures or that already have a caption
+        if (
+          table.closest('figure') ||
+          table.closest('.custom-replaced-table') ||
+          table.parentNode?.querySelector('figcaption') ||
+          table.parentNode?.querySelector('.table-caption') ||
+          table.previousElementSibling?.classList?.contains("table-caption")
+        ) {
+          return;
+        }
         const tableIndex = idx + 1;
         table.style.width = "100%";
         table.style.borderCollapse = "collapse";
@@ -6411,6 +6441,17 @@ function LivePreview({ htmlContent, format, project, citations }: { htmlContent:
       // 3. Process figure captions and sequential figure numbering
       const figures = container.querySelectorAll(".mermaid, img.diagram-figure");
       figures.forEach((fig: any, idx) => {
+        // Skip figures already inside custom figures or that already have a caption
+        if (
+          fig.closest('figure') ||
+          fig.closest('.custom-replaced-visual') ||
+          fig.closest('.custom-replaced-table') ||
+          fig.closest('.custom-replaced-formula') ||
+          fig.parentNode?.querySelector('figcaption') ||
+          fig.parentNode?.querySelector('.figure-caption')
+        ) {
+          return;
+        }
         const figIndex = idx + 1;
         
         // Scan siblings after the figure to find an existing caption
@@ -6425,7 +6466,7 @@ function LivePreview({ htmlContent, format, project, citations }: { htmlContent:
         let sibling = baseElementForSibling.nextElementSibling;
         for (let i = 0; i < 2 && sibling; i++) {
           const siblingText = sibling.textContent?.trim() || "";
-          if (/^(Figure|FIGURE)\s+\d+:/i.test(siblingText)) {
+          if (/^(Figure|FIGURE|Fig|FIG)\.?\s*\d+[:.]/i.test(siblingText)) {
             existingCaptionText = siblingText;
             sibling.remove(); // Remove the original paragraph to prevent duplication
             break;
