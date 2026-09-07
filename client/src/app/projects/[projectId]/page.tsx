@@ -73,23 +73,40 @@ const commonVisualStyles = `
   }
 
   .preview-paper .custom-replaced-visual img,
-  .preview-paper .custom-replaced-table img,
   .preview-paper figure.paper-figure img,
-  .preview-paper figure.paper-table img,
   .preview-paper figure img,
   .preview-paper .diagram-container img,
-  .preview-paper .table-figure,
   .preview-paper img.diagram-figure {
     display: block !important;
     max-width: 100% !important;
     height: auto !important;
     margin: 0 auto !important;
     object-fit: contain !important;
-    border: 1px solid #ddd !important;
-    padding: 6px !important;
+    border: none !important;
+    padding: 0 !important;
     background: #fff !important;
     box-sizing: border-box !important;
-    border-radius: 4px !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .preview-paper .custom-replaced-table img,
+  .preview-paper figure.paper-table img,
+  .preview-paper .table-figure {
+    display: block !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin: 0 auto !important;
+    object-fit: contain !important;
+    border-top: 1.5pt solid #000 !important;
+    border-bottom: 1.5pt solid #000 !important;
+    border-left: none !important;
+    border-right: none !important;
+    padding: 4px 0 !important;
+    background: #fff !important;
+    box-sizing: border-box !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
 
   .preview-paper .custom-replaced-table,
@@ -150,16 +167,25 @@ const commonVisualStyles = `
 
   .preview-paper figure.paper-figure figcaption,
   .preview-paper .custom-replaced-visual .figure-caption,
-  .preview-paper .figure-caption {
+  .preview-paper .figure-caption,
+  .preview-paper figcaption {
     display: block !important;
     width: 100% !important;
-    font-size: 8.5pt !important;
-    font-style: italic !important;
-    text-align: center !important;
-    margin-top: 6pt !important;
-    margin-bottom: 8pt !important;
-    color: #333 !important;
-    line-height: 1.3 !important;
+    font-size: 8pt !important;
+    font-style: normal !important;
+    text-align: justify !important;
+    margin-top: 5pt !important;
+    margin-bottom: 6pt !important;
+    color: #000 !important;
+    line-height: 1.25 !important;
+    text-indent: 0 !important;
+  }
+
+  .preview-paper figure.paper-figure figcaption strong,
+  .preview-paper .custom-replaced-visual .figure-caption strong,
+  .preview-paper .figure-caption strong,
+  .preview-paper figcaption strong {
+    font-weight: bold !important;
   }
 
   .preview-paper .custom-replaced-formula,
@@ -900,6 +926,12 @@ const resolveAndFormatCitations = (html: string, databaseCitations: any[]): stri
 const formatAcademicVisualCaptions = (rawHtml: string): string => {
   if (!rawHtml) return '';
   let processed = rawHtml;
+  // 0. Remove any leaked raw HTML attribute strings that leaked into visible text
+  processed = processed.replace(/(?:class=["'](?:paper-figure|paper-formula|paper-table|custom-replaced-[^"']+)["']\s*>)+/gi, '');
+  processed = processed.replace(/(?:data-visual-id=["'][^"']*["']\s*>)+/gi, '');
+  processed = processed.replace(/(?:data-visual-type=["'][^"']*["']\s*>)+/gi, '');
+  processed = processed.replace(/(?:data-original-html=["'][^"']*["']\s*>)+/gi, '');
+  processed = processed.replace(/(?:data-span-mode=["'][^"']*["']\s*>)+/gi, '');
 
   // 1. Format table captions inside figcaption or div, supporting concatenated Roman numerals (e.g. TABLE IACADEMIC)
   processed = processed.replace(
