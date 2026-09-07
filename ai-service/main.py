@@ -284,6 +284,7 @@ def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, w
             "format": format,
             "pages": pages,
             "research_context": [],
+            "academic_papers": [],
             "literature_reviews": [],
             "methodologies": [],
             "comparison_matrix": [],

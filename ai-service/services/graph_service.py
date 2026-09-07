@@ -151,6 +151,18 @@ def extract_entities_heuristics(paper: Dict[str, Any]) -> Dict[str, List[str]]:
             
     return entities
 
+ENTITY_TYPE_CONFIG = {
+    "paper": {"color": "#6366f1", "val": 4},
+    "author": {"color": "#10b981", "val": 2.5},
+    "method": {"color": "#f59e0b", "val": 3},
+    "dataset": {"color": "#ec4899", "val": 2.5},
+    "concept": {"color": "#06b6d4", "val": 2},
+    "technology": {"color": "#8b5cf6", "val": 2.5},
+    "metric": {"color": "#14b8a6", "val": 2},
+    "result": {"color": "#22c55e", "val": 2},
+    "institution": {"color": "#3b82f6", "val": 2.5}
+}
+
 _paper_graph_cache: Dict[str, Any] = {}
 
 def build_project_graph(project_id: str, papers: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -188,13 +200,15 @@ def build_project_graph(project_id: str, papers: List[Dict[str, Any]]) -> Dict[s
                 ent_id = ent["id"]
                 if ent_id == p_node_id:
                     continue
+                ent_type = str(ent.get("type", "concept")).lower()
+                cfg = ENTITY_TYPE_CONFIG.get(ent_type, {"color": "#06b6d4", "val": 2})
                 if ent_id not in nodes:
                     nodes[ent_id] = {
                         "id": ent_id,
                         "label": ent["label"],
-                        "type": ent["type"],
-                        "val": 2,
-                        "color": "#06b6d4" # Cyan by default
+                        "type": ent_type,
+                        "val": cfg["val"],
+                        "color": cfg["color"]
                     }
                 G.add_edge(p_node_id, ent_id, label="relates_to")
                 

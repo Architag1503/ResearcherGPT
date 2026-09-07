@@ -13,6 +13,8 @@ export interface ICitation extends Document {
   issue?: string;
   pages?: string;
   publisher?: string;
+  publishDate?: string;
+  url?: string;
   styles: {
     apa?: string;
     mla?: string;
@@ -30,10 +32,12 @@ const CitationSchema: Schema = new Schema(
     paperId: { type: Schema.Types.ObjectId, ref: 'Paper' },
     key: { type: String, required: true, index: true },
     doi: { type: String },
+    url: { type: String },
     title: { type: String, required: true },
     authors: [{ type: String }],
     journal: { type: String },
     year: { type: Number },
+    publishDate: { type: String },
     volume: { type: String },
     issue: { type: String },
     pages: { type: String },

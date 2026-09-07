@@ -1586,7 +1586,7 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
 
   // 3D Graph Interactive Learning States
   const [isLearningMode, setIsLearningMode] = useState<boolean>(false);
-  const [selectedNode, setSelectedNode] = useState<{ id: string; type: string; label: string } | null>(null);
+  const [selectedNode, setSelectedNode] = useState<{ id: string; type: string; label: string; color?: string } | null>(null);
   const [learningDetails, setLearningDetails] = useState<any>(null);
   const [learningLoading, setLearningLoading] = useState<boolean>(false);
   const [difficultyLevel, setDifficultyLevel] = useState<'beginner' | 'intermediate' | 'research'>('beginner');
@@ -2852,8 +2852,9 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
     }
   };
 
-  const handleNodeClick = async (nodeId: string, nodeType: string, nodeLabel: string) => {
-    setSelectedNode({ id: nodeId, type: nodeType, label: nodeLabel });
+  const handleNodeClick = async (nodeId: string, nodeType: string, nodeLabel: string, nodeColor?: string) => {
+    const color = nodeColor || graphData?.nodes?.find((n: any) => n.id === nodeId)?.color || '#6366f1';
+    setSelectedNode({ id: nodeId, type: nodeType, label: nodeLabel, color });
     setLearningLoading(true);
     setLearningDetails(null);
     setLearningPanelTab('explain');
@@ -3512,12 +3513,14 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                     <div className="flex items-start justify-between border-b border-zinc-850 pb-3 mb-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                            selectedNode.type === 'paper' ? 'bg-indigo-950 text-indigo-300 border border-indigo-800' :
-                            selectedNode.type === 'author' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' :
-                            selectedNode.type === 'method' ? 'bg-amber-950 text-amber-300 border border-amber-800' :
-                            'bg-pink-950 text-pink-300 border border-pink-800'
-                          }`}>
+                          <span
+                            className="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border shadow-sm"
+                            style={{
+                              backgroundColor: `${selectedNode.color || '#6366f1'}20`,
+                              color: selectedNode.color || '#6366f1',
+                              borderColor: `${selectedNode.color || '#6366f1'}50`
+                            }}
+                          >
                             {selectedNode.type}
                           </span>
                           <span className="text-[10px] text-zinc-500 font-medium">Node Details</span>

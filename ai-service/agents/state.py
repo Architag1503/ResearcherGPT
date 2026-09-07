@@ -10,6 +10,9 @@ class AgentWorkflowState(TypedDict):
     
     # Retrieved chunks from vector search
     research_context: List[Dict[str, Any]]
+
+    # Verified real academic papers from OpenAlex / arXiv / CrossRef
+    academic_papers: List[Dict[str, Any]]
     
     # Structured literature summaries (Author, Method, Dataset, Results, Limitations)
     literature_reviews: List[Dict[str, Any]]

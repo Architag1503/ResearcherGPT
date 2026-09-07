@@ -55,6 +55,10 @@ def execute_paper_generation_flow(project_id: str, query: str) -> Dict[str, Any]
     except:
         citations = []
         
+    if not citations:
+        from services.academic_service import search_academic_papers
+        citations = search_academic_papers(query, limit=5)
+        
     ref_block = build_references_section(citations)
 
     # 4. Formulate final section mapping
