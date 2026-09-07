@@ -10,8 +10,10 @@ def generate_outline(query: str, context: str) -> List[str]:
     gemini_key = os.getenv("GEMINI_API_KEY")
     if gemini_key and "your_gemini_api_key" not in gemini_key:
         system = (
-            "You are an Academic Editor. Design a publication-grade section outline (structural titles) "
-            "for a research paper based on the query and context. Output as a JSON list of strings."
+            "You are an Academic Editor preparing an IEEE Transactions style paper. "
+            "Design a publication-grade section outline with uppercase Roman numerals for body sections "
+            "(e.g. 'I. INTRODUCTION', 'II. RELATED WORK', etc.), with unnumbered 'Abstract', 'Keywords', "
+            "and 'REFERENCES'. Output as a JSON list of strings."
         )
         try:
             res_text = call_llm(system, f"Topic: {query}\nContext: {context[:2000]}")
@@ -21,14 +23,16 @@ def generate_outline(query: str, context: str) -> List[str]:
         except Exception as e:
             print(f"[OutlineGenerator] LLM outline failed: {e}")
 
-    # Fallback standard outline structure
+    # Fallback standard IEEE outline structure
     return [
         "Abstract",
-        "1. Introduction",
-        "2. Literature Review",
-        "3. Methodology & Design",
-        "4. Experimental Evaluation & Results",
-        "5. Discussion & Future Scope",
-        "6. Conclusion",
-        "References"
+        "Keywords",
+        "I. INTRODUCTION",
+        "II. RELATED WORK & BACKGROUND",
+        "III. PROPOSED FRAMEWORK & ARCHITECTURE",
+        "IV. METHODOLOGY",
+        "V. EXPERIMENTAL EVALUATION & RESULTS",
+        "VI. DISCUSSION & LIMITATIONS",
+        "VII. CONCLUSION & FUTURE WORK",
+        "REFERENCES"
     ]

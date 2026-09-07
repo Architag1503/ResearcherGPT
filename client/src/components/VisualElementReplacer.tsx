@@ -685,11 +685,11 @@ export default function VisualElementReplacer({
     if (figureMatch) {
       let inner = figureMatch[2];
       if (item.type === 'table') {
-        const tblMatch = newCaption.match(/^(TABLE\s+[IVXLCDM\d]+)[:.\s]+(.*)$/i);
+        const tblMatch = newCaption.match(/^(?:TABLE|Table)\s*([IVXLCDM\d]+)[:.\s-]+(.*)$/i);
         const captionInner = tblMatch
-          ? `<span class="table-num" style="display:block;text-align:center;font-weight:bold;margin-bottom:2pt;letter-spacing:0.5px;">${tblMatch[1].toUpperCase()}</span><span class="table-title" style="display:block;text-align:center;font-weight:bold;letter-spacing:0.3px;">${tblMatch[2].toUpperCase()}</span>`
-          : `<span class="table-title" style="display:block;text-align:center;font-weight:bold;letter-spacing:0.3px;">${newCaption.toUpperCase()}</span>`;
-        const newFigcaption = `<figcaption class="table-caption" style="font-size:8.5pt;color:#000;margin-bottom:6pt;text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;display:block;width:100%;max-width:100%;line-height:1.35;white-space:normal;word-break:normal;">${captionInner}</figcaption>`;
+          ? `<span class="table-num" style="display:block;text-align:center;font-weight:bold;margin-bottom:2pt;letter-spacing:0.5px;font-size:8.5pt;">TABLE ${tblMatch[1].toUpperCase()}</span><span class="table-title" style="display:block;text-align:center;letter-spacing:0.5px;font-size:8pt;">${tblMatch[2].trim().toUpperCase()}</span>`
+          : `<span class="table-title" style="display:block;text-align:center;letter-spacing:0.5px;font-size:8pt;">${newCaption.trim().toUpperCase()}</span>`;
+        const newFigcaption = `<figcaption class="table-caption" style="font-size:8pt;color:#000;margin-bottom:4pt;text-align:center;text-transform:uppercase;letter-spacing:0.5px;display:block;width:100%;max-width:100%;line-height:1.25;">${captionInner}</figcaption>`;
 
         if (/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i.test(inner)) {
           inner = inner.replace(/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i, newFigcaption);
@@ -697,7 +697,11 @@ export default function VisualElementReplacer({
           inner = newFigcaption + '\n' + inner;
         }
       } else if (item.type === 'diagram') {
-        const newFigcaption = `<figcaption class="figure-caption" style="font-size:8.5pt;color:#333;margin-top:6pt;margin-bottom:12pt;text-align:center;font-style:italic;display:block;width:100%;max-width:100%;line-height:1.35;white-space:normal;">${newCaption}</figcaption>`;
+        const figMatch = newCaption.match(/^(?:Figure|FIGURE|Fig|FIG)\.?\s*(\d+)[:.\s-]+(.*)$/i);
+        const figHtml = figMatch 
+          ? `<strong>Fig. ${figMatch[1]}.</strong>  ${figMatch[2].trim()}`
+          : (newCaption.startsWith('<strong>Fig') ? newCaption : `<strong>Fig. 1.</strong>  ${newCaption.trim()}`);
+        const newFigcaption = `<figcaption class="figure-caption" style="font-size:8pt;color:#000;margin-top:5pt;margin-bottom:6pt;text-align:justify;display:block;width:100%;max-width:100%;line-height:1.25;">${figHtml}</figcaption>`;
         if (/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i.test(inner)) {
           inner = inner.replace(/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i, newFigcaption);
         } else {
@@ -705,7 +709,7 @@ export default function VisualElementReplacer({
         }
       } else if (item.type === 'formula') {
         const eqNum = newCaption.replace(/[^0-9]/g, '') || '1';
-        const newFigcaption = `<figcaption class="equation-num" style="position:absolute;right:12px;font-size:9pt;font-family:'Times New Roman',serif;color:#333;font-style:normal;font-weight:normal;">(${eqNum})</figcaption>`;
+        const newFigcaption = `<figcaption class="equation-num" style="position:absolute;right:12px;font-size:9.5pt;font-family:'Times New Roman',serif;color:#000;font-style:normal;font-weight:normal;">(${eqNum})</figcaption>`;
         if (/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i.test(inner)) {
           inner = inner.replace(/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i, newFigcaption);
         } else {
@@ -787,30 +791,34 @@ export default function VisualElementReplacer({
       const encodedOriginal = encodeURIComponent(originalToPreserve);
 
       if (item.type === 'diagram') {
+        const figMatch = cleanCaption.match(/^(?:Figure|FIGURE|Fig|FIG)\.?\s*(\d+)[:.\s-]+(.*)$/i);
+        const figHtml = figMatch 
+          ? `<strong>Fig. ${figMatch[1]}.</strong>  ${figMatch[2].trim()}`
+          : (cleanCaption.startsWith('<strong>Fig') ? cleanCaption : `<strong>Fig. 1.</strong>  ${cleanCaption}`);
         replacementHtml = `
-<figure class="paper-figure custom-replaced-visual" data-visual-id="${item.id}" data-visual-type="diagram" data-span-mode="${spanMode}" data-original-html="${encodedOriginal}" style="text-align:center;margin:18pt auto;width:100%;max-width:100%;box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;${spanStyle}">
-  <img src="${finalImageUrl}" alt="${cleanCaption}" class="diagram-figure mx-auto shadow-sm" style="max-width:100%;height:auto;display:block;margin:0 auto;border:1px solid #ddd;padding:6px;background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.1);" />
-  <figcaption class="figure-caption" style="font-size:8.5pt;color:#333;margin-top:6pt;margin-bottom:12pt;text-align:center;font-style:italic;display:block;width:100%;max-width:100%;line-height:1.35;white-space:normal;">${cleanCaption}</figcaption>
+<figure class="paper-figure custom-replaced-visual" data-visual-id="${item.id}" data-visual-type="diagram" data-span-mode="${spanMode}" data-original-html="${encodedOriginal}" style="text-align:center;margin:12pt auto;width:100%;max-width:100%;box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;${spanStyle}">
+  <img src="${finalImageUrl}" alt="${cleanCaption}" class="diagram-figure mx-auto shadow-sm" style="max-width:100%;height:auto;display:block;margin:0 auto;background:#fff;" />
+  <figcaption class="figure-caption" style="font-size:8pt;color:#000;margin-top:5pt;margin-bottom:6pt;text-align:justify;display:block;width:100%;line-height:1.25;">${figHtml}</figcaption>
 </figure>`;
       } else if (item.type === 'table') {
-        const tblMatch = cleanCaption.match(/^(TABLE\s+[IVXLCDM\d]+)[:.\s]+(.*)$/i);
+        const tblMatch = cleanCaption.match(/^(?:TABLE|Table)\s*([IVXLCDM\d]+)[:.\s-]+(.*)$/i);
         let tableCaptionHtml = '';
         if (tblMatch) {
-          tableCaptionHtml = `<span class="table-num" style="display:block;text-align:center;font-weight:bold;margin-bottom:2pt;letter-spacing:0.5px;">${tblMatch[1].toUpperCase()}</span><span class="table-title" style="display:block;text-align:center;font-weight:bold;letter-spacing:0.3px;">${tblMatch[2].toUpperCase()}</span>`;
+          tableCaptionHtml = `<span class="table-num" style="display:block;text-align:center;font-weight:bold;margin-bottom:2pt;letter-spacing:0.5px;font-size:8.5pt;">TABLE ${tblMatch[1].toUpperCase()}</span><span class="table-title" style="display:block;text-align:center;letter-spacing:0.5px;font-size:8pt;">${tblMatch[2].trim().toUpperCase()}</span>`;
         } else {
-          tableCaptionHtml = `<span class="table-title" style="display:block;text-align:center;font-weight:bold;letter-spacing:0.3px;">${cleanCaption.toUpperCase()}</span>`;
+          tableCaptionHtml = `<span class="table-title" style="display:block;text-align:center;letter-spacing:0.5px;font-size:8pt;">${cleanCaption.trim().toUpperCase()}</span>`;
         }
         replacementHtml = `
-<figure class="paper-table custom-replaced-table" data-visual-id="${item.id}" data-visual-type="table" data-span-mode="${spanMode}" data-original-html="${encodedOriginal}" style="text-align:center;margin:18pt auto;width:100%;max-width:100%;box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;${spanStyle}">
-  <figcaption class="table-caption" style="font-size:8.5pt;color:#000;margin-bottom:6pt;text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;display:block;width:100%;max-width:100%;line-height:1.35;white-space:normal;word-break:normal;">${tableCaptionHtml}</figcaption>
-  <img src="${finalImageUrl}" alt="${cleanCaption}" class="table-figure mx-auto shadow-sm" style="max-width:100%;height:auto;display:block;margin:0 auto;border:1px solid #ddd;padding:6px;background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.1);" />
+<figure class="paper-table custom-replaced-table" data-visual-id="${item.id}" data-visual-type="table" data-span-mode="${spanMode}" data-original-html="${encodedOriginal}" style="text-align:center;margin:12pt auto;width:100%;max-width:100%;box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;${spanStyle}">
+  <figcaption class="table-caption" style="font-size:8pt;color:#000;margin-bottom:4pt;text-align:center;text-transform:uppercase;letter-spacing:0.5px;display:block;width:100%;line-height:1.25;">${tableCaptionHtml}</figcaption>
+  <img src="${finalImageUrl}" alt="${cleanCaption}" class="table-figure mx-auto" style="max-width:100%;height:auto;display:block;margin:0 auto;border-top:1.5pt solid #000;border-bottom:1.5pt solid #000;padding:4px 0;background:#fff;" />
 </figure>`;
       } else if (item.type === 'formula') {
         const eqNum = cleanCaption.replace(/[^0-9]/g, '') || '1';
         replacementHtml = `
-<figure class="paper-formula custom-replaced-formula" data-visual-id="${item.id}" data-visual-type="formula" data-original-html="${encodedOriginal}" style="text-align:center;margin:14pt auto;width:100%;max-width:100%;display:flex;align-items:center;justify-content:center;position:relative;break-inside:avoid;page-break-inside:avoid;box-sizing:border-box;padding:6px 0;">
+<figure class="paper-formula custom-replaced-formula" data-visual-id="${item.id}" data-visual-type="formula" data-original-html="${encodedOriginal}" style="text-align:center;margin:10pt auto;width:100%;max-width:100%;display:flex;align-items:center;justify-content:center;position:relative;break-inside:avoid;page-break-inside:avoid;box-sizing:border-box;padding:4px 0;">
   <img src="${finalImageUrl}" alt="${cleanCaption}" class="formula-figure" style="max-width:85%;max-height:130px;height:auto;object-fit:contain;display:inline-block;padding:4px;background:transparent;" />
-  <figcaption class="equation-num" style="position:absolute;right:12px;font-size:9pt;font-family:'Times New Roman',serif;color:#333;font-style:normal;font-weight:normal;">(${eqNum})</figcaption>
+  <figcaption class="equation-num" style="position:absolute;right:8px;font-size:9.5pt;font-family:'Times New Roman',serif;color:#000;font-style:normal;font-weight:normal;">(${eqNum})</figcaption>
 </figure>`;
       }
 

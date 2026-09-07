@@ -901,7 +901,7 @@ const formatAcademicVisualCaptions = (rawHtml: string): string => {
   if (!rawHtml) return '';
   let processed = rawHtml;
 
-  // 1. Format table captions inside figcaption or div
+  // 1. Format table captions inside figcaption or div, supporting concatenated Roman numerals (e.g. TABLE IACADEMIC)
   processed = processed.replace(
     /(<figcaption[^>]*class=["'][^"']*table-caption[^"']*["'][^>]*>|<figcaption[^>]*>|<div[^>]*class=["'][^"']*table-caption[^"']*["'][^>]*>)([\s\S]*?)(<\/figcaption>|<\/div>)/gi,
     (match, openTag, content, closeTag) => {
@@ -909,12 +909,31 @@ const formatAcademicVisualCaptions = (rawHtml: string): string => {
         return `<figcaption class="table-caption">${content.trim()}</figcaption>`;
       }
       const text = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-      const tblMatch = text.match(/^(?:TABLE|Table)\s+([IVXLCDM\d]+)[:.\s-]+(.*)$/i);
+      
+      // Match standard "TABLE I: TITLE" or "TABLE 1 - TITLE"
+      let tblMatch = text.match(/^(?:TABLE|Table)\s+([IVXLCDM\d]+)[:.\s-]+(.*)$/i);
       if (tblMatch) {
         const num = tblMatch[1].toUpperCase();
         const title = tblMatch[2].trim().toUpperCase();
         return `<figcaption class="table-caption"><span class="table-num">TABLE ${num}</span><span class="table-title">${title}</span></figcaption>`;
       }
+      
+      // Match concatenated "TABLE IACADEMIC EXPERIMENTAL EVALUATION"
+      const concatMatch = text.match(/^(?:TABLE|Table)\s*([IVXLCDM]+)([A-Z\s].*)$/i);
+      if (concatMatch) {
+        const num = concatMatch[1].toUpperCase();
+        const title = concatMatch[2].trim().toUpperCase();
+        return `<figcaption class="table-caption"><span class="table-num">TABLE ${num}</span><span class="table-title">${title}</span></figcaption>`;
+      }
+
+      // Check if it's actually a figure caption accidentally tagged with table-caption class
+      const figMatch = text.match(/^(?:Figure|FIGURE|Fig|FIG)\.?\s*(\d+)[:.\s-]+(.*)$/i);
+      if (figMatch) {
+        const num = figMatch[1];
+        const title = figMatch[2].trim();
+        return `<figcaption class="figure-caption"><strong>Fig. ${num}.</strong> ${title}</figcaption>`;
+      }
+
       return `<figcaption class="table-caption"><span class="table-title">${text.toUpperCase()}</span></figcaption>`;
     }
   );
@@ -924,6 +943,21 @@ const formatAcademicVisualCaptions = (rawHtml: string): string => {
     /<p[^>]*>\s*(?:<strong>)?(?:TABLE|Table)\s+([IVXLCDM\d]+)[:.\s-]+([^<]+)(?:<\/strong>)?\s*<\/p>(\s*<figure|\s*<table|\s*<div class="table)/gi,
     (match, num, title, following) => {
       return `<div class="table-caption"><span class="table-num">TABLE ${num.toUpperCase()}</span><span class="table-title">${title.trim().toUpperCase()}</span></div>${following}`;
+    }
+  );
+
+  // 3. Normalize figure captions to IEEE format: Fig. X. Description
+  processed = processed.replace(
+    /(<figcaption[^>]*class=["'][^"']*figure-caption[^"']*["'][^>]*>|<figcaption[^>]*>|<p[^>]*class=["'][^"']*figure-caption[^"']*["'][^>]*>)([\s\S]*?)(<\/figcaption>|<\/p>)/gi,
+    (match, openTag, content, closeTag) => {
+      const text = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      const figMatch = text.match(/^(?:Figure|FIGURE|Fig|FIG)\.?\s*(\d+)[:.\s-]+(.*)$/i);
+      if (figMatch) {
+        const num = figMatch[1];
+        const title = figMatch[2].trim();
+        return `<figcaption class="figure-caption"><strong>Fig. ${num}.</strong> ${title}</figcaption>`;
+      }
+      return match;
     }
   );
 
@@ -2281,53 +2315,66 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
           body {
             font-family: 'Times New Roman', Times, serif;
             font-size: 10pt;
-            line-height: 1.25;
+            line-height: 1.2;
             color: #000;
             background: #fff;
             margin: 0;
             padding: 0;
+            text-align: justify;
           }
           h1.doc-title {
             font-size: 24pt;
             text-align: center;
-            margin-top: 10mm;
+            margin-top: 5mm;
             margin-bottom: 12pt;
             font-weight: normal;
+            line-height: 1.15;
           }
           .author-block {
             text-align: center;
-            margin-bottom: 24pt;
-            font-size: 11pt;
+            margin-bottom: 18pt;
+            font-size: 10pt;
+            line-height: 1.3;
           }
           .main-content {
             column-count: 2;
             column-gap: 8mm;
             text-align: justify;
+            text-justify: inter-word;
+            hyphens: auto;
           }
           .abstract-section {
-            column-span: all;
             margin-bottom: 12pt;
-            padding: 0 5px;
+            padding: 0 4px;
+            width: 100%;
           }
           .abstract-section p {
             font-size: 9pt;
             font-weight: bold;
-            text-indent: 0;
-            margin: 0 0 6pt 0;
+            text-indent: 0 !important;
+            margin: 0 0 4pt 0;
+            text-align: justify;
+            text-justify: inter-word;
+          }
+          .abstract-section em {
+            font-style: italic;
+            font-weight: bold;
           }
           h2 {
             font-size: 10pt;
             text-align: center;
             text-transform: uppercase;
-            margin-top: 12pt;
+            margin-top: 14pt;
             margin-bottom: 4pt;
             font-weight: bold;
+            letter-spacing: 0.5px;
             break-after: avoid;
           }
           h3 {
             font-size: 10pt;
             text-align: left;
             font-style: italic;
+            font-weight: bold;
             margin-top: 10pt;
             margin-bottom: 3pt;
             break-after: avoid;
@@ -2336,17 +2383,22 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
             font-size: 10pt;
             text-align: left;
             font-style: italic;
+            font-weight: normal;
+            text-indent: 1.25pc;
             margin-top: 8pt;
             margin-bottom: 3pt;
             break-after: avoid;
           }
           p {
-            margin: 0 0 4pt 0;
+            margin: 0;
             text-indent: 1.25pc;
+            text-align: justify;
+            text-justify: inter-word;
+            hyphens: auto;
           }
           pre, code {
             font-family: monospace;
-            font-size: 8.5pt;
+            font-size: 8pt;
             background: #f8f8f8;
             display: block;
             padding: 6px;
@@ -2356,16 +2408,105 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
           table {
             width: 100%;
             border-collapse: collapse;
-            margin: 12pt 0;
+            margin: 8pt 0 12pt 0;
             font-size: 8pt;
+            line-height: 1.2;
+            border-top: 1.5pt solid #000;
+            border-bottom: 1.5pt solid #000;
+            border-left: none !important;
+            border-right: none !important;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          thead th, th {
+            border: none !important;
+            border-bottom: 0.75pt solid #000 !important;
+            padding: 4pt 6pt;
+            text-align: center;
+            font-weight: bold;
+            font-size: 8pt;
+          }
+          tbody td, td {
+            border: none !important;
+            padding: 3pt 6pt;
+            font-size: 8pt;
+          }
+          .table-caption, caption {
+            caption-side: top;
+            text-align: center;
+            font-size: 8pt;
+            margin-bottom: 4pt;
+            line-height: 1.25;
+            text-transform: uppercase;
             break-inside: avoid;
           }
-          th, td {
-            border: 1px solid #000;
-            padding: 4px;
-            text-align: center;
+          .table-num {
+            display: block;
+            font-weight: bold;
+            font-size: 8.5pt;
+            letter-spacing: 0.5px;
           }
-          /* Unnumbered headings like References */
+          .table-title {
+            display: block;
+            font-size: 8pt;
+            letter-spacing: 0.5px;
+          }
+          .paper-figure, figure, .diagram-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 10pt 0;
+            width: 100%;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          .paper-figure img, figure img, .diagram-container img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+          }
+          .figure-caption, figcaption {
+            font-size: 8pt;
+            line-height: 1.25;
+            text-align: justify;
+            margin-top: 5pt;
+            margin-bottom: 6pt;
+            text-indent: 0 !important;
+            width: 100%;
+          }
+          .figure-caption strong, figcaption strong {
+            font-weight: bold;
+          }
+          .equation-wrapper, .katex-display {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            position: relative !important;
+            width: 100% !important;
+            margin: 6pt 0 !important;
+            overflow-x: visible !important;
+          }
+          .katex-display > .katex {
+            text-align: center !important;
+            width: 100% !important;
+          }
+          .katex-display > .katex > .katex-html > .tag {
+            position: absolute !important;
+            right: 0 !important;
+            font-size: 9.5pt !important;
+            color: #000 !important;
+          }
+          .bibliography-entry {
+            margin-bottom: 3pt;
+            text-indent: -1.5em;
+            padding-left: 1.5em;
+            font-size: 8pt;
+            line-height: 1.25;
+            text-align: justify;
+            color: #000;
+          }
           h2.unnumbered-heading {
             text-align: center;
             text-transform: uppercase;
@@ -2775,10 +2916,17 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
               Department of Autonomous Scholarly Synthesis
             </div>
 
-            <div class="${selectedFormat === 'IEEE' || selectedFormat === 'ACM' || selectedFormat === 'Springer' ? 'main-content' : ''}">
+            ${selectedFormat === 'IEEE' ? `
               ${abstractSectionHTML}
-              ${sectionsHTML}
-            </div>
+              <div class="main-content">
+                ${sectionsHTML}
+              </div>
+            ` : `
+              <div class="${selectedFormat === 'ACM' || selectedFormat === 'Springer' ? 'main-content' : ''}">
+                ${abstractSectionHTML}
+                ${sectionsHTML}
+              </div>
+            `}
 
             <script>${getExportPipelineScript(selectedFormat)}</script>
           </body>
@@ -6139,14 +6287,14 @@ function ProcessingTimeline({ status, stage }: { status: string; stage?: string 
 const getFormatCSS = (format: string) => {
   const getRawFormatCSS = (fmt: string) => {
     if (fmt === 'IEEE') {
-    return `
+      return `
       .preview-paper {
         font-family: 'Times New Roman', Times, serif;
         font-size: 10pt;
         line-height: 1.2;
         color: #000;
         background: #fff;
-        padding: 30px 40px;
+        padding: 24px 32px;
         text-align: justify;
       }
       .preview-paper, .preview-paper * {
@@ -6158,101 +6306,195 @@ const getFormatCSS = (format: string) => {
         box-sizing: border-box;
       }
       .preview-paper h1.doc-title {
-        font-size: 20pt;
+        font-size: 22pt;
         text-align: center;
         margin-bottom: 12pt;
         font-weight: normal;
+        line-height: 1.15;
         color: #000;
       }
       .preview-paper .author-block {
         text-align: center;
-        margin-bottom: 20pt;
-        font-size: 11pt;
+        margin-bottom: 18pt;
+        font-size: 10pt;
+        line-height: 1.3;
         color: #000;
       }
       .preview-paper .main-content {
         column-count: 2;
         column-gap: 20px;
         text-align: justify;
+        text-justify: inter-word;
+        hyphens: auto;
       }
       .preview-paper .abstract-section {
-        column-span: all;
         margin-bottom: 12pt;
+        padding: 0 4px;
+        width: 100%;
+      }
+      .preview-paper .abstract-section p {
+        font-size: 9pt;
+        font-weight: bold;
+        text-indent: 0 !important;
+        margin: 0 0 4pt 0;
+        text-align: justify;
+        text-justify: inter-word;
+      }
+      .preview-paper .abstract-section em {
+        font-style: italic;
+        font-weight: bold;
       }
       .preview-paper h2 {
         font-size: 10pt;
         text-align: center;
         text-transform: uppercase;
-        margin-top: 12pt;
+        margin-top: 14pt;
         margin-bottom: 4pt;
         font-weight: bold;
         color: #000;
         border: none;
+        letter-spacing: 0.5px;
+        break-after: avoid;
+      }
+      .preview-paper h3 {
+        font-size: 10pt;
+        text-align: left;
+        font-style: italic;
+        font-weight: bold;
+        margin-top: 10pt;
+        margin-bottom: 3pt;
+        break-after: avoid;
+      }
+      .preview-paper h4 {
+        font-size: 10pt;
+        text-align: left;
+        font-style: italic;
+        font-weight: normal;
+        text-indent: 1.25pc;
+        margin-top: 8pt;
+        margin-bottom: 3pt;
         break-after: avoid;
       }
       .preview-paper p {
-        margin: 0 0 4pt 0;
-        text-indent: 1.5pc;
+        margin: 0;
+        text-indent: 1.25pc;
+        text-align: justify;
+        text-justify: inter-word;
+        hyphens: auto;
         color: #000;
       }
       .preview-paper table {
         width: 100%;
         border-collapse: collapse;
-        margin: 12pt auto;
+        margin: 8pt auto 12pt auto;
         font-size: 8pt;
+        line-height: 1.2;
+        border-top: 1.5pt solid #000 !important;
+        border-bottom: 1.5pt solid #000 !important;
+        border-left: none !important;
+        border-right: none !important;
         break-inside: avoid;
       }
-      .preview-paper table caption {
+      .preview-paper thead th, .preview-paper th {
+        border: none !important;
+        border-bottom: 0.75pt solid #000 !important;
+        padding: 4pt 6pt;
+        text-align: center;
+        font-weight: bold;
+        font-size: 8pt;
+        background: transparent !important;
+        color: #000;
+      }
+      .preview-paper tbody td, .preview-paper td {
+        border: none !important;
+        padding: 3pt 6pt;
+        font-size: 8pt;
+        background: transparent !important;
+        color: #000;
+      }
+      .preview-paper .table-caption, .preview-paper caption {
         caption-side: top;
-        font-weight: bold;
-        font-size: 8.5pt;
-        margin-bottom: 4px;
-        text-align: left;
-        color: #000;
-      }
-      .preview-paper thead tr th {
-        border: 1px solid #000;
-        padding: 5px 6px;
         text-align: center;
-        font-weight: bold;
-        background: #f0f0f0;
-        color: #000;
-      }
-      .preview-paper tbody tr td {
-        border: 1px solid #ccc;
-        padding: 4px 6px;
-        text-align: center;
-        color: #000;
-      }
-      .preview-paper tbody tr:nth-child(odd) td {
-        background: #fafafa;
-      }
-      .preview-paper th, .preview-paper td {
-        border: 1px solid #000;
-        padding: 4px;
-        text-align: center;
-        color: #000;
-      }
-      .preview-paper .figure-caption {
-        font-size: 8.5pt;
-        font-style: italic;
-        text-align: center;
-        margin-top: 6pt;
-        margin-bottom: 12pt;
-        color: #000;
-      }
-      .preview-paper .diagram-container {
-        text-align: center;
-        margin: 16pt auto;
+        font-size: 8pt;
+        margin-bottom: 4pt;
+        line-height: 1.25;
+        text-transform: uppercase;
         break-inside: avoid;
+        color: #000;
       }
-      .preview-paper .diagram-container img {
+      .preview-paper .table-num {
+        display: block;
+        font-weight: bold;
+        font-size: 8.5pt;
+        letter-spacing: 0.5px;
+      }
+      .preview-paper .table-title {
+        display: block;
+        font-size: 8pt;
+        letter-spacing: 0.5px;
+      }
+      .preview-paper .paper-figure, .preview-paper figure, .preview-paper .diagram-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 10pt auto;
+        width: 100%;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .preview-paper .paper-figure img, .preview-paper figure img, .preview-paper .diagram-container img {
         max-width: 100%;
-        border: 1px solid #ddd;
-        padding: 8px;
-        background: #fff;
+        height: auto;
+        display: block;
+        margin: 0 auto;
       }
-      .preview-paper .diagram-container, .preview-paper pre, .preview-paper code, .preview-paper .table-caption, .preview-paper .figure-caption {
+      .preview-paper .figure-caption, .preview-paper figcaption {
+        font-size: 8pt;
+        line-height: 1.25;
+        text-align: justify;
+        margin-top: 5pt;
+        margin-bottom: 6pt;
+        text-indent: 0 !important;
+        width: 100%;
+        color: #000;
+      }
+      .preview-paper .figure-caption strong, .preview-paper figcaption strong {
+        font-weight: bold;
+      }
+      .preview-paper .equation-wrapper, .preview-paper .katex-display {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        position: relative !important;
+        width: 100% !important;
+        margin: 6pt 0 !important;
+        overflow-x: visible !important;
+      }
+      .preview-paper .katex-display > .katex {
+        text-align: center !important;
+        width: 100% !important;
+      }
+      .preview-paper .katex-display > .katex > .katex-html > .tag {
+        position: absolute !important;
+        right: 0 !important;
+        font-size: 9.5pt !important;
+        color: #000 !important;
+      }
+      .preview-paper .bibliography-entry {
+        margin-bottom: 3pt;
+        text-indent: -1.5em;
+        padding-left: 1.5em;
+        font-size: 8pt;
+        line-height: 1.25;
+        text-align: justify;
+        color: #000;
+      }
+      .preview-paper h2.unnumbered-heading {
+        text-align: center;
+        text-transform: uppercase;
+      }
+      .preview-paper .diagram-container, .preview-paper .table-caption, .preview-paper .figure-caption {
         break-inside: avoid;
       }
     `;
@@ -6701,26 +6943,23 @@ function LivePreview({ htmlContent, format, project, citations }: { htmlContent:
 
         const cols = Array.from(table.querySelectorAll("th, tr:first-child td")).map((el: any) => el.textContent?.trim() || "");
         
-        let captionText = "";
+        let tableTitle = "";
         if (existingCaptionText) {
-          // Normalize the table number and style it
-          captionText = existingCaptionText.replace(/^(Table|TABLE)\s+(\w+):/i, (m, tbl, num) => {
-            return `TABLE ${toRomanGlobal(tableIndex)}:`;
-          });
-        } else {
-          captionText = `TABLE ${toRomanGlobal(tableIndex)}: COMPARISON RESULTS FOR ${cols.slice(0, 3).join(", ").toUpperCase()}`;
+          tableTitle = existingCaptionText.replace(/^(Table|TABLE)\s+[IVXLCDM\d]+[:.\s-]+/i, '').trim().toUpperCase();
+        }
+        if (!tableTitle) {
+          tableTitle = `COMPARISON RESULTS FOR ${cols.slice(0, 3).join(", ").toUpperCase()}`;
         }
         
         if (!table.previousElementSibling?.classList.contains("table-caption")) {
           const captionDiv = document.createElement("div");
           captionDiv.className = "table-caption";
           captionDiv.style.textAlign = "center";
-          captionDiv.style.fontSize = "8.5pt";
-          captionDiv.style.fontWeight = "bold";
+          captionDiv.style.fontSize = "8pt";
           captionDiv.style.textTransform = "uppercase";
-          captionDiv.style.marginBottom = "6pt";
+          captionDiv.style.marginBottom = "4pt";
           captionDiv.style.color = "#000";
-          captionDiv.textContent = captionText;
+          captionDiv.innerHTML = `<span class="table-num" style="display:block;font-weight:bold;font-size:8.5pt;letter-spacing:0.5px;">TABLE ${toRomanGlobal(tableIndex)}</span><span class="table-title" style="display:block;font-size:8pt;letter-spacing:0.5px;">${tableTitle}</span>`;
           table.parentNode?.insertBefore(captionDiv, table);
         }
       });
@@ -6761,11 +7000,10 @@ function LivePreview({ htmlContent, format, project, citations }: { htmlContent:
           sibling = sibling.nextElementSibling;
         }
 
-        let captionText = "";
+        let captionHTML = "";
         if (existingCaptionText) {
-          captionText = existingCaptionText.replace(/^(Figure|FIGURE)\s+(\d+)[:.]/i, (m, fgr, num) => {
-            return `Figure ${figIndex}.`;
-          });
+          const desc = existingCaptionText.replace(/^(Figure|FIGURE|Fig|FIG)\.?\s*\d+[:.\s-]+/i, '').trim();
+          captionHTML = `<strong>Fig. ${figIndex}.</strong>  ${desc}`;
         } else {
           const prevHeadingEl = fig.previousElementSibling?.tagName.startsWith("H") 
             ? fig.previousElementSibling 
@@ -6783,20 +7021,19 @@ function LivePreview({ htmlContent, format, project, citations }: { htmlContent:
           } else if (cleanHeading) {
             captionDesc = `Architectural overview of ${cleanHeading} implementation.`;
           }
-          captionText = `Figure ${figIndex}. ${captionDesc}`;
+          captionHTML = `<strong>Fig. ${figIndex}.</strong>  ${captionDesc}`;
         }
         
         const nextEl = baseElementForSibling.nextElementSibling;
         if (!nextEl?.classList.contains("figure-caption")) {
           const captionDiv = document.createElement("div");
           captionDiv.className = "figure-caption";
-          captionDiv.style.textAlign = "center";
-          captionDiv.style.fontSize = "8.5pt";
-          captionDiv.style.fontStyle = "italic";
-          captionDiv.style.marginTop = "6pt";
-          captionDiv.style.marginBottom = "12pt";
+          captionDiv.style.textAlign = "justify";
+          captionDiv.style.fontSize = "8pt";
+          captionDiv.style.marginTop = "5pt";
+          captionDiv.style.marginBottom = "6pt";
           captionDiv.style.color = "#000";
-          captionDiv.textContent = captionText;
+          captionDiv.innerHTML = captionHTML;
           baseElementForSibling.parentNode?.insertBefore(captionDiv, baseElementForSibling.nextSibling);
         }
       });
@@ -7033,10 +7270,17 @@ function LivePreview({ htmlContent, format, project, citations }: { htmlContent:
             Department of Autonomous Scholarly Synthesis
           </div>
 
-          <div 
-            className={format === 'IEEE' || format === 'ACM' || format === 'Springer' ? 'main-content' : ''}
-            dangerouslySetInnerHTML={{ __html: `${abstractSectionHTML} ${sectionsHTML}` }} 
-          />
+          {format === 'IEEE' ? (
+            <>
+              <div dangerouslySetInnerHTML={{ __html: abstractSectionHTML }} />
+              <div className="main-content" dangerouslySetInnerHTML={{ __html: sectionsHTML }} />
+            </>
+          ) : (
+            <div 
+              className={format === 'ACM' || format === 'Springer' ? 'main-content' : ''}
+              dangerouslySetInnerHTML={{ __html: `${abstractSectionHTML} ${sectionsHTML}` }} 
+            />
+          )}
         </div>
       </div>
     </div>

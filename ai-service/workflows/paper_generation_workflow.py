@@ -61,16 +61,16 @@ def execute_paper_generation_flow(project_id: str, query: str) -> Dict[str, Any]
         
     ref_block = build_references_section(citations)
 
-    # 4. Formulate final section mapping
+    # 4. Formulate final section mapping with IEEE Roman Numeral headings
     sections = [
         {"title": "Abstract", "heading": "Abstract", "content": abstract},
-        {"title": "Introduction", "heading": "1. Introduction", "content": intro},
-        {"title": "Literature Review", "heading": "2. Literature Review", "content": lit_review},
-        {"title": "Methodology", "heading": "3. Methodology & Design", "content": methodology},
-        {"title": "Results", "heading": "4. Experimental Results", "content": results},
-        {"title": "Discussion", "heading": "5. Discussion & Future Scope", "content": discussion},
-        {"title": "Conclusion", "heading": "6. Conclusion", "content": conclusion},
-        {"title": "References", "heading": "References", "content": ref_block}
+        {"title": "I. INTRODUCTION", "heading": "I. INTRODUCTION", "content": intro},
+        {"title": "II. LITERATURE REVIEW", "heading": "II. LITERATURE REVIEW", "content": lit_review},
+        {"title": "III. METHODOLOGY & DESIGN", "heading": "III. METHODOLOGY & DESIGN", "content": methodology},
+        {"title": "IV. EXPERIMENTAL RESULTS", "heading": "IV. EXPERIMENTAL RESULTS", "content": results},
+        {"title": "V. DISCUSSION & FUTURE SCOPE", "heading": "V. DISCUSSION & FUTURE SCOPE", "content": discussion},
+        {"title": "VI. CONCLUSION", "heading": "VI. CONCLUSION", "content": conclusion},
+        {"title": "REFERENCES", "heading": "REFERENCES", "content": ref_block}
     ]
 
     full_paper_text = "\n\n".join([f"{s['heading']}\n{s['content']}" for s in sections])
