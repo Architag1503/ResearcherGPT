@@ -1033,36 +1033,7 @@ def generate_fallback_data(agent_name: str, project_id: str, query: str, pages: 
                         f"Thus the writing cycle terminates in finite steps."
                     )
                 
-            # If we need to scale up to the user's specific page count, let's duplicate/extend paragraphs
-            # to make sure the output word count is proportional to the pages.
-            # We want to match approximately (pages * 600) / 14 words per section.
-            # Let's add extra detailed text paragraphs if the page count is high!
-            target_words_per_section = max(50, (pages * 600) // 14)
-            current_content = "\n\n".join(content_parts)
-            current_word_count = len(current_content.split())
-            
-            # Procedural academic text extender loop
-            loop_idx = 0
-            while current_word_count < target_words_per_section and len(content_parts) > 0:
-                # Add highly technical academic reinforcement paragraph
-                reinforcement = (
-                    f"In addition, mathematical modeling of the {query} system verifies that state-transition "
-                    f"weights conform to the convergence parameters. Let us examine the optimization boundaries. "
-                    f"Specifically, we analyze parameters under step {loop_idx + 1}. The relational updates are synchronized "
-                    f"asynchronously across the node cluster, reducing the token overhead of the main loop. "
-                    f"Furthermore, local state locking ensures transactional boundaries. This confirms that the proposed "
-                    f"framework is resilient to race conditions, and handles cyclical agent workflows without degradation. "
-                    f"Each agent node executes its task independently, querying vector segments and updating the central state. "
-                    f"The QA agent verifies accuracy against known ground truths, ensuring publication-grade output."
-                )
-                content_parts.append(reinforcement)
-                current_content = "\n\n".join(content_parts)
-                current_word_count = len(current_content.split())
-                loop_idx += 1
-                if loop_idx > 30: # safety break
-                    break
-                    
-            return current_content
+            return "\n\n".join(content_parts)
             
         sections = []
         section_titles = [

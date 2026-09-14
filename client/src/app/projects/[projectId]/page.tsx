@@ -982,14 +982,18 @@ const formatAcademicVisualCaptions = (rawHtml: string): string => {
   processed = processed.replace(
     /(<figcaption[^>]*class=["'][^"']*figure-caption[^"']*["'][^>]*>|<figcaption[^>]*>|<p[^>]*class=["'][^"']*figure-caption[^"']*["'][^>]*>)([\s\S]*?)(<\/figcaption>|<\/p>)/gi,
     (match, openTag, content, closeTag) => {
-      const text = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-      const figMatch = text.match(/^(?:Figure|FIGURE|Fig|FIG)\.?\s*(\d+)[:.\s-]+(.*)$/i);
-      if (figMatch) {
-        const num = figMatch[1];
-        const title = figMatch[2].trim();
-        return `<figcaption class="figure-caption"><strong>Fig. ${num}.</strong> ${title}</figcaption>`;
+      let text = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      const numMatch = text.match(/\d+/);
+      const num = numMatch ? numMatch[0] : '1';
+
+      while (true) {
+        const prev = text;
+        text = text.replace(/^(?:Figure|FIGURE|Fig|FIG)\.?\s*\d*[:.\s-]*/i, '').trim();
+        if (text === prev) break;
       }
-      return match;
+      text = text.replace(/\.+$/, '');
+      if (!text) text = 'System Architecture and Workflow';
+      return `<figcaption class="figure-caption"><strong>Fig. ${num}.</strong> ${text}.</figcaption>`;
     }
   );
 
@@ -1494,7 +1498,11 @@ const getExportPipelineScript = (format: string): string => {
   s.push('                      fig.closest(\'.custom-replaced-table\') ||');
   s.push('                      fig.closest(\'.custom-replaced-formula\') ||');
   s.push('                      fig.parentNode?.querySelector(\'figcaption\') ||');
-  s.push('                      fig.parentNode?.querySelector(\'.figure-caption\')');
+  s.push('                      fig.parentNode?.querySelector(\'.figure-caption\') ||');
+  s.push('                      fig.closest(\'.diagram-container\')?.querySelector(\'.figure-caption\') ||');
+  s.push('                      fig.closest(\'.diagram-container\')?.querySelector(\'figcaption\') ||');
+  s.push('                      fig.closest(\'.diagram-container\')?.nextElementSibling?.classList.contains(\'figure-caption\') ||');
+  s.push('                      fig.nextElementSibling?.classList.contains(\'figure-caption\')');
   s.push('                    ) {');
   s.push('                      return;');
   s.push('                    }');
@@ -2943,14 +2951,17 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
           <body>
             <h1 class="doc-title">${title}</h1>
             <div class="author-block">
-              <strong>Research Team</strong><br>
-              ResearcherGPT Multi-Agent Synthesis Framework<br>
-              Department of Autonomous Scholarly Synthesis
+              <div style="font-size:11pt; font-weight:bold; margin-bottom:2pt;">Research Author</div>
+              <div style="font-size:9.5pt; color:#222; line-height:1.25;">
+                Department of Computer Science & Engineering<br>
+                ResearcherGPT Academic Research Workspace<br>
+                research@workspace.ac.in
+              </div>
             </div>
 
             ${selectedFormat === 'IEEE' ? `
-              ${abstractSectionHTML}
               <div class="main-content">
+                ${abstractSectionHTML}
                 ${sectionsHTML}
               </div>
             ` : `
@@ -7006,7 +7017,11 @@ function LivePreview({ htmlContent, format, project, citations }: { htmlContent:
           fig.closest('.custom-replaced-table') ||
           fig.closest('.custom-replaced-formula') ||
           fig.parentNode?.querySelector('figcaption') ||
-          fig.parentNode?.querySelector('.figure-caption')
+          fig.parentNode?.querySelector('.figure-caption') ||
+          fig.closest('.diagram-container')?.querySelector('.figure-caption') ||
+          fig.closest('.diagram-container')?.querySelector('figcaption') ||
+          fig.closest('.diagram-container')?.nextElementSibling?.classList.contains('figure-caption') ||
+          fig.nextElementSibling?.classList.contains('figure-caption')
         ) {
           return;
         }

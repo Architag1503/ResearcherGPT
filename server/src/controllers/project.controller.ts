@@ -17,6 +17,7 @@ import { Queue } from 'bullmq';
 import { bullConfig } from '../config/redis.js';
 import axios from 'axios';
 import { FormaTeXService } from '../services/formatex.service.js';
+import { PaperValidationService } from '../services/paperValidation.service.js';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
@@ -407,8 +408,28 @@ function parseHtmlToManuscript(html: string): { title: string; sections: { title
     title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
   }
 
-  const sections: { title: string; content: string }[] = [];
-  const references: string[] = [];
+  const rawSections: { title: string; content: string }[] = [];
+  const rawReferences: string[] = [];
+
+  // Abstract and Keywords extraction from standard containers
+  const abstractMatch = html.match(/<div[^>]*class="abstract-section"[^>]*>([\s\S]*?)<\/div>/i) || 
+                        html.match(/<strong>ABSTRACT<\/strong>([\s\S]*?)(?:<strong>|$)/i) ||
+                        html.match(/<em>Abstract<\/em>[—\-]([\s\S]*?)(?:<\/p>|<em>Keywords|$)/i);
+  if (abstractMatch) {
+    const absText = abstractMatch[1].replace(/<[^>]*>/g, '').trim();
+    if (absText) {
+      rawSections.push({ title: "Abstract", content: absText });
+    }
+  }
+
+  const keywordsMatch = html.match(/<em>(?:Keywords|Index Terms)<\/em>[—\-]([\s\S]*?)<\/p>/i) || 
+                        html.match(/<strong>(?:KEYWORDS|Keywords)<\/strong>[\s\S]*?<br\s*\/?>([\s\S]*?)<\/p>/i);
+  if (keywordsMatch) {
+    const kwText = keywordsMatch[1].replace(/<[^>]*>/g, '').trim();
+    if (kwText) {
+      rawSections.push({ title: "Keywords", content: kwText });
+    }
+  }
 
   // Match all <section> wrapper elements if they exist
   const sectionRegex = /<section[^>]*>\s*<h2[^>]*>([\s\S]*?)<\/h2>\s*<div[^>]*>([\s\S]*?)<\/div>\s*<\/section>/gi;
@@ -424,33 +445,23 @@ function parseHtmlToManuscript(html: string): { title: string; sections: { title
       const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
       let liMatch;
       while ((liMatch = liRegex.exec(secContent)) !== null) {
-        references.push(liMatch[1].replace(/<[^>]*>/g, '').trim());
+        rawReferences.push(liMatch[1].replace(/<[^>]*>/g, '').trim());
       }
-      if (references.length === 0) {
+      if (rawReferences.length === 0) {
         const lines = secContent.split(/<p>|<br\/?>/i);
         lines.forEach(line => {
           const cleanLine = line.replace(/<[^>]*>/g, '').trim();
-          if (cleanLine) references.push(cleanLine);
+          if (cleanLine) rawReferences.push(cleanLine);
         });
       }
     } else {
-      sections.push({ title: secTitle, content: secContent });
+      rawSections.push({ title: secTitle, content: secContent });
     }
   }
 
   // If no wrapped sections were found, parse flat h2 tags
   if (!hasWrappedSections) {
     const parts = html.split(/<h2[^>]*>([\s\S]*?)<\/h2>/gi);
-    
-    // Abstract check in first part
-    const abstractMatch = html.match(/<div[^>]*class="abstract-section"[^>]*>([\s\S]*?)<\/div>/i) || html.match(/<strong>ABSTRACT<\/strong>([\s\S]*?)(?:<strong>|$)/i);
-    if (abstractMatch) {
-      sections.push({
-        title: "Abstract",
-        content: abstractMatch[1].replace(/<[^>]*>/g, '').trim()
-      });
-    }
-
     for (let i = 1; i < parts.length; i += 2) {
       const secTitle = parts[i].replace(/<[^>]*>/g, '').trim();
       const secContent = (parts[i + 1] || '').trim();
@@ -459,15 +470,21 @@ function parseHtmlToManuscript(html: string): { title: string; sections: { title
         const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
         let liMatch;
         while ((liMatch = liRegex.exec(secContent)) !== null) {
-          references.push(liMatch[1].replace(/<[^>]*>/g, '').trim());
+          rawReferences.push(liMatch[1].replace(/<[^>]*>/g, '').trim());
         }
       } else {
-        sections.push({ title: secTitle, content: secContent });
+        rawSections.push({ title: secTitle, content: secContent });
       }
     }
   }
 
-  return { title, sections, references };
+  // Normalize, deduplicate paragraphs, and enforce single rendering
+  const normalized = PaperValidationService.normalizeManuscript(title, rawSections, rawReferences);
+  return {
+    title: normalized.title,
+    sections: normalized.sections.map(s => ({ title: s.title, content: s.content })),
+    references: normalized.references
+  };
 }
 
 export const exportProjectPaperPDF = async (req: Request, res: Response) => {
@@ -541,6 +558,12 @@ export const exportProjectPaperPDF = async (req: Request, res: Response) => {
       .replace(/https?:\/\/[^\/]+(:\d+)?\/uploads\//g, 'uploads/')
       .replace(/src=["']\/uploads\//g, 'src="uploads/');
 
+    // Sanitize processedHtml to strip repetitive filler sentences and duplicate captions
+    processedHtml = processedHtml.replace(
+      /(?:<p[^>]*>)?\s*In addition, mathematical modeling of the[\s\S]*?ensuring publication-grade output\.?\s*(?:<\/p>)?/gi,
+      ''
+    );
+
     // Get the absolute base path for file:// origin in Chromium
     const uploadsPath = path.resolve('uploads');
     const projectRootPath = path.dirname(uploadsPath).replace(/\\/g, '/');
@@ -557,9 +580,18 @@ export const exportProjectPaperPDF = async (req: Request, res: Response) => {
     tempFilePath = path.join(projectRootPath, tempFileName);
     fs.writeFileSync(tempFilePath, processedHtml, 'utf-8');
 
-    // Launch Chromium headlessly using the system browser package in Alpine
+    // Launch Chromium headlessly using the system browser package in Alpine or local Windows Chrome/Edge
+    let executablePath = process.env.CHROMIUM_PATH || '/usr/bin/chromium-browser';
+    if (process.platform === 'win32') {
+      if (fs.existsSync('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe')) {
+        executablePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+      } else if (fs.existsSync('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe')) {
+        executablePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+      }
+    }
+
     const browser = await chromium.launch({
-      executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium-browser',
+      executablePath,
       args: [
         '--headless',
         '--no-sandbox',

@@ -41,3 +41,7 @@ Thumbs.db
 *.njsproj
 *.sln
 *.swp
+
+# Uploads and temporary artifacts
+uploads/
+*.pdf

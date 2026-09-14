@@ -697,10 +697,17 @@ export default function VisualElementReplacer({
           inner = newFigcaption + '\n' + inner;
         }
       } else if (item.type === 'diagram') {
-        const figMatch = newCaption.match(/^(?:Figure|FIGURE|Fig|FIG)\.?\s*(\d+)[:.\s-]+(.*)$/i);
-        const figHtml = figMatch 
-          ? `<strong>Fig. ${figMatch[1]}.</strong>  ${figMatch[2].trim()}`
-          : (newCaption.startsWith('<strong>Fig') ? newCaption : `<strong>Fig. 1.</strong>  ${newCaption.trim()}`);
+        let pureDesc = newCaption;
+        while (true) {
+          const prev = pureDesc;
+          pureDesc = pureDesc.replace(/^(?:Figure|FIGURE|Fig|FIG)\.?\s*\d*[:.\s-]*/i, '').trim();
+          if (pureDesc === prev) break;
+        }
+        pureDesc = pureDesc.replace(/\.+$/, '');
+        if (!pureDesc) pureDesc = 'System Architecture and Workflow';
+        const numMatch = newCaption.match(/\d+/);
+        const num = numMatch ? numMatch[0] : '1';
+        const figHtml = `<strong>Fig. ${num}.</strong>  ${pureDesc}.`;
         const newFigcaption = `<figcaption class="figure-caption" style="font-size:8pt;color:#000;margin-top:5pt;margin-bottom:6pt;text-align:justify;display:block;width:100%;max-width:100%;line-height:1.25;">${figHtml}</figcaption>`;
         if (/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i.test(inner)) {
           inner = inner.replace(/<figcaption[^>]*>[\s\S]*?<\/figcaption>/i, newFigcaption);
@@ -791,23 +798,45 @@ export default function VisualElementReplacer({
       const encodedOriginal = encodeURIComponent(originalToPreserve);
 
       if (item.type === 'diagram') {
-        const figMatch = cleanCaption.match(/^(?:Figure|FIGURE|Fig|FIG)\.?\s*(\d+)[:.\s-]+(.*)$/i);
-        const figHtml = figMatch 
-          ? `<strong>Fig. ${figMatch[1]}.</strong>  ${figMatch[2].trim()}`
-          : (cleanCaption.startsWith('<strong>Fig') ? cleanCaption : `<strong>Fig. 1.</strong>  ${cleanCaption}`);
+        let pureDesc = cleanCaption;
+        while (true) {
+          const prev = pureDesc;
+          pureDesc = pureDesc.replace(/^(?:Figure|FIGURE|Fig|FIG)\.?\s*\d*[:.\s-]*/i, '').trim();
+          if (pureDesc === prev) break;
+        }
+        pureDesc = pureDesc.replace(/\.+$/, '');
+        if (!pureDesc) pureDesc = 'System Architecture and Workflow';
+        const numMatch = cleanCaption.match(/\d+/);
+        const num = numMatch ? numMatch[0] : '1';
+        const figHtml = `<strong>Fig. ${num}.</strong>  ${pureDesc}.`;
         replacementHtml = `
 <figure class="paper-figure custom-replaced-visual" data-visual-id="${item.id}" data-visual-type="diagram" data-span-mode="${spanMode}" data-original-html="${encodedOriginal}" style="text-align:center;margin:12pt auto;width:100%;max-width:100%;box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;${spanStyle}">
   <img src="${finalImageUrl}" alt="${cleanCaption}" class="diagram-figure mx-auto shadow-sm" style="max-width:100%;height:auto;display:block;margin:0 auto;background:#fff;" />
   <figcaption class="figure-caption" style="font-size:8pt;color:#000;margin-top:5pt;margin-bottom:6pt;text-align:justify;display:block;width:100%;line-height:1.25;">${figHtml}</figcaption>
 </figure>`;
       } else if (item.type === 'table') {
-        const tblMatch = cleanCaption.match(/^(?:TABLE|Table)\s*([IVXLCDM\d]+)[:.\s-]+(.*)$/i);
-        let tableCaptionHtml = '';
-        if (tblMatch) {
-          tableCaptionHtml = `<span class="table-num" style="display:block;text-align:center;font-weight:bold;margin-bottom:2pt;letter-spacing:0.5px;font-size:8.5pt;">TABLE ${tblMatch[1].toUpperCase()}</span><span class="table-title" style="display:block;text-align:center;letter-spacing:0.5px;font-size:8pt;">${tblMatch[2].trim().toUpperCase()}</span>`;
+        let romanNum = 'I';
+        let tableTitle = cleanCaption;
+
+        const matchSpacing = cleanCaption.match(/^(?:TABLE|Table)\s*([IVXLCDM\d]+)[:.\s-]+(.*)$/i);
+        const matchConcat = cleanCaption.match(/^(?:TABLE|Table)\s*([IVXLCDM]+)([A-Za-z\s].*)$/i);
+        const matchUnspaced = cleanCaption.match(/^(?:TABLE|Table)([IVXLCDM]+)([A-Z].*)$/i);
+
+        if (matchSpacing) {
+          romanNum = matchSpacing[1].toUpperCase();
+          tableTitle = matchSpacing[2].trim().toUpperCase();
+        } else if (matchConcat) {
+          romanNum = matchConcat[1].toUpperCase();
+          tableTitle = matchConcat[2].trim().toUpperCase();
+        } else if (matchUnspaced) {
+          romanNum = matchUnspaced[1].toUpperCase();
+          tableTitle = matchUnspaced[2].trim().toUpperCase();
         } else {
-          tableCaptionHtml = `<span class="table-title" style="display:block;text-align:center;letter-spacing:0.5px;font-size:8pt;">${cleanCaption.trim().toUpperCase()}</span>`;
+          tableTitle = cleanCaption.replace(/^(?:TABLE|Table)\s*[IVXLCDM\d]*[:.\s-]*/i, '').trim().toUpperCase();
         }
+
+        if (!tableTitle) tableTitle = 'EXPERIMENTAL EVALUATION';
+        const tableCaptionHtml = `<span class="table-num" style="display:block;text-align:center;font-weight:bold;margin-bottom:2pt;letter-spacing:0.5px;font-size:8.5pt;">TABLE ${romanNum}</span><span class="table-title" style="display:block;text-align:center;letter-spacing:0.5px;font-size:8pt;">${tableTitle}</span>`;
         replacementHtml = `
 <figure class="paper-table custom-replaced-table" data-visual-id="${item.id}" data-visual-type="table" data-span-mode="${spanMode}" data-original-html="${encodedOriginal}" style="text-align:center;margin:12pt auto;width:100%;max-width:100%;box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;${spanStyle}">
   <figcaption class="table-caption" style="font-size:8pt;color:#000;margin-bottom:4pt;text-align:center;text-transform:uppercase;letter-spacing:0.5px;display:block;width:100%;line-height:1.25;">${tableCaptionHtml}</figcaption>

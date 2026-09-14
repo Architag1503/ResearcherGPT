@@ -4,6 +4,11 @@ import time
 import requests
 from typing import Dict, Any, List, Tuple, Optional
 
+try:
+    from services.paper_validator import PaperValidator
+except ImportError:
+    from paper_validator import PaperValidator
+
 # Base URL and API Key
 BASE_URL = "https://api.formatex.io/api/v1"
 API_KEY = os.getenv("FORMATEX_API_KEY") or "fex_164debc960d90958825678cd389c9c5296a57fbb91e34957a8ba855ac54b8711"
@@ -541,6 +546,8 @@ class FormaTeXService:
         tikz.append(r"\end{tikzpicture}")
         return "\n".join(tikz)
 
+    @classmethod
+    def _preprocess_diagrams_and_media(cls, content: str) -> str:
         # 4. Handle ASCII box-drawing or schematic grids in <pre> or <div> blocks (e.g. Methodology Pipeline)
         def replace_ascii_schematic(match):
             block_text = match.group(2).strip()
@@ -639,6 +646,12 @@ class FormaTeXService:
         
         # 1. Decode HTML entities and replace less-than/greater-than signs
         p = p.replace('&lt;', '<').replace('&gt;', '>')
+        p = p.replace('&times;', r'$\times$').replace('×', r'$\times$')
+        p = p.replace('&ge;', r'$\ge$').replace('≥', r'$\ge$')
+        p = p.replace('&le;', r'$\le$').replace('≤', r'$\le$')
+        p = p.replace('&plusmn;', r'$\pm$').replace('±', r'$\pm$')
+        p = p.replace('&infin;', r'$\infty$').replace('∞', r'$\infty$')
+        p = p.replace('&nbsp;', ' ')
         
         # 2. Temporarily mask math blocks to isolate them from plain text ampersand escaping
         math_blocks = []
@@ -668,18 +681,68 @@ class FormaTeXService:
         p = p.replace("<i>", "\\textit{").replace("</i>", "}")
         p = p.replace("<code>", "\\texttt{").replace("</code>", "}")
         
-        # 5. Handle diagram container images with figure captions
+        def resolve_img_src(raw_src: str) -> str:
+            if not raw_src:
+                return ""
+            if raw_src.startswith("data:image"):
+                try:
+                    import base64
+                    import hashlib
+                    header, b64_data = raw_src.split(",", 1)
+                    img_bytes = base64.b64decode(b64_data)
+                    img_hash = hashlib.md5(img_bytes).hexdigest()[:12]
+                    filename = f"img_{img_hash}.png"
+                    upload_dir = "uploads"
+                    os.makedirs(upload_dir, exist_ok=True)
+                    filepath = os.path.join(upload_dir, filename)
+                    if not os.path.exists(filepath):
+                        with open(filepath, "wb") as f:
+                            f.write(img_bytes)
+                    return filename
+                except Exception as ex:
+                    print(f"Error decoding base64 image: {ex}")
+                    return ""
+            return os.path.basename(raw_src)
+
+        # 5. Handle semantic HTML5 figure elements
+        def repl_figure_element(m):
+            fig_html = m.group(0)
+            img_m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', fig_html, re.IGNORECASE)
+            cap_m = re.search(r'<figcaption[^>]*>([\s\S]*?)<\/figcaption>', fig_html, re.IGNORECASE) or re.search(r'<p[^>]*class=["\']figure-caption["\'][^>]*>([\s\S]*?)<\/p>', fig_html, re.IGNORECASE)
+            
+            if not img_m:
+                return ""
+            
+            src = resolve_img_src(img_m.group(1))
+            if not src:
+                return ""
+            
+            caption_text = ""
+            if cap_m:
+                caption_text = PaperValidator.strip_caption_prefix(cap_m.group(1), "figure")
+            
+            tex_fig = []
+            tex_fig.append(r"\begin{figure}[htbp]")
+            tex_fig.append(r"\centering")
+            tex_fig.append(f"\\includegraphics[width=0.85\\linewidth]{{uploads/{src}}}")
+            if caption_text:
+                tex_fig.append(f"\\caption{{{caption_text}}}")
+            tex_fig.append(r"\end{figure}")
+            return "\n" + "\n".join(tex_fig) + "\n"
+
+        p = re.sub(r'<figure[^>]*>[\s\S]*?<\/figure>', repl_figure_element, p, flags=re.IGNORECASE)
+
+        # Handle diagram container images with figure captions
         def repl_figure_with_caption(m):
             img_tag = m.group(1)
             caption_html = m.group(2)
             
-            caption_text = re.sub(r'</?[a-zA-Z][^>]*>', '', caption_html).strip()
-            caption_text = re.sub(r'^Fig\.\s+\d+[:\.]\s*|^Figure\s+\d+[:\.]\s*', '', caption_text, flags=re.IGNORECASE)
+            caption_text = PaperValidator.strip_caption_prefix(caption_html, "figure")
             
             src = ""
             src_m = re.search(r'src=["\']([^"\']+)["\']', img_tag, re.IGNORECASE)
             if src_m:
-                src = os.path.basename(src_m.group(1))
+                src = resolve_img_src(src_m.group(1))
             
             if not src:
                 return ""
@@ -703,14 +766,14 @@ class FormaTeXService:
         # 6. Fallback inline images conversion
         def repl_img_fallback(m):
             img_tag = m.group(0)
-            alt = "Figure"
+            alt = "System Architecture and Workflow"
             src = ""
             src_m = re.search(r'src=["\']([^"\']+)["\']', img_tag, re.IGNORECASE)
             alt_m = re.search(r'alt=["\']([^"\']+)["\']', img_tag, re.IGNORECASE)
             if src_m:
-                src = os.path.basename(src_m.group(1))
+                src = resolve_img_src(src_m.group(1))
             if alt_m:
-                alt = alt_m.group(1)
+                alt = PaperValidator.strip_caption_prefix(alt_m.group(1), "figure")
             
             if not src:
                 return ""
@@ -729,8 +792,7 @@ class FormaTeXService:
             caption_html = m.group(1)
             tbody = m.group(2)
             
-            caption_text = re.sub(r'</?[a-zA-Z][^>]*>', '', caption_html).strip()
-            caption_text = re.sub(r'^TABLE\s+[IVXLCDM\d]+[:\.]\s*', '', caption_text, flags=re.IGNORECASE)
+            caption_text = PaperValidator.strip_caption_prefix(caption_html, "table")
             
             rows = re.findall(r'<tr[^>]*>([\s\S]*?)<\/tr>', tbody, re.IGNORECASE)
             if not rows:
@@ -740,7 +802,7 @@ class FormaTeXService:
             col_count = len(first_row_cells)
             align = "c" * col_count
             
-            use_star = (col_count > 3) and (style.upper() in ("IEEE", "SPRINGER", "ACM", "ELSEVIER"))
+            use_star = (col_count > 5) and (style.upper() in ("IEEE", "SPRINGER", "ACM", "ELSEVIER"))
             table_env = "table*" if use_star else "table"
             width_limit = r"\textwidth" if use_star else r"\linewidth"
             
@@ -757,6 +819,7 @@ class FormaTeXService:
                 cells = re.findall(r'<t[dh][^>]*>([\s\S]*?)<\/t[dh]>', r, re.IGNORECASE)
                 cleaned_cells = [re.sub(r'</?[a-zA-Z][^>]*>', '', c).strip() for c in cells]
                 cleaned_cells = [c.replace('&amp;', r'\&').replace('&', r'\&') for c in cleaned_cells]
+                cleaned_cells = [c.replace(r'\&times;', r'$\times$').replace('&times;', r'$\times$').replace('×', r'$\times$') for c in cleaned_cells]
                 
                 if len(cleaned_cells) < col_count:
                     cleaned_cells += [""] * (col_count - len(cleaned_cells))
@@ -843,17 +906,12 @@ class FormaTeXService:
         style_upper = style.upper()
         doc = []
         
-        abstract_text = ""
-        keywords_text = ""
-
-        # Pre-process abstract / keywords if they exist
-        for s in sections:
-            t = s["title"].strip()
-            c = s["content"].strip()
-            if t.lower() == 'abstract':
-                abstract_text = re.sub(r'<[^>]*>', '', c).strip()
-            elif t.lower() in ('keywords', 'key words'):
-                keywords_text = re.sub(r'<[^>]*>', '', c).strip()
+        from services.paper_validator import PaperValidator
+        sanitized = PaperValidator.sanitize_paper_structure(title, sections, references)
+        sections = sanitized["sections"]
+        references = sanitized["references"]
+        abstract_text = sanitized["abstract"]
+        keywords_text = sanitized["keywords"]
 
         # Enforce exact layout headers based on style
         if style_upper == "IEEE":
@@ -873,13 +931,7 @@ class FormaTeXService:
             doc.append(r"\renewcommand{\floatpagefraction}{0.7}")
             doc.append(r"\begin{document}")
             doc.append(f"\\title{{{title}}}")
-            doc.append(r"\author{")
-            doc.append(r"Vishal Srivastav, Archit Gupta, Palak Sharma\\")
-            doc.append(r"\textit{Department of Computer Science}\\")
-            doc.append(r"\textit{Department of Computer Science, Vivekananda Institute of Professional Studies and Technical Campus}\\")
-            doc.append(r"Pitampura, New Delhi, India\\")
-            doc.append(r"\{vishal.srivastav, archit.gupta, palak.sharma\}@vips.edu")
-            doc.append(r"}")
+            doc.append(r"\author{\IEEEauthorblockN{Author}\IEEEauthorblockA{\textit{Department of Computer Science}\\author@researcher.org}}")
             doc.append(r"\maketitle")
             if abstract_text:
                 doc.append(f"\\begin{{abstract}}\n{abstract_text}\n\\end{{abstract}}")
@@ -1067,7 +1119,8 @@ class FormaTeXService:
                 continue
             
             clean_t = re.sub(r'<[^>]*>', '', t).strip()
-            doc.append(f"\n\\section{{{clean_t}}}")
+            clean_no_num, _ = PaperValidator.clean_heading_title(clean_t)
+            doc.append(f"\n\\section{{{clean_no_num}}}")
             doc.append(cls._to_clean_latex_text(c, style=style))
 
         if references:
