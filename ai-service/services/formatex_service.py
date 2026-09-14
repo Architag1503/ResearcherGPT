@@ -574,6 +574,42 @@ class FormaTeXService:
             flags=re.IGNORECASE
         )
 
+        # Handle <figure> enclosing a mermaid diagram
+        def replace_mermaid_figure(m):
+            full_block = m.group(0)
+            cap_m = re.search(r'<figcaption[^>]*>([\s\S]*?)<\/figcaption>', full_block, re.IGNORECASE)
+            caption = "System architecture diagram."
+            if cap_m:
+                caption = PaperValidator.strip_caption_prefix(cap_m.group(1), "figure")
+            code_m = re.search(r'<code[^>]*>([\s\S]*?)<\/code>', full_block, re.IGNORECASE)
+            raw_code = code_m.group(1) if code_m else full_block
+            clean_code = re.sub(r'<[^>]*>', '', raw_code).strip()
+            tikz = cls._mermaid_to_tikz(clean_code)
+            if tikz:
+                return f"\n\\begin{{figure}}[htbp]\n\\centering\n{tikz}\n\\caption{{{caption}}}\n\\end{{figure}}\n"
+            return ""
+
+        content = re.sub(
+            r'<figure[^>]*>[\s\S]*?<code[^>]*class=["\'][^"\']*mermaid[^"\']*["\'][^>]*>[\s\S]*?<\/figure>',
+            replace_mermaid_figure,
+            content,
+            flags=re.IGNORECASE
+        )
+
+        def replace_mermaid_pre(m):
+            clean_code = re.sub(r'<[^>]*>', '', m.group(1)).strip()
+            tikz = cls._mermaid_to_tikz(clean_code)
+            if tikz:
+                return f"\n\\begin{{figure}}[htbp]\n\\centering\n{tikz}\n\\caption{{System architecture diagram.}}\n\\end{{figure}}\n"
+            return ""
+
+        content = re.sub(
+            r'<pre[^>]*><code[^>]*class=["\'][^"\']*mermaid[^"\']*["\'][^>]*>([\s\S]*?)<\/code><\/pre>',
+            replace_mermaid_pre,
+            content,
+            flags=re.IGNORECASE
+        )
+
         # 5. Search for any general paragraph containing raw mermaid graph syntax (e.g. starts with graph LR / TD)
         lines = content.split('\n')
         new_lines = []
@@ -671,6 +707,21 @@ class FormaTeXService:
         # 3b. Restore and clean math blocks (retaining unescaped alignment ampersands)
         for idx, block in enumerate(math_blocks):
             clean_block = block.replace('&amp;', '&').replace(r'\&', '&')
+            
+            # If it is display math ($$ ... $$ or \[ ... \]), prevent column overflow in two-column formats
+            m_disp = re.match(r'^(?:\$\$|\\\[)([\s\S]*?)(?:\$\$|\\\])$', clean_block.strip())
+            if m_disp:
+                inner_math = m_disp.group(1).strip()
+                tag_m = re.search(r'\\tag\{([^}]+)\}', inner_math)
+                math_without_tag = re.sub(r'\\tag\{[^}]+\}', '', inner_math).strip()
+                
+                # If equation is wider than 55 chars or contains wide formulas, scale to column
+                if len(math_without_tag) > 55 or (r'\sum' in math_without_tag and r'\times' in math_without_tag):
+                    if tag_m:
+                        clean_block = f"\n\\begin{{equation}}\n\\resizebox{{0.95\\linewidth}}{{!}}{{$\\displaystyle {math_without_tag}$}}\n\\tag{{{tag_m.group(1)}}}\n\\end{{equation}}\n"
+                    else:
+                        clean_block = f"\n\\begin{{equation*}}\n\\resizebox{{0.95\\linewidth}}{{!}}{{$\\displaystyle {math_without_tag}$}}\n\\end{{equation*}}\n"
+
             p = p.replace(f"MATH_BLOCK_PLACEHOLDER_{idx}", clean_block)
 
         # 4. Replace common inline text formatting tags
@@ -853,7 +904,7 @@ class FormaTeXService:
             col_count = len(first_row_cells)
             align = "c" * col_count
             
-            use_star = (col_count > 3) and (style.upper() in ("IEEE", "SPRINGER", "ACM", "ELSEVIER"))
+            use_star = (col_count > 5) and (style.upper() in ("IEEE", "SPRINGER", "ACM", "ELSEVIER"))
             table_env = "table*" if use_star else "table"
             width_limit = r"\textwidth" if use_star else r"\linewidth"
             
@@ -891,6 +942,10 @@ class FormaTeXService:
 
         # 11. Clean up ALL remaining HTML tags safely (to avoid leaving raw div/p tags in final LaTeX)
         p = re.sub(r'</?[a-zA-Z][^>]*>', '', p)
+        # Clean up malformed unclosed tags e.g. '<code \n'
+        p = re.sub(r'<[a-zA-Z]+(?:\s+[^>\n]*)?(?=\n|$)', '', p)
+        # Clean up any remaining stray unescaped angle brackets so they do not produce ¡ or ¿
+        p = p.replace('<', '$<$').replace('>', '$>$')
         
         # Restore tikz figures exactly as they were preprocessed
         for idx, block in enumerate(tikz_figures):
