@@ -202,10 +202,11 @@ def build_project_graph(project_id: str, papers: List[Dict[str, Any]]) -> Dict[s
                     continue
                 ent_type = str(ent.get("type", "concept")).lower()
                 cfg = ENTITY_TYPE_CONFIG.get(ent_type, {"color": "#06b6d4", "val": 2})
+                ent_label = ent.get("label") or ent.get("name") or ent.get("id") or "Unknown"
                 if ent_id not in nodes:
                     nodes[ent_id] = {
                         "id": ent_id,
-                        "label": ent["label"],
+                        "label": ent_label,
                         "type": ent_type,
                         "val": cfg["val"],
                         "color": cfg["color"]
@@ -214,10 +215,11 @@ def build_project_graph(project_id: str, papers: List[Dict[str, Any]]) -> Dict[s
                 
             # Add internal relations extracted by Gemini
             for rel in gemini_graph.get("relations", []):
-                src = rel["source"]
-                tgt = rel["target"]
-                if src in nodes and tgt in nodes:
-                    G.add_edge(src, tgt, label=rel["label"])
+                src = rel.get("source")
+                tgt = rel.get("target")
+                rel_label = rel.get("label") or rel.get("type") or rel.get("relationship") or "relates_to"
+                if src and tgt and src in nodes and tgt in nodes:
+                    G.add_edge(src, tgt, label=rel_label)
         else:
             # Fallback to heuristics
             ents = extract_entities_heuristics(paper)

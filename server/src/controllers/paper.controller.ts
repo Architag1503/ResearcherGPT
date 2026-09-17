@@ -398,3 +398,41 @@ export const uploadVisualImage = async (req: Request, res: Response) => {
   }
 };
 
+export const retryPaperProcessing = async (req: Request, res: Response) => {
+  try {
+    const { paperId } = req.params;
+    const paper = await Paper.findById(paperId);
+    if (!paper) {
+      return res.status(404).json({ error: 'Paper not found' });
+    }
+
+    paper.status = 'pending';
+    paper.currentStage = 'Queued';
+    paper.progress = 10;
+    paper.processingError = '';
+    paper.completedStages = [];
+    await paper.save();
+
+    if (pdfQueue) {
+      const job = await pdfQueue.add('pdf-processing', {
+        paperId: paper._id,
+        projectId: paper.projectId,
+        storageUrl: paper.storageUrl,
+        checksum: paper.checksum,
+        processingVersion: '1.0.0',
+      });
+
+      return res.status(200).json({
+        message: 'Paper processing re-queued successfully.',
+        paper,
+        jobId: job.id,
+      });
+    } else {
+      return res.status(503).json({ error: 'Queue is unavailable. Cannot retry right now.' });
+    }
+  } catch (error: any) {
+    console.error('[retryPaperProcessing] Error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+};
+

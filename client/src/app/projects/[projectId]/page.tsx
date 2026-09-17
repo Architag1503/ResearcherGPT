@@ -1898,6 +1898,17 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
     }
   };
 
+  const handleRetryPaper = async (paperId: string) => {
+    try {
+      const apiBase = getApiUrl();
+      await axios.post(`${apiBase}/api/papers/${paperId}/retry`);
+      fetchPapers();
+    } catch (err: any) {
+      console.error('Failed to retry paper:', err);
+      alert(err.response?.data?.error || 'Failed to retry paper processing. Please try again.');
+    }
+  };
+
   const fetchCitations = async () => {
     try {
       const apiBase = getApiUrl();
@@ -3205,7 +3216,7 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
     if (activeTab === 'plagiarism') { fetchPlagiarismReports(); fetchSavedPapers(); }
   }, [activeTab, projectId]);
 
-  // Handle PDF Upload
+  // Handle PDF Upload with resilient 429 retry
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
@@ -3215,17 +3226,39 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
     formData.append('projectId', projectId);
 
     setUploading(true);
-    try {
-      await axios.post(`${API_URL}/api/papers/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      fetchPapers();
-    } catch (err: any) {
-      console.error('Upload failed:', err);
-      alert(err.response?.data?.error || 'Failed to upload paper. Please try again.');
-    } finally {
-      setUploading(false);
+    const apiBase = getApiUrl();
+    const maxRetries = 3;
+    let uploadedSuccessfully = false;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        await axios.post(`${apiBase}/api/papers/upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        uploadedSuccessfully = true;
+        break;
+      } catch (err: any) {
+        const is429 = err.response?.status === 429 || String(err.message).includes('429');
+        if (is429 && attempt < maxRetries - 1) {
+          const waitMs = (attempt + 1) * 3500;
+          console.warn(`[handleUpload] 429 Rate limit encountered. Auto-retrying in ${waitMs / 1000}s (attempt ${attempt + 1}/${maxRetries})...`);
+          await new Promise(res => setTimeout(res, waitMs));
+          continue;
+        }
+
+        console.error('Upload failed:', err);
+        const errMsg = err.response?.data?.error || (is429
+          ? 'External AI provider rate limit reached (Status 429). The system will queue your paper as soon as capacity clears.'
+          : 'Failed to upload paper. Please try again.');
+        alert(errMsg);
+        break;
+      }
     }
+
+    if (uploadedSuccessfully) {
+      fetchPapers();
+    }
+    setUploading(false);
   };
 
   // Handle Agent Trigger (unified)
@@ -3610,6 +3643,15 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                             }`}>
                               {p.status}
                             </span>
+                            {p.status === 'failed' && (
+                              <button
+                                onClick={() => handleRetryPaper(p._id)}
+                                className="p-1.5 rounded-lg hover:bg-amber-500/10 text-amber-500 hover:text-amber-400 transition-colors"
+                                title="Retry Processing"
+                              >
+                                <RefreshCw className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleDeletePaper(p._id)}
                               className="p-1.5 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition-colors"
@@ -3622,8 +3664,16 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
 
                         {/* Rendering error if failed */}
                         {p.status === 'failed' && p.processingError && (
-                          <div className="text-[10px] text-red-400/90 bg-red-500/5 border border-red-500/10 p-2.5 rounded-lg">
-                            Error: {p.processingError}
+                          <div className="flex items-center justify-between text-[11px] text-red-400/90 bg-red-500/5 border border-red-500/10 p-2.5 rounded-lg mt-2">
+                            <div>
+                              <span className="font-semibold text-red-300">Processing Error:</span> {p.processingError}
+                            </div>
+                            <button
+                              onClick={() => handleRetryPaper(p._id)}
+                              className="ml-3 px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[11px] font-medium flex items-center gap-1.5 transition-colors flex-shrink-0"
+                            >
+                              <RefreshCw className="w-3 h-3" /> Retry
+                            </button>
                           </div>
                         )}
 

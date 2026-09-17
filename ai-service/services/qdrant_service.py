@@ -86,6 +86,9 @@ def get_gemini_embeddings_batch(texts: List[str]) -> List[List[float]]:
     SUB_BATCH_SIZE = 40
     all_embeddings = []
     
+    import random
+    import time
+
     for i in range(0, len(texts), SUB_BATCH_SIZE):
         chunk_batch = texts[i:i + SUB_BATCH_SIZE]
         requests_list = []
@@ -99,21 +102,37 @@ def get_gemini_embeddings_batch(texts: List[str]) -> List[List[float]]:
             
         payload = {"requests": requests_list}
         res_data = None
-        for attempt in range(2):
-            res = requests.post(url, headers=headers, json=payload, timeout=25)
-            if res.status_code == 200:
-                res_data = res.json()
+        max_attempts = 4
+        for attempt in range(max_attempts):
+            try:
+                res = requests.post(url, headers=headers, json=payload, timeout=25)
+                if res.status_code == 200:
+                    res_data = res.json()
+                    break
+                if res.status_code == 429:
+                    if attempt < max_attempts - 1:
+                        delay = min(25, 3 * (2 ** attempt) + random.uniform(0.5, 2.0))
+                        print(f"[qdrant_service] Gemini 429 rate limit on batch {i//SUB_BATCH_SIZE + 1}. Retrying in {delay:.1f}s (attempt {attempt + 1}/{max_attempts})...")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        print(f"[qdrant_service] Gemini 429 rate limit exceeded all retries. Gracefully falling back to alternative embedding provider.")
+                        return []
+                print(f"[qdrant_service] Gemini Embeddings API returned status {res.status_code}: {res.text[:120]}")
                 break
-            if res.status_code == 429 and attempt == 0:
-                print("[qdrant_service] Gemini 429 rate limit hit, backing off 2s before retry...")
-                import time
-                time.sleep(2)
-                continue
-            raise Exception(f"Gemini Embeddings API returned status {res.status_code}: {res.text}")
+            except Exception as req_err:
+                if attempt < max_attempts - 1:
+                    time.sleep(2)
+                    continue
+                print(f"[qdrant_service] Gemini batch request error: {req_err}")
+                return []
         
         if res_data:
             for emb in res_data.get("embeddings", []):
                 all_embeddings.append(emb.get("values", []))
+        else:
+            # If any batch failed to obtain embeddings, return empty list to trigger fallback provider
+            return []
             
     return all_embeddings
 
@@ -125,17 +144,44 @@ def get_mistral_embeddings_batch(texts: List[str]) -> List[List[float]]:
     url = "https://api.mistral.ai/v1/embeddings"
     headers = {"Authorization": f"Bearer {mistral_key}", "Content-Type": "application/json"}
     
+    import random
+    import time
+
     BATCH = 64
     all_embeddings = []
     for i in range(0, len(texts), BATCH):
         batch_texts = texts[i:i + BATCH]
         payload = {"model": "mistral-embed", "input": batch_texts}
-        res = requests.post(url, headers=headers, json=payload, timeout=20)
-        if res.status_code != 200:
-            raise Exception(f"Mistral Embeddings API returned status {res.status_code}: {res.text}")
-        data = res.json().get("data", [])
-        for item in data:
-            all_embeddings.append(item.get("embedding", []))
+        max_attempts = 3
+        batch_success = False
+        for attempt in range(max_attempts):
+            try:
+                res = requests.post(url, headers=headers, json=payload, timeout=20)
+                if res.status_code == 200:
+                    data = res.json().get("data", [])
+                    for item in data:
+                        all_embeddings.append(item.get("embedding", []))
+                    batch_success = True
+                    break
+                if res.status_code == 429:
+                    if attempt < max_attempts - 1:
+                        delay = min(20, 2.5 * (2 ** attempt) + random.uniform(0.5, 1.5))
+                        print(f"[qdrant_service] Mistral 429 rate limit. Retrying in {delay:.1f}s...")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        print("[qdrant_service] Mistral 429 quota exhausted. Falling back to Cohere/local.")
+                        return []
+                print(f"[qdrant_service] Mistral error {res.status_code}: {res.text[:120]}")
+                break
+            except Exception as e:
+                if attempt < max_attempts - 1:
+                    time.sleep(2)
+                    continue
+                print(f"[qdrant_service] Mistral batch exception: {e}")
+                return []
+        if not batch_success:
+            return []
     return all_embeddings
 
 def get_cohere_embeddings_batch(texts: List[str]) -> List[List[float]]:
@@ -146,6 +192,9 @@ def get_cohere_embeddings_batch(texts: List[str]) -> List[List[float]]:
     url = "https://api.cohere.com/v2/embed"
     headers = {"Authorization": f"Bearer {cohere_key}", "Content-Type": "application/json"}
     
+    import random
+    import time
+
     BATCH = 64
     all_embeddings = []
     for i in range(0, len(texts), BATCH):
@@ -156,11 +205,35 @@ def get_cohere_embeddings_batch(texts: List[str]) -> List[List[float]]:
             "input_type": "search_document",
             "embedding_types": ["float"]
         }
-        res = requests.post(url, headers=headers, json=payload, timeout=20)
-        if res.status_code != 200:
-            raise Exception(f"Cohere Embeddings API returned status {res.status_code}: {res.text}")
-        embs = res.json().get("embeddings", {}).get("float", [])
-        all_embeddings.extend(embs)
+        max_attempts = 3
+        batch_success = False
+        for attempt in range(max_attempts):
+            try:
+                res = requests.post(url, headers=headers, json=payload, timeout=20)
+                if res.status_code == 200:
+                    embs = res.json().get("embeddings", {}).get("float", [])
+                    all_embeddings.extend(embs)
+                    batch_success = True
+                    break
+                if res.status_code == 429:
+                    if attempt < max_attempts - 1:
+                        delay = min(20, 2.5 * (2 ** attempt) + random.uniform(0.5, 1.5))
+                        print(f"[qdrant_service] Cohere 429 rate limit. Retrying in {delay:.1f}s...")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        print("[qdrant_service] Cohere 429 quota exhausted. Falling back to local hash projection.")
+                        return []
+                print(f"[qdrant_service] Cohere error {res.status_code}: {res.text[:120]}")
+                break
+            except Exception as e:
+                if attempt < max_attempts - 1:
+                    time.sleep(2)
+                    continue
+                print(f"[qdrant_service] Cohere batch exception: {e}")
+                return []
+        if not batch_success:
+            return []
     return all_embeddings
 
 def get_fast_fallback_embedding(text: str, dim: int = 1024) -> List[float]:
@@ -310,7 +383,7 @@ def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -
         page_num = c["page_number"]
         chunk_idx = c["chunk_index"]
         
-        vector = vectors[idx] if idx < len(vectors) else get_embedding(text)
+        vector = vectors[idx] if idx < len(vectors) else get_fast_fallback_embedding(text, target_dim)
         point_id = str(uuid.uuid4())
         
         payload = {

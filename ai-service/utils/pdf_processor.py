@@ -17,6 +17,7 @@ def ocr_page_multimodal(b64_data: str) -> str:
     """
     Robust OCR extraction using Google Gemini Multimodal Vision API, with fallback between fast Flash models.
     """
+    import time
     gemini_key = os.getenv("GEMINI_API_KEY")
     # 1. Try Gemini Flash Vision (fast, multimodal)
     if gemini_key and "your_gemini_api_key" not in gemini_key:
@@ -57,6 +58,9 @@ def ocr_page_multimodal(b64_data: str) -> str:
                             text = parts[0]["text"].strip()
                             if text:
                                 return text
+                elif res.status_code == 429:
+                    print(f"[pdf_processor] Gemini 429 rate limit on {gemini_model}. Pausing 3s before fallback...")
+                    time.sleep(3)
                 else:
                     print(f"[pdf_processor] Gemini model {gemini_model} returned {res.status_code}. Trying next fallback...")
             except Exception as e:
@@ -83,6 +87,8 @@ def ocr_page_multimodal(b64_data: str) -> str:
                 text = res.json()["choices"][0]["message"]["content"].strip()
                 if text:
                     return text
+            elif res.status_code == 429:
+                print("[pdf_processor] Mistral Pixtral 429 rate limit. Falling back to plain text.")
             else:
                 print(f"[pdf_processor] Mistral Pixtral OCR error: {res.status_code} - {res.text[:100]}")
         except Exception as e:
@@ -94,6 +100,7 @@ def extract_metadata_with_gemini(first_page_text: str) -> Dict[str, Any]:
     """
     Leverages Gemini Flash to accurately extract Title, Authors, Abstract, Year, and DOI from the first page text.
     """
+    import time
     gemini_key = os.getenv("GEMINI_API_KEY")
     if not gemini_key or "your_gemini_api_key" in gemini_key:
         return {}
@@ -121,23 +128,35 @@ def extract_metadata_with_gemini(first_page_text: str) -> Dict[str, Any]:
     """
 
     for gemini_model in models_to_try:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={gemini_key}"
-            headers = {"Content-Type": "application/json"}
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}]
-            }
-            res = requests.post(url, headers=headers, json=payload, timeout=12)
-            if res.status_code == 200:
-                text = res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-                # Clean up potential markdown formatting
-                if text.startswith("```json"):
-                    text = text.replace("```json", "").replace("```", "").strip()
-                elif text.startswith("```"):
-                    text = text.replace("```", "").strip()
-                return json.loads(text)
-        except Exception as e:
-            print(f"[pdf_processor] Fast fallback for metadata on {gemini_model}: {str(e)}")
+        for attempt in range(2):
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={gemini_key}"
+                headers = {"Content-Type": "application/json"}
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}]
+                }
+                res = requests.post(url, headers=headers, json=payload, timeout=12)
+                if res.status_code == 200:
+                    text = res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    # Clean up potential markdown formatting
+                    if text.startswith("```json"):
+                        text = text.replace("```json", "").replace("```", "").strip()
+                    elif text.startswith("```"):
+                        text = text.replace("```", "").strip()
+                    return json.loads(text)
+                elif res.status_code == 429:
+                    if attempt == 0:
+                        print(f"[pdf_processor] Gemini 429 on metadata extraction ({gemini_model}). Backing off 3s...")
+                        time.sleep(3)
+                        continue
+                    else:
+                        print(f"[pdf_processor] Gemini 429 on {gemini_model}. Trying next fallback model or heuristic...")
+                        break
+                else:
+                    break
+            except Exception as e:
+                print(f"[pdf_processor] Fast fallback for metadata on {gemini_model}: {str(e)}")
+                break
     return {}
 
 def extract_pdf_content(file_path: str) -> Dict[str, Any]:

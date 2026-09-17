@@ -8,6 +8,7 @@ import {
   deletePaper,
   getPaperPdf,
   uploadVisualImage,
+  retryPaperProcessing,
 } from '../controllers/paper.controller.js';
 
 const router = Router();
@@ -67,5 +68,6 @@ router.get('/', getPapers);
 router.get('/:paperId', getPaperById);
 router.get('/:paperId/pdf', getPaperPdf);
 router.delete('/:paperId', deletePaper);
+router.post('/:paperId/retry', retryPaperProcessing);
 
 export default router;

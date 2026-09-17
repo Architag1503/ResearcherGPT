@@ -128,18 +128,36 @@ try {
           // Step 2: Parsing & Chunking on AI service
           if (!hasParsed) {
             await updateProgress(paperId, 'Parsing', 40);
-            
-            const response = await axios.post(`${AI_SERVICE_URL}/api/pdf/process`, {
-              paper_id: paperId,
-              project_id: projectId,
-              file_base64: fileBase64,
-              storage_url: aiServiceStorageUrl,
-              file_path: localFilePath,
-            }, {
-              timeout: 600000, // 10 minutes timeout to allow large papers to process fully
-              maxBodyLength: Infinity,
-              maxContentLength: Infinity
-            });
+
+            // Parsing & Chunking on AI service with automatic 429 backoff retry
+            let response: any = null;
+            const maxAiRetries = 3;
+            for (let aiAttempt = 0; aiAttempt < maxAiRetries; aiAttempt++) {
+              try {
+                response = await axios.post(`${AI_SERVICE_URL}/api/pdf/process`, {
+                  paper_id: paperId,
+                  project_id: projectId,
+                  file_base64: fileBase64,
+                  storage_url: aiServiceStorageUrl,
+                  file_path: localFilePath,
+                }, {
+                  timeout: 600000, // 10 minutes timeout to allow large papers to process fully
+                  maxBodyLength: Infinity,
+                  maxContentLength: Infinity
+                });
+                break;
+              } catch (aiErr: any) {
+                const is429 = aiErr.response?.status === 429 || String(aiErr.message).includes('429');
+                if (is429 && aiAttempt < maxAiRetries - 1) {
+                  const retryDelay = (aiAttempt + 1) * 7000;
+                  console.warn(`[pdfWorker] AI service returned 429 rate limit. Backing off ${retryDelay / 1000}s (attempt ${aiAttempt + 1}/${maxAiRetries})...`);
+                  await updateProgress(paperId, `Rate Limited (Retrying in ${retryDelay / 1000}s)`, 45);
+                  await new Promise(r => setTimeout(r, retryDelay));
+                  continue;
+                }
+                throw aiErr;
+              }
+            }
 
             const { success, chunks: processedChunks, metadata: processedMeta, error } = response.data;
             if (!success) {
@@ -226,7 +244,10 @@ try {
 
         console.log(`[pdfWorker] Successfully processed paper: ${paperId}`);
       } catch (error: any) {
-        const errorDetail = error.response?.data?.error || error.message || 'Unknown processing error';
+        let errorDetail = error.response?.data?.error || error.message || 'Unknown processing error';
+        if (String(errorDetail).includes('429') || String(errorDetail).toLowerCase().includes('rate limit')) {
+          errorDetail = 'External AI provider quota limit reached (Status 429). The system will automatically use fallback models or you can click Retry.';
+        }
         console.error(`[pdfWorker] Error processing paper ${paperId}:`, errorDetail);
         await Paper.findByIdAndUpdate(paperId, {
           status: 'failed',
