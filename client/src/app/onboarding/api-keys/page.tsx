@@ -121,8 +121,8 @@ export default function OnboardingApiKeysPage() {
     e.preventDefault();
     setErrorMessage('');
 
-    if (!groqKey.trim() && !geminiKey.trim()) {
-      setErrorMessage('Please provide at least a Groq or Gemini API key to activate AI agent pipelines.');
+    if (!groqKey.trim() || !geminiKey.trim() || !openaiKey.trim() || !anthropicKey.trim()) {
+      setErrorMessage('All 4 LLM API keys (Groq, Google Gemini, OpenAI, and Anthropic Claude) are compulsory. Please fill in all keys.');
       return;
     }
 
@@ -152,6 +152,8 @@ export default function OnboardingApiKeysPage() {
 
   const isGroqValid = groqKey.trim().length > 10;
   const isGeminiValid = geminiKey.trim().length > 10;
+  const isOpenaiValid = openaiKey.trim().length > 10;
+  const isAnthropicValid = anthropicKey.trim().length > 10;
 
   return (
     <div className="relative min-h-screen bg-[#09090b] text-zinc-100 flex flex-col justify-between overflow-x-hidden">
@@ -337,76 +339,117 @@ export default function OnboardingApiKeysPage() {
                 </div>
               </motion.div>
 
-              {/* Optional Keys Accordion / Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* OpenAI Card */}
-                <div className="p-5 rounded-xl border border-zinc-800/80 bg-zinc-950/50 backdrop-blur-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                      <Key className="w-3.5 h-3.5 text-indigo-400" /> OpenAI API Key
-                    </span>
-                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Optional</span>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type={showOpenai ? 'text' : 'password'}
-                      value={openaiKey}
-                      onChange={(e) => setOpenaiKey(e.target.value)}
-                      placeholder="sk-..."
-                      className="w-full bg-zinc-900/80 border border-zinc-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-600 font-mono pr-8 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowOpenai(!showOpenai)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                    >
-                      {showOpenai ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
+              {/* OpenAI Card */}
+              <motion.div
+                whileHover={{ y: -2 }}
+                transition={{ duration: 0.2 }}
+                className="p-6 rounded-2xl border border-zinc-800 bg-zinc-950/70 backdrop-blur-xl shadow-xl space-y-4 hover:border-indigo-500/40 transition-colors"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">
+                      <Key className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-semibold text-zinc-100">OpenAI API Key</h2>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                          Compulsory
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Powers academic fact verification, citation validation, and peer review via <span className="text-zinc-400 font-mono">gpt-4o</span>.
+                      </p>
+                    </div>
                   </div>
                   <a
                     href="https://platform.openai.com/api-keys"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                    className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium px-3 py-1.5 rounded-lg border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors shrink-0"
                   >
-                    OpenAI Console <ExternalLink className="w-2.5 h-2.5" />
+                    <span>OpenAI Console</span>
+                    <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
 
-                {/* Anthropic Card */}
-                <div className="p-5 rounded-xl border border-zinc-800/80 bg-zinc-950/50 backdrop-blur-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                      <Key className="w-3.5 h-3.5 text-orange-400" /> Anthropic Claude API Key
-                    </span>
-                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Optional</span>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type={showAnthropic ? 'text' : 'password'}
-                      value={anthropicKey}
-                      onChange={(e) => setAnthropicKey(e.target.value)}
-                      placeholder="sk-ant-..."
-                      className="w-full bg-zinc-900/80 border border-zinc-800 focus:border-orange-500 rounded-lg px-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-600 font-mono pr-8 focus:outline-none"
-                    />
+                <div className="relative">
+                  <input
+                    type={showOpenai ? 'text' : 'password'}
+                    value={openaiKey}
+                    onChange={(e) => setOpenaiKey(e.target.value)}
+                    placeholder="sk-..."
+                    required
+                    className="w-full bg-zinc-900/90 border border-zinc-800 focus:border-indigo-500 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 pr-12 font-mono transition-all"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    {isOpenaiValid && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
                     <button
                       type="button"
-                      onClick={() => setShowAnthropic(!showAnthropic)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                      onClick={() => setShowOpenai(!showOpenai)}
+                      className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
                     >
-                      {showAnthropic ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      {showOpenai ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Anthropic Card */}
+              <motion.div
+                whileHover={{ y: -2 }}
+                transition={{ duration: 0.2 }}
+                className="p-6 rounded-2xl border border-zinc-800 bg-zinc-950/70 backdrop-blur-xl shadow-xl space-y-4 hover:border-orange-500/40 transition-colors"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 font-bold">
+                      <Key className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-semibold text-zinc-100">Anthropic Claude API Key</h2>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                          Compulsory
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Powers rigorous scholarly manuscript drafting, methodology analysis, and synthesis via <span className="text-zinc-400 font-mono">claude-3-5-sonnet</span>.
+                      </p>
+                    </div>
                   </div>
                   <a
                     href="https://console.anthropic.com/settings/keys"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] text-orange-400 hover:text-orange-300 flex items-center gap-1"
+                    className="inline-flex items-center gap-1.5 text-xs text-orange-400 hover:text-orange-300 font-medium px-3 py-1.5 rounded-lg border border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10 transition-colors shrink-0"
                   >
-                    Anthropic Console <ExternalLink className="w-2.5 h-2.5" />
+                    <span>Anthropic Console</span>
+                    <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
-              </div>
+
+                <div className="relative">
+                  <input
+                    type={showAnthropic ? 'text' : 'password'}
+                    value={anthropicKey}
+                    onChange={(e) => setAnthropicKey(e.target.value)}
+                    placeholder="sk-ant-..."
+                    required
+                    className="w-full bg-zinc-900/90 border border-zinc-800 focus:border-orange-500 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-orange-500/50 pr-12 font-mono transition-all"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    {isAnthropicValid && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                    <button
+                      type="button"
+                      onClick={() => setShowAnthropic(!showAnthropic)}
+                      className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
+                    >
+                      {showAnthropic ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
 
             </div>
 

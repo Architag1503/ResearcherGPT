@@ -46,7 +46,7 @@ export const createProject = async (req: Request, res: Response) => {
     if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
       return res.status(402).json({
         error: 'API_KEY_REQUIRED',
-        message: 'You must configure your LLM API keys (Groq & Google Gemini) before creating a research project.',
+        message: 'You must configure all 4 LLM API keys (Groq, Google Gemini, OpenAI, and Anthropic Claude) before creating a research project.',
       });
     }
 
@@ -195,7 +195,7 @@ export const generateAIGaps = async (req: Request, res: Response) => {
     if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
       return res.status(402).json({
         error: 'API_KEY_REQUIRED',
-        message: 'You must configure your LLM API keys (Groq & Google Gemini) before generating AI gaps.',
+        message: 'You must configure all 4 LLM API keys (Groq, Google Gemini, OpenAI, and Anthropic Claude) before generating AI gaps.',
       });
     }
 
@@ -461,7 +461,7 @@ export const generateAIDescription = async (req: Request, res: Response) => {
     if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
       return res.status(402).json({
         error: 'API_KEY_REQUIRED',
-        message: 'You must configure your LLM API keys (Groq & Google Gemini) before using AI description generation.',
+        message: 'You must configure all 4 LLM API keys (Groq, Google Gemini, OpenAI, and Anthropic Claude) before using AI description generation.',
       });
     }
 

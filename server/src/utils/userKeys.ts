@@ -23,7 +23,9 @@ export const isPrimaryOwner = (user?: { id?: string; email?: string }): boolean 
 export const hasAllRequiredUserKeys = (keys: ExtractedUserKeys): boolean => {
   return Boolean(
     keys.groq && keys.groq.trim().length > 5 &&
-    keys.gemini && keys.gemini.trim().length > 5
+    keys.gemini && keys.gemini.trim().length > 5 &&
+    keys.openai && keys.openai.trim().length > 5 &&
+    keys.anthropic && keys.anthropic.trim().length > 5
   );
 };
 
@@ -44,7 +46,7 @@ export const getUserApiKeys = async (
   if (headerAnthropic) keys.anthropic = headerAnthropic;
 
   // If any key is missing, check database for user
-  if (!keys.groq || !keys.gemini) {
+  if (!keys.groq || !keys.gemini || !keys.openai || !keys.anthropic) {
     try {
       const dbRecord = await UserApiKey.findOne({ userId });
       if (dbRecord) {

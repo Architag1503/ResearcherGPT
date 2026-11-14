@@ -22,12 +22,12 @@ export const triggerAgentRun = async (req: Request, res: Response) => {
     const userKeys = await getUserApiKeys(userId, req);
     const isOwner = isPrimaryOwner((req as any).user);
 
-    // Protect developer quota: require external users to provide BOTH their own Groq and Gemini keys
+    // Protect developer quota: require external users to provide all 4 compulsory keys
     if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
       return res.status(402).json({
         error: 'API_KEY_REQUIRED',
-        provider: !userKeys.groq ? 'groq' : 'gemini',
-        message: 'Your personal Groq and Google Gemini API keys are required to run autonomous agents. Please configure your keys before proceeding.',
+        provider: !userKeys.groq ? 'groq' : !userKeys.gemini ? 'gemini' : !userKeys.openai ? 'openai' : 'anthropic',
+        message: 'All 4 personal LLM API keys (Groq, Google Gemini, OpenAI, and Anthropic Claude) are required to run autonomous agents. Please configure your keys before proceeding.',
       });
     }
 

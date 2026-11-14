@@ -59,8 +59,8 @@ export const sendMessage = async (req: Request, res: Response) => {
   if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
     return res.status(402).json({
       error: 'API_KEY_REQUIRED',
-      provider: !userKeys.groq ? 'groq' : 'gemini',
-      message: 'Your personal Groq and Google Gemini API keys are required to use AI Chat. Please configure your keys before proceeding.',
+      provider: !userKeys.groq ? 'groq' : !userKeys.gemini ? 'gemini' : !userKeys.openai ? 'openai' : 'anthropic',
+      message: 'All 4 personal LLM API keys (Groq, Google Gemini, OpenAI, and Anthropic Claude) are required to use AI Chat. Please configure your keys before proceeding.',
     });
   }
 

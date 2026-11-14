@@ -102,6 +102,8 @@ export default function ApiKeySettingsPanel() {
 
   const hasGroq = Boolean(keys.groqApiKey && keys.groqApiKey.trim().length > 5);
   const hasGemini = Boolean(keys.geminiApiKey && keys.geminiApiKey.trim().length > 5);
+  const hasOpenai = Boolean(keys.openaiApiKey && keys.openaiApiKey.trim().length > 5);
+  const hasAnthropic = Boolean(keys.anthropicApiKey && keys.anthropicApiKey.trim().length > 5);
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-12">
@@ -271,7 +273,7 @@ export default function ApiKeySettingsPanel() {
           </div>
         </div>
 
-        {/* Optional Secondary Providers */}
+        {/* Compulsory Secondary Providers */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* OpenAI */}
           <div className="p-5 rounded-xl border border-zinc-800/60 bg-zinc-950/30 backdrop-blur-sm space-y-3">
@@ -279,7 +281,15 @@ export default function ApiKeySettingsPanel() {
               <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
                 <Key className="w-3.5 h-3.5 text-indigo-400" /> OpenAI API Key
               </span>
-              <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Optional Fallback</span>
+              {hasOpenai ? (
+                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                  <CheckCircle2 className="w-2.5 h-2.5" /> Configured
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                  Compulsory
+                </span>
+              )}
             </div>
             <div className="relative">
               <input
@@ -313,7 +323,15 @@ export default function ApiKeySettingsPanel() {
               <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
                 <Key className="w-3.5 h-3.5 text-orange-400" /> Anthropic Claude API Key
               </span>
-              <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Optional Fallback</span>
+              {hasAnthropic ? (
+                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                  <CheckCircle2 className="w-2.5 h-2.5" /> Configured
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                  Compulsory
+                </span>
+              )}
             </div>
             <div className="relative">
               <input

@@ -352,7 +352,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <strong className="text-zinc-100 font-semibold block sm:inline mr-1">Configure your LLM API Keys:</strong>
-                <span className="text-zinc-400">Add your free Groq and Google Gemini keys to unlock autonomous agent pipelines and avoid token interruptions.</span>
+                <span className="text-zinc-400">Add your compulsory Groq, Google Gemini, OpenAI, and Anthropic Claude keys to unlock autonomous agent pipelines and create research projects.</span>
               </div>
             </div>
             <Link

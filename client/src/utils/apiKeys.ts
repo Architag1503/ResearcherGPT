@@ -4,15 +4,17 @@ import { getApiUrl } from './apiUrl';
 export interface UserApiKeys {
   groqApiKey: string;
   geminiApiKey: string;
-  openaiApiKey?: string;
-  anthropicApiKey?: string;
+  openaiApiKey: string;
+  anthropicApiKey: string;
 }
 
 export const hasRequiredApiKeys = (keys?: UserApiKeys | null): boolean => {
   if (!keys) return false;
   return Boolean(
     keys.groqApiKey && keys.groqApiKey.trim().length > 5 &&
-    keys.geminiApiKey && keys.geminiApiKey.trim().length > 5
+    keys.geminiApiKey && keys.geminiApiKey.trim().length > 5 &&
+    keys.openaiApiKey && keys.openaiApiKey.trim().length > 5 &&
+    keys.anthropicApiKey && keys.anthropicApiKey.trim().length > 5
   );
 };
 

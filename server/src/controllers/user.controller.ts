@@ -25,7 +25,9 @@ export const getUserApiKeysHandler = async (req: Request, res: Response) => {
       return `${k.slice(0, 4)}••••••••${k.slice(-4)}`;
     };
 
-    const hasConfiguredKeys = Boolean(groqKey || geminiKey || isOwner);
+    const hasConfiguredKeys = Boolean(
+      (groqKey && geminiKey && openaiKey && anthropicKey) || isOwner
+    );
 
     return res.status(200).json({
       hasConfiguredKeys,
@@ -72,7 +74,9 @@ export const saveUserApiKeysHandler = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: 'API keys saved successfully across your workspace.',
-      hasConfiguredKeys: Boolean(record.groqApiKey || record.geminiApiKey),
+      hasConfiguredKeys: Boolean(
+        record.groqApiKey && record.geminiApiKey && record.openaiApiKey && record.anthropicApiKey
+      ),
     });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
