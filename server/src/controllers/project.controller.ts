@@ -18,6 +18,7 @@ import { bullConfig } from '../config/redis.js';
 import axios from 'axios';
 import { FormaTeXService } from '../services/formatex.service.js';
 import { PaperValidationService } from '../services/paperValidation.service.js';
+import { getUserApiKeys, isPrimaryOwner } from '../utils/userKeys.js';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
@@ -169,14 +170,17 @@ export const getProjectGaps = async (req: Request, res: Response) => {
 export const generateAIGaps = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
+    const userId = (req as any).user?.id || 'mock_user_id';
     const project = await Project.findById(projectId);
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
+    const userKeys = await getUserApiKeys(userId, req);
     const aiRes = await axios.post(`${AI_SERVICE_URL}/api/project/generate-gaps`, {
       name: project.name,
       description: project.description || '',
+      user_api_keys: userKeys,
     });
 
     let gapsArray = aiRes.data?.gaps;
@@ -425,10 +429,15 @@ export const updateProject = async (req: Request, res: Response) => {
 export const generateAIDescription = async (req: Request, res: Response) => {
   try {
     const { name } = req.body;
+    const userId = (req as any).user?.id || 'mock_user_id';
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Project name is required' });
     }
-    const aiRes = await axios.post(`${AI_SERVICE_URL}/api/project/generate-description`, { name });
+    const userKeys = await getUserApiKeys(userId, req);
+    const aiRes = await axios.post(`${AI_SERVICE_URL}/api/project/generate-description`, {
+      name,
+      user_api_keys: userKeys,
+    });
     if (aiRes.data && aiRes.data.success) {
       return res.status(200).json({ description: aiRes.data.description });
     } else {

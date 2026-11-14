@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import {
   Upload, FileText, MessageSquare, GitBranch, Table, Bookmark,
   AlertTriangle, Play, RefreshCw, Layers, Edit, CheckCircle, Trash2, Download, Shield,
-  GraduationCap, ChevronLeft, ChevronRight, Plus, Image as ImageIcon
+  GraduationCap, ChevronLeft, ChevronRight, Plus, Image as ImageIcon, Key
 } from 'lucide-react';
 
 import ChatWindow from '../../../components/ChatWindow';
@@ -15,6 +15,7 @@ import TipTapEditor from '../../../components/TipTapEditor';
 import EvidencePanel from '../../../components/EvidencePanel';
 import KnowledgeGraph3D from '../../../components/KnowledgeGraph3D';
 import VisualElementReplacer from '../../../components/VisualElementReplacer';
+import ApiKeySettingsPanel from '../../../components/ApiKeySettingsPanel';
 import { getApiUrl } from '../../../utils/apiUrl';
 import katex from 'katex';
 
@@ -245,6 +246,7 @@ const tabItems = [
   { id: 'saved_papers', label: 'Saved Research Papers', icon: FileText },
   { id: 'plagiarism', label: 'Plagiarism Report', icon: Shield },
   { id: 'editor', label: 'Writing Workspace', icon: Edit },
+  { id: 'apikeys', label: 'LLM API Keys', icon: Key },
 ];
 
 const getRunProgressPercent = (run: any) => {
@@ -6007,6 +6009,13 @@ export default function ProjectWorkspace({ params: paramsPromise }: { params: Pr
                   </>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* LLM API Keys Global Settings Studio */}
+          {activeTab === 'apikeys' && (
+            <div className="pt-2">
+              <ApiKeySettingsPanel />
             </div>
           )}
 

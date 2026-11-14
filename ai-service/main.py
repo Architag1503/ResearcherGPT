@@ -54,6 +54,7 @@ class ChatStreamRequest(BaseModel):
     query: str
     project_id: str
     session_id: str
+    user_api_keys: Optional[Dict[str, str]] = None
 
 class AgentRunRequest(BaseModel):
     run_id: str
@@ -62,6 +63,7 @@ class AgentRunRequest(BaseModel):
     workflow_type: str = "paper"
     format: str = "IEEE"
     pages: int = 5
+    user_api_keys: Optional[Dict[str, str]] = None
 
 
 class ComparisonRequest(BaseModel):
@@ -229,9 +231,17 @@ def chat_stream(req: ChatStreamRequest):
         prompt = f"Using these context chunks:\n{context_str}\n\nAnswer the user's question: {req.query}"
         system = "You are a helpful academic RAG chatbot assistant. Synthesize a concise response backed by the contexts. Include citation keys if relevant."
 
-        # Query LLM (either Gemini or fallback)
-        # To simulate token-by-token streaming response:
-        response_text = call_llm(system, prompt)
+        # Query LLM (either Gemini or fallback, honoring user custom keys)
+        try:
+            response_text = call_llm(system, prompt, user_api_keys=req.user_api_keys)
+        except Exception as llm_err:
+            err_str = str(llm_err)
+            if "TOKEN_LIMIT_EXCEEDED" in err_str:
+                parts = err_str.split(":", 2)
+                provider = parts[1].strip() if len(parts) > 1 else "LLM"
+                yield f"data: {json.dumps({'type': 'error', 'error': 'TOKEN_LIMIT_EXCEEDED', 'provider': provider, 'message': f'Your {provider} token quota was exhausted. Please update your key.'})}\n\n"
+                return
+            raise llm_err
         
         # Split into small parts/words to simulate streaming over SSE
         words = response_text.split(" ")
@@ -241,7 +251,7 @@ def chat_stream(req: ChatStreamRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, workflow_type: str = "paper", format: str = "IEEE", pages: int = 5):
+def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, workflow_type: str = "paper", format: str = "IEEE", pages: int = 5, user_api_keys: Optional[Dict[str, str]] = None):
     if workflow_type == "proposal":
         report_progress(run_id, "Proposal Generation", "running", logs="Executing multi-agent proposal flow...")
         try:
@@ -249,7 +259,12 @@ def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, w
             res = execute_proposal_flow(project_id, query)
             report_progress(run_id, "Proposal Generation", "completed", logs="Proposal generated successfully.", overall_status="completed", result=res["proposal"])
         except Exception as e:
-            report_progress(run_id, "Proposal Generation", "failed", logs=f"Proposal flow failed: {str(e)}", overall_status="failed", result={"error": str(e)})
+            err_msg = str(e)
+            provider = "LLM"
+            if "TOKEN_LIMIT_EXCEEDED" in err_msg:
+                parts = err_msg.split(":", 2)
+                provider = parts[1].strip() if len(parts) > 1 else "LLM"
+            report_progress(run_id, "Proposal Generation", "failed", logs=f"Proposal flow failed: {err_msg}", overall_status="failed", result={"error": "TOKEN_LIMIT_EXCEEDED" if "TOKEN_LIMIT_EXCEEDED" in err_msg else str(e), "provider": provider})
     elif workflow_type == "survey":
         report_progress(run_id, "Survey Generation", "running", logs="Executing multi-agent survey flow...")
         try:
@@ -257,7 +272,12 @@ def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, w
             res = execute_survey_flow(project_id, query)
             report_progress(run_id, "Survey Generation", "completed", logs="Survey generated successfully.", overall_status="completed", result=res["survey"])
         except Exception as e:
-            report_progress(run_id, "Survey Generation", "failed", logs=f"Survey flow failed: {str(e)}", overall_status="failed", result={"error": str(e)})
+            err_msg = str(e)
+            provider = "LLM"
+            if "TOKEN_LIMIT_EXCEEDED" in err_msg:
+                parts = err_msg.split(":", 2)
+                provider = parts[1].strip() if len(parts) > 1 else "LLM"
+            report_progress(run_id, "Survey Generation", "failed", logs=f"Survey flow failed: {err_msg}", overall_status="failed", result={"error": "TOKEN_LIMIT_EXCEEDED" if "TOKEN_LIMIT_EXCEEDED" in err_msg else str(e), "provider": provider})
     elif workflow_type == "review":
         report_progress(run_id, "Reviewer Agent", "running", logs="Executing peer review agent flow...")
         try:
@@ -274,15 +294,21 @@ def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, w
             res = execute_review_flow(paper_text, "IEEE")
             report_progress(run_id, "Reviewer Agent", "completed", logs="Review generated successfully.", overall_status="completed", result=res["review"])
         except Exception as e:
-            report_progress(run_id, "Reviewer Agent", "failed", logs=f"Review flow failed: {str(e)}", overall_status="failed", result={"error": str(e)})
+            err_msg = str(e)
+            provider = "LLM"
+            if "TOKEN_LIMIT_EXCEEDED" in err_msg:
+                parts = err_msg.split(":", 2)
+                provider = parts[1].strip() if len(parts) > 1 else "LLM"
+            report_progress(run_id, "Reviewer Agent", "failed", logs=f"Review flow failed: {err_msg}", overall_status="failed", result={"error": "TOKEN_LIMIT_EXCEEDED" if "TOKEN_LIMIT_EXCEEDED" in err_msg else str(e), "provider": provider})
     else:
-        # Prepare initial LangGraph state
+        # Prepare initial LangGraph state with user custom keys
         initial_state = {
             "project_id": project_id,
             "run_id": run_id,
             "query": query,
             "format": format,
             "pages": pages,
+            "user_api_keys": user_api_keys,
             "research_context": [],
             "academic_papers": [],
             "literature_reviews": [],
@@ -304,7 +330,13 @@ def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, w
             # Run state machine sequentially
             agent_workflow.invoke(initial_state, config={"recursion_limit": 50})
         except Exception as e:
-            print(f"Workflow execution failure: {e}")
+            err_str = str(e)
+            print(f"Workflow execution failure: {err_str}")
+            provider = "LLM"
+            is_token_limit = "TOKEN_LIMIT_EXCEEDED" in err_str
+            if is_token_limit:
+                parts = err_str.split(":", 2)
+                provider = parts[1].strip() if len(parts) > 1 else "LLM"
             # Send failure callback to Express
             try:
                 requests.post(
@@ -312,9 +344,13 @@ def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, w
                     json={
                         "stepName": "Writing Agent",
                         "status": "failed",
-                        "logs": f"Workflow failed: {str(e)}",
+                        "logs": f"Workflow failed: {err_str}",
                         "overallStatus": "failed",
-                        "result": {"error": str(e)}
+                        "result": {
+                            "error": "TOKEN_LIMIT_EXCEEDED" if is_token_limit else err_str,
+                            "provider": provider,
+                            "message": f"Your {provider} token quota was exhausted. Please update your API key in Settings." if is_token_limit else err_str
+                        }
                     },
                     timeout=30
                 )
@@ -323,8 +359,8 @@ def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, w
 
 @app.post("/api/agent/run")
 def trigger_agent(req: AgentRunRequest, bg_tasks: BackgroundTasks):
-    # Execute workflow in background task
-    bg_tasks.add_task(run_agent_workflow_in_background, req.run_id, req.project_id, req.query, req.workflow_type, req.format, req.pages)
+    # Execute workflow in background task with user keys
+    bg_tasks.add_task(run_agent_workflow_in_background, req.run_id, req.project_id, req.query, req.workflow_type, req.format, req.pages, req.user_api_keys)
     return {"status": "running"}
 
 @app.post("/api/comparison/matrix")
@@ -447,6 +483,7 @@ def ask_node_learning(req: LearningNodeAskRequest):
 
 class DescriptionGenerateRequest(BaseModel):
     name: str
+    user_api_keys: Optional[Dict[str, str]] = None
 
 @app.post("/api/project/generate-description")
 def generate_project_description(req: DescriptionGenerateRequest):
@@ -457,7 +494,7 @@ def generate_project_description(req: DescriptionGenerateRequest):
             "Output only the description itself in a single paragraph. Do not include any introductory phrases, bullet points, headers, or quotes. Keep it under 250 characters."
         )
         prompt = f"Generate a project description for the research project named: '{req.name}'"
-        description = call_llm(system, prompt).strip()
+        description = call_llm(system, prompt, user_api_keys=req.user_api_keys).strip()
         description = description.strip("\"'")
         return {"success": True, "description": description}
     except Exception as e:
@@ -467,6 +504,7 @@ def generate_project_description(req: DescriptionGenerateRequest):
 class GapsGenerateRequest(BaseModel):
     name: str
     description: str
+    user_api_keys: Optional[Dict[str, str]] = None
 
 @app.post("/api/project/generate-gaps")
 def generate_project_gaps(req: GapsGenerateRequest):
@@ -484,7 +522,7 @@ def generate_project_gaps(req: GapsGenerateRequest):
             "Do not output markdown code blocks, XML tags, or any text other than the valid JSON array."
         )
         prompt = f"Project Name: {req.name}\nProject Description: {req.description}"
-        gaps_json_str = call_llm(system, prompt).strip()
+        gaps_json_str = call_llm(system, prompt, user_api_keys=req.user_api_keys).strip()
         
         # Clean potential markdown output
         if gaps_json_str.startswith("```json"):

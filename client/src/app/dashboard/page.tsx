@@ -7,8 +7,9 @@ import { motion } from 'framer-motion';
 import axios from 'axios';
 import { useAuth, UserButton } from '@clerk/nextjs';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { FolderPlus, RefreshCw, ChevronRight, Plus, FileText, BookOpen, Layers, Cpu, BookMarked, Pencil, Trash2 } from 'lucide-react';
+import { FolderPlus, RefreshCw, ChevronRight, Plus, FileText, BookOpen, Layers, Cpu, BookMarked, Pencil, Trash2, Key } from 'lucide-react';
 import { getApiUrl } from '../../utils/apiUrl';
+import { fetchRemoteApiKeys } from '../../utils/apiKeys';
 
 const API_URL = getApiUrl();
 
@@ -47,6 +48,8 @@ export default function Dashboard() {
   const [apiError, setApiError] = useState(false);
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [generationError, setGenerationError] = useState('');
+  const [hasConfiguredKeys, setHasConfiguredKeys] = useState(true);
+  const [isOwner, setIsOwner] = useState(false);
 
   // Edit Project States
   const [showEditModal, setShowEditModal] = useState(false);
@@ -137,6 +140,15 @@ export default function Dashboard() {
     if (!hasClerk || isLoaded) {
       fetchProjects();
       fetchStats();
+      // Check whether user has configured API keys
+      fetchRemoteApiKeys()
+        .then((data) => {
+          if (data) {
+            setIsOwner(Boolean(data.isOwner));
+            setHasConfiguredKeys(Boolean(data.hasConfiguredKeys || data.isOwner));
+          }
+        })
+        .catch(() => {});
     }
   }, [isLoaded, userId]);
 
@@ -283,6 +295,13 @@ export default function Dashboard() {
             <p className="text-zinc-500 text-sm mt-1">Monitor datasets, references, gaps, and run agent pipelines.</p>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              href="/onboarding/api-keys"
+              className="px-4 h-10 rounded-lg border border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-colors flex items-center gap-2 font-medium text-sm"
+            >
+              <Key className="w-4 h-4 text-indigo-400" />
+              <span>API Keys</span>
+            </Link>
             <button
               onClick={() => setShowModal(true)}
               className="px-5 h-10 rounded-lg bg-indigo-600 text-zinc-100 hover:bg-indigo-500 transition-colors flex items-center gap-2 shadow-lg shadow-indigo-600/10 font-medium text-sm"
@@ -292,6 +311,28 @@ export default function Dashboard() {
             <UserButton />
           </div>
         </div>
+
+        {/* Missing API Keys Notification Banner */}
+        {!hasConfiguredKeys && !isOwner && !loading && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3.5 rounded-xl border border-indigo-500/30 bg-indigo-950/20 text-zinc-300 text-xs shadow-lg shadow-indigo-950/20">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                <Key className="w-4 h-4" />
+              </div>
+              <div>
+                <strong className="text-zinc-100 font-semibold block sm:inline mr-1">Configure your LLM API Keys:</strong>
+                <span className="text-zinc-400">Add your free Groq and Google Gemini keys to unlock autonomous agent pipelines and avoid token interruptions.</span>
+              </div>
+            </div>
+            <Link
+              href="/onboarding/api-keys"
+              className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-1.5 transition-colors shrink-0 w-fit"
+            >
+              <span>Setup API Keys</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        )}
 
         {/* API Error Banner */}
         {apiError && (

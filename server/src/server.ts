@@ -64,6 +64,14 @@ app.use(cors({
     'X-User-Email',
     'x-user-name',
     'X-User-Name',
+    'x-groq-api-key',
+    'X-Groq-Api-Key',
+    'x-gemini-api-key',
+    'X-Gemini-Api-Key',
+    'x-openai-api-key',
+    'X-Openai-Api-Key',
+    'x-anthropic-api-key',
+    'X-Anthropic-Api-Key',
   ],
 }));
 

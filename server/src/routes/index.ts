@@ -8,9 +8,11 @@ import agentRoutes from './agent.routes.js';
 import comparisonRoutes from './comparison.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
 import formatexRoutes from './formatex.routes.js';
+import userRoutes from './user.routes.js';
 
 const router = Router();
 
+router.use('/user', userRoutes);
 router.use('/projects', projectRoutes);
 router.use('/projects/:projectId/formatex', formatexRoutes);
 router.use('/formatex', formatexRoutes);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import AuthSync from "@/components/AuthSync";
+import TokenExhaustionModal from "@/components/TokenExhaustionModal";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -24,6 +25,7 @@ export default function RootLayout({
       <html lang="en" className="dark">
         <body className={`${inter.className} antialiased bg-background text-foreground`}>
           <AuthSync />
+          <TokenExhaustionModal />
           {children}
         </body>
       </html>

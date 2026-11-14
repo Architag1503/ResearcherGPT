@@ -60,8 +60,8 @@ AGENT_TEMPERATURES = {
     "quality_assurance": 0.1
 }
 
-def call_gemini_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_output_tokens: int = 8192) -> str:
-    gemini_key = os.getenv("GEMINI_API_KEY")
+def call_gemini_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_output_tokens: int = 8192, api_key: Optional[str] = None) -> str:
+    gemini_key = api_key or os.getenv("GEMINI_API_KEY")
     if not gemini_key or "your_gemini_api_key" in gemini_key:
         raise ValueError("GEMINI_API_KEY is not configured.")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
@@ -81,6 +81,8 @@ def call_gemini_direct(model_name: str, temp: float, system_prompt: str, user_pr
 
     def _do_gemini_call():
         res = requests.post(url, headers=headers, json=data, timeout=300)
+        if res.status_code == 429 or "resource_exhausted" in res.text.lower() or "quota" in res.text.lower():
+            raise Exception(f"TOKEN_LIMIT_EXCEEDED:GEMINI: {res.text}")
         if res.status_code != 200:
             raise Exception(f"Gemini API returned {res.status_code}: {res.text}")
         res_data = res.json()
@@ -91,10 +93,10 @@ def call_gemini_direct(model_name: str, temp: float, system_prompt: str, user_pr
             print(f"[Gemini] Output truncated at MAX_TOKENS ({max_output_tokens}). Returning partial content.")
         return text
 
-    return _call_with_retry(_do_gemini_call, max_retries=4, base_delay=6.0)
+    return _call_with_retry(_do_gemini_call, max_retries=2, base_delay=4.0)
 
-def call_openai_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_tokens: int = 8192) -> str:
-    openai_key = os.getenv("OPENAI_API_KEY")
+def call_openai_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_tokens: int = 8192, api_key: Optional[str] = None) -> str:
+    openai_key = api_key or os.getenv("OPENAI_API_KEY")
     if not openai_key or "your_openai_api_key" in openai_key:
         raise ValueError("OPENAI_API_KEY is not configured.")
     url = "https://api.openai.com/v1/chat/completions"
@@ -113,11 +115,13 @@ def call_openai_direct(model_name: str, temp: float, system_prompt: str, user_pr
 
     def _do_openai_call():
         res = requests.post(url, headers=headers, json=data, timeout=300)
+        if res.status_code == 429 or "insufficient_quota" in res.text.lower():
+            raise Exception(f"TOKEN_LIMIT_EXCEEDED:OPENAI: {res.text}")
         if res.status_code != 200:
             raise Exception(f"OpenAI API returned {res.status_code}: {res.text}")
         return res.json()["choices"][0]["message"]["content"]
 
-    return _call_with_retry(_do_openai_call, max_retries=3, base_delay=5.0)
+    return _call_with_retry(_do_openai_call, max_retries=2, base_delay=4.0)
 
 def _call_with_retry(call_fn, max_retries: int = 3, base_delay: float = 5.0):
     """Call a function with exponential backoff retry on rate-limit errors (429)."""
@@ -135,12 +139,18 @@ def _call_with_retry(call_fn, max_retries: int = 3, base_delay: float = 5.0):
             raise
 
 
-def call_model(agent_role: str, system_prompt: str, user_prompt: str) -> str:
+def call_model(agent_role: str, system_prompt: str, user_prompt: str, user_api_keys: Optional[Dict[str, str]] = None) -> str:
     model = MODEL_REGISTRY.get(agent_role, "gemini-2.5-flash")
     temp = AGENT_TEMPERATURES.get(agent_role, 0.3)
     
     # Writer gets extra tokens for long content
     is_writer = agent_role in ("writer", "literature_review", "reviewer")
+
+    # Extract user custom keys if supplied
+    user_groq = (user_api_keys.get("groq") or user_api_keys.get("GROQ_API_KEY")) if user_api_keys else None
+    user_gemini = (user_api_keys.get("gemini") or user_api_keys.get("GEMINI_API_KEY")) if user_api_keys else None
+    user_openai = (user_api_keys.get("openai") or user_api_keys.get("OPENAI_API_KEY")) if user_api_keys else None
+    user_anthropic = (user_api_keys.get("anthropic") or user_api_keys.get("ANTHROPIC_API_KEY")) if user_api_keys else None
     
     # Parse provider
     provider = None
@@ -152,7 +162,7 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str) -> str:
         
     try:
         if provider == "groq":
-            groq_key = os.getenv("GROQ_API_KEY")
+            groq_key = user_groq or os.getenv("GROQ_API_KEY")
             if not groq_key or "your_groq_api_key" in groq_key:
                 raise ValueError("GROQ_API_KEY is not configured.")
             url = "https://api.groq.com/openai/v1/chat/completions"
@@ -170,6 +180,8 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str) -> str:
                 data["response_format"] = {"type": "json_object"}
             def _do_groq():
                 res = requests.post(url, headers=headers, json=data, timeout=180)
+                if res.status_code == 429 or "rate_limit" in res.text.lower() or "quota" in res.text.lower():
+                    raise Exception(f"TOKEN_LIMIT_EXCEEDED:GROQ: {res.text}")
                 if res.status_code != 200:
                     raise Exception(f"Groq API returned {res.status_code}: {res.text}")
                 return res.json()["choices"][0]["message"]["content"]
@@ -354,14 +366,14 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str) -> str:
         elif model.startswith("gemini-"):
             # For writer roles use maximum output tokens (65536 for Gemini 2.5 Flash)
             gemini_max_tokens = 65536 if is_writer else 8192
-            return call_gemini_direct(model, temp, system_prompt, user_prompt, max_output_tokens=gemini_max_tokens)
+            return call_gemini_direct(model, temp, system_prompt, user_prompt, max_output_tokens=gemini_max_tokens, api_key=user_gemini)
             
         elif model.startswith("gpt-") or model.startswith("o1-"):
             openai_max_tokens = 16384 if is_writer else 4096
-            return call_openai_direct(model, temp, system_prompt, user_prompt, max_tokens=openai_max_tokens)
+            return call_openai_direct(model, temp, system_prompt, user_prompt, max_tokens=openai_max_tokens, api_key=user_openai)
             
         elif model.startswith("claude-"):
-            anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+            anthropic_key = user_anthropic or os.getenv("ANTHROPIC_API_KEY")
             if not anthropic_key or "your_anthropic_api_key" in anthropic_key:
                 raise ValueError("ANTHROPIC_API_KEY is not configured.")
             url = "https://api.anthropic.com/v1/messages"
@@ -378,6 +390,8 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str) -> str:
                 "max_tokens": 16000 if is_writer else 4096
             }
             res = requests.post(url, headers=headers, json=data, timeout=300)
+            if res.status_code == 429 or "rate_limit" in res.text.lower():
+                raise Exception(f"TOKEN_LIMIT_EXCEEDED:ANTHROPIC: {res.text}")
             if res.status_code != 200:
                 raise Exception(f"Anthropic API returned {res.status_code}: {res.text}")
             return res.json()["content"][0]["text"]
@@ -386,15 +400,19 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str) -> str:
             raise ValueError(f"Unsupported model name: {model}")
             
     except Exception as e:
+        if "TOKEN_LIMIT_EXCEEDED" in str(e):
+            raise e
         print(f"[Fallback] Provider '{provider or 'default'}' for role '{agent_role}' failed: {e}. Trying Gemini fallback...")
         try:
             # Fallback 1: Gemini 2.5 Flash - large context, free tier, ideal for writing
             gemini_fb_tokens = 65536 if is_writer else 8192
-            return call_gemini_direct(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"), temp, system_prompt, user_prompt, max_output_tokens=gemini_fb_tokens)
+            return call_gemini_direct(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"), temp, system_prompt, user_prompt, max_output_tokens=gemini_fb_tokens, api_key=user_gemini)
         except Exception as gemini_err:
+            if "TOKEN_LIMIT_EXCEEDED" in str(gemini_err):
+                raise gemini_err
             print(f"[Fallback Fail] Gemini fallback failed: {gemini_err}. Trying Groq fallback...")
             try:
-                groq_key = os.getenv("GROQ_API_KEY")
+                groq_key = user_groq or os.getenv("GROQ_API_KEY")
                 if not groq_key or "your_groq_api_key" in groq_key:
                     raise ValueError("GROQ_API_KEY is not configured.")
                 url = "https://api.groq.com/openai/v1/chat/completions"
@@ -412,11 +430,15 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str) -> str:
                     data["response_format"] = {"type": "json_object"}
                 def _do_groq_fb():
                     res = requests.post(url, headers=headers, json=data, timeout=180)
+                    if res.status_code == 429 or "rate_limit" in res.text.lower() or "quota" in res.text.lower():
+                        raise Exception(f"TOKEN_LIMIT_EXCEEDED:GROQ: {res.text}")
                     if res.status_code != 200:
                         raise Exception(f"Groq fallback returned {res.status_code}: {res.text}")
                     return res.json()["choices"][0]["message"]["content"]
                 return _call_with_retry(_do_groq_fb, max_retries=2, base_delay=8.0)
             except Exception as groq_err:
+                if "TOKEN_LIMIT_EXCEEDED" in str(groq_err):
+                    raise groq_err
                 print(f"[Fallback Fail] Groq fallback failed: {groq_err}. Trying SambaNova fallback...")
                 try:
                     sambanova_key = os.getenv("SAMBANOVA_API_KEY")
@@ -442,13 +464,13 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str) -> str:
                 except Exception as samba_err:
                     print(f"[Fallback Fail] SambaNova fallback failed: {samba_err}. Trying OpenAI fallback...")
                     try:
-                        return call_openai_direct("gpt-4o-mini", temp, system_prompt, user_prompt)
+                        return call_openai_direct("gpt-4o-mini", temp, system_prompt, user_prompt, api_key=user_openai)
                     except Exception as openai_err:
                         print(f"[Fallback Fail] All API fallbacks exhausted for role '{agent_role}': {openai_err}")
                         raise openai_err
 
-def call_llm(system_prompt: str, user_prompt: str) -> str:
-    return call_model("writer", system_prompt, user_prompt)
+def call_llm(system_prompt: str, user_prompt: str, user_api_keys: Optional[Dict[str, str]] = None) -> str:
+    return call_model("writer", system_prompt, user_prompt, user_api_keys=user_api_keys)
 
 def get_project_papers(project_id: str) -> List[Dict[str, Any]]:
     try:
@@ -1161,7 +1183,7 @@ def planner_node(state: AgentWorkflowState) -> AgentWorkflowState:
     system = "You are a Research Planner Agent. You must output exactly a JSON list of strings. Do not include markdown wraps."
     
     try:
-        res_text = call_model("planner", system, prompt)
+        res_text = call_model("planner", system, prompt, user_api_keys=state.get("user_api_keys"))
         if "Failed to contact" in res_text or res_text == "[]":
             raise Exception("Planner model call failed")
         if "```" in res_text:
@@ -1227,7 +1249,7 @@ def literature_review_node(state: AgentWorkflowState) -> AgentWorkflowState:
     system = "You are an expert Literature Review Agent. You must output a JSON list of objects containing: author (string), year (integer), method (string), dataset (string), results (string), limitation (string)."
     
     try:
-        res_text = call_model("literature_review", system, prompt)
+        res_text = call_model("literature_review", system, prompt, user_api_keys=state.get("user_api_keys"))
         if "Failed to contact" in res_text or res_text == "[]":
             raise Exception("Literature review call failed")
         reviews = parse_json_list_of_dicts(res_text)
@@ -1247,7 +1269,7 @@ def methodology_extraction_node(state: AgentWorkflowState) -> AgentWorkflowState
     system = "You are a Methodology Extraction Agent. Output a JSON list of objects, each containing: paper (string), architecture (string), dataset (string), algorithm (string)."
     
     try:
-        res_text = call_model("methodology_extraction", system, prompt)
+        res_text = call_model("methodology_extraction", system, prompt, user_api_keys=state.get("user_api_keys"))
         if "Failed to contact" in res_text or res_text == "[]":
             raise Exception("Methodology extraction call failed")
         methodologies = parse_json_list_of_dicts(res_text)
@@ -1267,7 +1289,7 @@ def comparison_node(state: AgentWorkflowState) -> AgentWorkflowState:
     system = "You are a Comparative Analysis Agent. Output a JSON list of objects, each containing: paper (string), accuracy (string), latency (string), parameters (string), strengths (string), weaknesses (string)."
     
     try:
-        res_text = call_model("comparison", system, prompt)
+        res_text = call_model("comparison", system, prompt, user_api_keys=state.get("user_api_keys"))
         if "Failed to contact" in res_text or res_text == "[]":
             raise Exception("Comparison call failed")
         comparison_matrix = parse_json_list_of_dicts(res_text)
@@ -1288,7 +1310,7 @@ def trend_node(state: AgentWorkflowState) -> AgentWorkflowState:
     system = "You are a Trend Analysis Agent. Output a JSON list of objects, each containing: trend (string), evidence (string), confidence (float between 0 and 1)."
     
     try:
-        res_text = call_model("trend_analysis", system, prompt)
+        res_text = call_model("trend_analysis", system, prompt, user_api_keys=state.get("user_api_keys"))
         if "Failed to contact" in res_text or res_text == "[]":
             raise Exception("Trend analysis call failed")
         trends = parse_json_list_of_dicts(res_text)
@@ -1321,7 +1343,7 @@ def gap_analysis_node(state: AgentWorkflowState) -> AgentWorkflowState:
     )
     
     try:
-        res_text = call_model("gap_analysis", system, prompt)
+        res_text = call_model("gap_analysis", system, prompt, user_api_keys=state.get("user_api_keys"))
         if "Failed to contact" in res_text or res_text == "[]":
             raise Exception("Gap analysis call failed")
         gaps = parse_json_list_of_dicts(res_text)
@@ -1341,7 +1363,7 @@ def contradiction_node(state: AgentWorkflowState) -> AgentWorkflowState:
     system = "You are a Contradiction Detection Agent. Output a JSON list of objects, each containing: conflict_area (string), paper_a (string), claim_a (string), paper_b (string), claim_b (string), resolution (string)."
     
     try:
-        res_text = call_model("contradiction_detection", system, prompt)
+        res_text = call_model("contradiction_detection", system, prompt, user_api_keys=state.get("user_api_keys"))
         if "Failed to contact" in res_text or res_text == "[]":
             raise Exception("Contradiction detection call failed")
         contradictions = parse_json_list_of_dicts(res_text)
@@ -1442,7 +1464,7 @@ def fact_verification_node(state: AgentWorkflowState) -> AgentWorkflowState:
     system = "You are an Academic Fact Checker Agent. Verify if claims are backed by snippets. Output a JSON list of objects containing: claim (string), status (verified/refuted/unverified), confidenceScore (float 0-1), analysis (string), sources (array of objects with paperTitle, pageNumber, snippet, confidenceScore)."
     
     try:
-        res_text = call_model("fact_verification", system, prompt)
+        res_text = call_model("fact_verification", system, prompt, user_api_keys=state.get("user_api_keys"))
         if "Failed to contact" in res_text or res_text == "[]":
             raise Exception("Fact verification call failed")
         checks = parse_json_list_of_dicts(res_text)
@@ -1463,7 +1485,7 @@ def reviewer_node(state: AgentWorkflowState) -> AgentWorkflowState:
     system = "You are a Peer Reviewer Agent. Critique the research proposal plan, literature reviews, methodologies, and identified gaps. Provide constructive feedback, highlighting strengths, weaknesses, and structural suggestions. Output the critique as a markdown string."
     
     try:
-        res_text = call_model("reviewer", system, prompt)
+        res_text = call_model("reviewer", system, prompt, user_api_keys=state.get("user_api_keys"))
         if "Failed to contact" in res_text or len(res_text) < 10:
             raise Exception("Reviewer call failed")
     except Exception as e:
@@ -1916,7 +1938,7 @@ def writer_node(state: AgentWorkflowState) -> AgentWorkflowState:
                 f"CRITICAL: Keep your response academic. Derive mathematical equations in LaTeX ($$...$$), present evaluation results in markdown tables, and write a full system architecture diagram in Mermaid syntax inside a ```mermaid code block. Write {words_per_batch} words minimum."
             )
             
-            batch_result = call_model("writer", system, prompt)
+            batch_result = call_model("writer", system, prompt, user_api_keys=state.get("user_api_keys"))
             
             if "Failed to contact" in batch_result or len(batch_result) < 100:
                 raise Exception(f"Writer batch {idx+1} failed")

@@ -6,15 +6,29 @@ import FactCheck from '../models/FactCheck.js';
 import GeneratedPaper from '../models/GeneratedPaper.js';
 import Paper from '../models/Paper.js';
 import Citation from '../models/Citation.js';
+import { getUserApiKeys, isPrimaryOwner } from '../utils/userKeys.js';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
 export const triggerAgentRun = async (req: Request, res: Response) => {
   try {
     const { projectId, query, workflowType = 'paper', format = 'IEEE', pages = 5 } = req.body;
+    const userId = (req as any).user?.id || 'mock_user_id';
 
     if (!projectId || !query) {
       return res.status(400).json({ error: 'projectId and query are required' });
+    }
+
+    const userKeys = await getUserApiKeys(userId, req);
+    const isOwner = isPrimaryOwner((req as any).user);
+
+    // Protect developer quota: require external users to provide their own Groq or Gemini key
+    if (!isOwner && !userKeys.groq && !userKeys.gemini) {
+      return res.status(402).json({
+        error: 'API_KEY_REQUIRED',
+        provider: 'groq',
+        message: 'Your personal Groq or Gemini API key is required to run autonomous agents. Please configure your key in LLM API Keys.',
+      });
     }
 
     // Determine steps based on workflowType
@@ -45,7 +59,7 @@ export const triggerAgentRun = async (req: Request, res: Response) => {
     });
     await run.save();
 
-    // 2. Trigger AI Service async in background, sending our MongoDB runId for callbacks
+    // 2. Trigger AI Service async in background, sending our MongoDB runId and user API keys for callbacks
     axios.post(`${AI_SERVICE_URL}/api/agent/run`, {
       run_id: run._id,
       project_id: projectId,
@@ -53,6 +67,7 @@ export const triggerAgentRun = async (req: Request, res: Response) => {
       workflow_type: workflowType,
       format,
       pages,
+      user_api_keys: userKeys,
     }).catch(err => {
       console.error('[triggerAgentRun] AI Service trigger failed asynchronously:', err.message);
       AgentRun.findByIdAndUpdate(run._id, {
