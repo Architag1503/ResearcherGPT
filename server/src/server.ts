@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import jwt from 'jsonwebtoken';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 import { connectDB } from './config/db.js';
@@ -48,7 +49,22 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(cors({
   origin: '*', // Allow all in dev, secure in production
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'Expires', 'X-Requested-With', 'Accept', 'Origin'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'Cache-Control',
+    'Pragma',
+    'Expires',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'x-user-id',
+    'X-User-Id',
+    'x-user-email',
+    'X-User-Email',
+    'x-user-name',
+    'X-User-Name',
+  ],
 }));
 
 // Increase body size limit to 50MB — the Writing Agent sends the full generated
@@ -58,33 +74,61 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static('uploads'));
 
-// Developer Mock Auth Middleware
+// Auth Middleware: Support Clerk JWT token, custom user headers, and dev fallback
 app.use((req: Request, res: Response, next: NextFunction) => {
-  // In development, if Clerk token is not present, we attach a default researcher user
   const authHeader = req.headers.authorization;
-  if (!authHeader) {
+  const headerUserId = (req.headers['x-user-id'] as string) || (req.headers['X-User-Id'] as string);
+  const headerEmail = (req.headers['x-user-email'] as string) || (req.headers['X-User-Email'] as string);
+  const headerName = (req.headers['x-user-name'] as string) || (req.headers['X-User-Name'] as string);
+
+  let extractedUserId: string | null = null;
+  let extractedEmail: string | null = headerEmail || null;
+  let extractedName: string | null = headerName || null;
+
+  // 1. Try decoding Clerk JWT from Bearer token
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    if (token && token !== 'mock-token') {
+      try {
+        const decoded = jwt.decode(token) as any;
+        if (decoded && decoded.sub) {
+          extractedUserId = decoded.sub;
+        }
+      } catch (err) {
+        // Ignore decode errors and proceed
+      }
+    }
+  }
+
+  // 2. Fallback to X-User-Id header sent by client
+  if (!extractedUserId && headerUserId && headerUserId.trim()) {
+    extractedUserId = headerUserId.trim();
+  }
+
+  // 3. If an authenticated user ID was extracted, attach to req.user
+  if (extractedUserId) {
     (req as any).user = {
-      id: '666a7b29d5b51a0211a7c501', // Mock MongoDB ObjectId string
+      id: extractedUserId,
+      name: extractedName || 'Researcher',
+      email: extractedEmail || `${extractedUserId}@user.researchergpt.io`,
+      role: 'researcher',
+    };
+    return next();
+  }
+
+  // 4. Offline Dev / Mock Auth Bypass (only when unauthenticated)
+  const allowDevBypass =
+    process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEV_MOCK_AUTH === 'true';
+
+  if (allowDevBypass) {
+    (req as any).user = {
+      id: '666a7b29d5b51a0211a7c501',
       name: 'Dr. Sarah Jenkins',
       email: 'sarah.jenkins@university.edu',
       role: 'researcher',
     };
-  } else {
-    // In production, decode JWT from Clerk
-    // For this implementation, we simulate verifying the JWT header
-    const token = authHeader.split(' ')[1];
-    if (token === 'mock-token') {
-      (req as any).user = {
-        id: '666a7b29d5b51a0211a7c501',
-        name: 'Dr. Sarah Jenkins',
-        email: 'sarah.jenkins@university.edu',
-        role: 'researcher',
-      };
-    } else {
-      // Decode Clerk jwt here (optional fallback validation)
-      (req as any).user = { id: '666a7b29d5b51a0211a7c501', role: 'researcher' };
-    }
   }
+
   next();
 });
 

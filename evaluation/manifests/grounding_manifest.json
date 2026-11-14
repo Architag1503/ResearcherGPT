@@ -1,0 +1,1262 @@
+[
+  {
+    "claim_id": "c_dir_00_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Reciprocal Rank Fusion combined with full-corpus BM25 achieved 84.2% Recall@5 over 75 scholarly queries.",
+    "evidence": [
+      {
+        "paper_id": "p_0",
+        "text_content": "Reciprocal Rank Fusion combined with full-corpus BM25 achieved 84.2% Recall@5 over 75 scholarly queries.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_00_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Combining full-corpus BM25 lexical matching with RRF yielded 84.2% Recall@5 across 75 evaluation queries.",
+    "evidence": [
+      {
+        "paper_id": "p_0",
+        "text_content": "Combining full-corpus BM25 lexical matching with RRF yielded 84.2% Recall@5 across 75 evaluation queries.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_00_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Combining full-corpus BM25 lexical matching with RRF yielded 84.2% Recall@5 across 75 evaluation queries.",
+    "evidence": [
+      {
+        "paper_id": "p_0",
+        "text_content": "Reciprocal Rank Fusion combined with full-corpus BM25 achieved 84.2% Recall@5 over 75 scholarly queries.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_00_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Reciprocal Rank Fusion combined with full-corpus BM25 achieved 84.2% Recall@5 over 75 scholarly queries.",
+    "evidence": [
+      {
+        "paper_id": "p_0",
+        "text_content": "Combining full-corpus BM25 lexical matching with RRF yielded 84.2% Recall@5 across 75 evaluation queries.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_00",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "Reciprocal Rank Fusion achieved 98.7% Recall@5 across 400 scholarly queries.",
+    "evidence": [
+      {
+        "paper_id": "p_0",
+        "text_content": "Reciprocal Rank Fusion combined with full-corpus BM25 achieved 84.2% Recall@5 over 75 scholarly queries.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_00",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Quantum annealing reduced NP-hard protein folding energy by 44.1% on cryogenic qubits.",
+    "evidence": [
+      {
+        "paper_id": "p_0",
+        "text_content": "Reciprocal Rank Fusion combined with full-corpus BM25 achieved 84.2% Recall@5 over 75 scholarly queries.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_01_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "The transformer encoder uses 6 stacked self-attention layers with hidden dimension 512 and dropout 0.1.",
+    "evidence": [
+      {
+        "paper_id": "p_1",
+        "text_content": "The transformer encoder uses 6 stacked self-attention layers with hidden dimension 512 and dropout 0.1.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_01_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Our encoder architecture comprises 6 self-attention layers, a 512-unit hidden state, and 0.1 dropout regularization.",
+    "evidence": [
+      {
+        "paper_id": "p_1",
+        "text_content": "Our encoder architecture comprises 6 self-attention layers, a 512-unit hidden state, and 0.1 dropout regularization.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_01_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Our encoder architecture comprises 6 self-attention layers, a 512-unit hidden state, and 0.1 dropout regularization.",
+    "evidence": [
+      {
+        "paper_id": "p_1",
+        "text_content": "The transformer encoder uses 6 stacked self-attention layers with hidden dimension 512 and dropout 0.1.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_01_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "The transformer encoder uses 6 stacked self-attention layers with hidden dimension 512 and dropout 0.1.",
+    "evidence": [
+      {
+        "paper_id": "p_1",
+        "text_content": "Our encoder architecture comprises 6 self-attention layers, a 512-unit hidden state, and 0.1 dropout regularization.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_01",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "The transformer encoder uses 24 stacked self-attention layers with hidden dimension 2048 and dropout 0.5.",
+    "evidence": [
+      {
+        "paper_id": "p_1",
+        "text_content": "The transformer encoder uses 6 stacked self-attention layers with hidden dimension 512 and dropout 0.1.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_01",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Bayesian MCMC sampling converged after 10000 Metropolis steps on paleoclimate ice-core isotopes.",
+    "evidence": [
+      {
+        "paper_id": "p_1",
+        "text_content": "The transformer encoder uses 6 stacked self-attention layers with hidden dimension 512 and dropout 0.1.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_02_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "PyMuPDF extracted clean digital text from 18 out of 20 multi-column manuscripts in under 1.2 seconds.",
+    "evidence": [
+      {
+        "paper_id": "p_2",
+        "text_content": "PyMuPDF extracted clean digital text from 18 out of 20 multi-column manuscripts in under 1.2 seconds.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_02_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "FitZ digital parsing recovered text from 18 of 20 two-column manuscripts within 1.2 seconds.",
+    "evidence": [
+      {
+        "paper_id": "p_2",
+        "text_content": "FitZ digital parsing recovered text from 18 of 20 two-column manuscripts within 1.2 seconds.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_02_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "FitZ digital parsing recovered text from 18 of 20 two-column manuscripts within 1.2 seconds.",
+    "evidence": [
+      {
+        "paper_id": "p_2",
+        "text_content": "PyMuPDF extracted clean digital text from 18 out of 20 multi-column manuscripts in under 1.2 seconds.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_02_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "PyMuPDF extracted clean digital text from 18 out of 20 multi-column manuscripts in under 1.2 seconds.",
+    "evidence": [
+      {
+        "paper_id": "p_2",
+        "text_content": "FitZ digital parsing recovered text from 18 of 20 two-column manuscripts within 1.2 seconds.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_02",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "PyMuPDF extracted clean digital text from 3 out of 20 manuscripts taking 45.0 seconds.",
+    "evidence": [
+      {
+        "paper_id": "p_2",
+        "text_content": "PyMuPDF extracted clean digital text from 18 out of 20 multi-column manuscripts in under 1.2 seconds.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_02",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "CRISPR-Cas9 off-target editing frequency dropped below 0.02% in murine hematopoietic stem cells.",
+    "evidence": [
+      {
+        "paper_id": "p_2",
+        "text_content": "PyMuPDF extracted clean digital text from 18 out of 20 multi-column manuscripts in under 1.2 seconds.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_03_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "All-MiniLM-L6-v2 maps input sentences into 384-dimensional L2-normalized embedding vectors.",
+    "evidence": [
+      {
+        "paper_id": "p_3",
+        "text_content": "All-MiniLM-L6-v2 maps input sentences into 384-dimensional L2-normalized embedding vectors.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_03_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "The local MiniLM-L6-v2 encoder projects sentences onto normalized 384-dimensional feature spaces.",
+    "evidence": [
+      {
+        "paper_id": "p_3",
+        "text_content": "The local MiniLM-L6-v2 encoder projects sentences onto normalized 384-dimensional feature spaces.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_03_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "The local MiniLM-L6-v2 encoder projects sentences onto normalized 384-dimensional feature spaces.",
+    "evidence": [
+      {
+        "paper_id": "p_3",
+        "text_content": "All-MiniLM-L6-v2 maps input sentences into 384-dimensional L2-normalized embedding vectors.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_03_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "All-MiniLM-L6-v2 maps input sentences into 384-dimensional L2-normalized embedding vectors.",
+    "evidence": [
+      {
+        "paper_id": "p_3",
+        "text_content": "The local MiniLM-L6-v2 encoder projects sentences onto normalized 384-dimensional feature spaces.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_03",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "All-MiniLM-L6-v2 maps input sentences into 3072-dimensional unnormalized tensor arrays.",
+    "evidence": [
+      {
+        "paper_id": "p_3",
+        "text_content": "All-MiniLM-L6-v2 maps input sentences into 384-dimensional L2-normalized embedding vectors.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_03",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Superconducting niobium resonators maintained quality factors exceeding two billion at 20 millikelvin.",
+    "evidence": [
+      {
+        "paper_id": "p_3",
+        "text_content": "All-MiniLM-L6-v2 maps input sentences into 384-dimensional L2-normalized embedding vectors.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_04_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "MinHash uses 128 independent hash permutations over overlapping 5-word shingles to estimate Jaccard overlap.",
+    "evidence": [
+      {
+        "paper_id": "p_4",
+        "text_content": "MinHash uses 128 independent hash permutations over overlapping 5-word shingles to estimate Jaccard overlap.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_04_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Overlapping 5-token shingles are sketched using 128 hash permutations to approximate Jaccard similarity.",
+    "evidence": [
+      {
+        "paper_id": "p_4",
+        "text_content": "Overlapping 5-token shingles are sketched using 128 hash permutations to approximate Jaccard similarity.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_04_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Overlapping 5-token shingles are sketched using 128 hash permutations to approximate Jaccard similarity.",
+    "evidence": [
+      {
+        "paper_id": "p_4",
+        "text_content": "MinHash uses 128 independent hash permutations over overlapping 5-word shingles to estimate Jaccard overlap.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_04_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "MinHash uses 128 independent hash permutations over overlapping 5-word shingles to estimate Jaccard overlap.",
+    "evidence": [
+      {
+        "paper_id": "p_4",
+        "text_content": "Overlapping 5-token shingles are sketched using 128 hash permutations to approximate Jaccard similarity.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_04",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "MinHash uses 16 permutations over 12-word shingles to estimate cosine divergence.",
+    "evidence": [
+      {
+        "paper_id": "p_4",
+        "text_content": "MinHash uses 128 independent hash permutations over overlapping 5-word shingles to estimate Jaccard overlap.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_04",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Atmospheric aerosol optical depth increased by 18.4% following boreal wildfire smoke transport.",
+    "evidence": [
+      {
+        "paper_id": "p_4",
+        "text_content": "MinHash uses 128 independent hash permutations over overlapping 5-word shingles to estimate Jaccard overlap.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_05_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Winnowing guarantees detection of any shared substring of length at least w + k - 1 tokens within window w=4.",
+    "evidence": [
+      {
+        "paper_id": "p_5",
+        "text_content": "Winnowing guarantees detection of any shared substring of length at least w + k - 1 tokens within window w=4.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_05_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Using window size w=4 and shingle k, Winnowing deterministically captures matching spans of length w + k - 1.",
+    "evidence": [
+      {
+        "paper_id": "p_5",
+        "text_content": "Using window size w=4 and shingle k, Winnowing deterministically captures matching spans of length w + k - 1.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_05_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Using window size w=4 and shingle k, Winnowing deterministically captures matching spans of length w + k - 1.",
+    "evidence": [
+      {
+        "paper_id": "p_5",
+        "text_content": "Winnowing guarantees detection of any shared substring of length at least w + k - 1 tokens within window w=4.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_05_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Winnowing guarantees detection of any shared substring of length at least w + k - 1 tokens within window w=4.",
+    "evidence": [
+      {
+        "paper_id": "p_5",
+        "text_content": "Using window size w=4 and shingle k, Winnowing deterministically captures matching spans of length w + k - 1.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_05",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "Winnowing only captures substrings longer than 95 tokens when window size is w=64.",
+    "evidence": [
+      {
+        "paper_id": "p_5",
+        "text_content": "Winnowing guarantees detection of any shared substring of length at least w + k - 1 tokens within window w=4.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_05",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Single-cell RNA sequencing revealed three distinct macrophage subpopulations in fibrotic kidney tissue.",
+    "evidence": [
+      {
+        "paper_id": "p_5",
+        "text_content": "Winnowing guarantees detection of any shared substring of length at least w + k - 1 tokens within window w=4.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_06_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Knowledge graph entity linking connected 25 method nodes to target publications for structural boosting at beta=1.3.",
+    "evidence": [
+      {
+        "paper_id": "p_6",
+        "text_content": "Knowledge graph entity linking connected 25 method nodes to target publications for structural boosting at beta=1.3.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_06_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Linking 25 method entities in the graph to corresponding papers enabled a beta=1.3 retrieval multiplier.",
+    "evidence": [
+      {
+        "paper_id": "p_6",
+        "text_content": "Linking 25 method entities in the graph to corresponding papers enabled a beta=1.3 retrieval multiplier.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_06_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Linking 25 method entities in the graph to corresponding papers enabled a beta=1.3 retrieval multiplier.",
+    "evidence": [
+      {
+        "paper_id": "p_6",
+        "text_content": "Knowledge graph entity linking connected 25 method nodes to target publications for structural boosting at beta=1.3.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_06_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Knowledge graph entity linking connected 25 method nodes to target publications for structural boosting at beta=1.3.",
+    "evidence": [
+      {
+        "paper_id": "p_6",
+        "text_content": "Linking 25 method entities in the graph to corresponding papers enabled a beta=1.3 retrieval multiplier.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_06",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "Knowledge graph entity linking connected 900 method nodes with a boosting factor beta=4.8.",
+    "evidence": [
+      {
+        "paper_id": "p_6",
+        "text_content": "Knowledge graph entity linking connected 25 method nodes to target publications for structural boosting at beta=1.3.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_06",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Adaptive optics compensated wavefront distortion across 64 actuators on the infrared coronagraph.",
+    "evidence": [
+      {
+        "paper_id": "p_6",
+        "text_content": "Knowledge graph entity linking connected 25 method nodes to target publications for structural boosting at beta=1.3.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_07_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Production authentication middleware rejects missing Bearer tokens with HTTP 401 when NODE_ENV is production.",
+    "evidence": [
+      {
+        "paper_id": "p_7",
+        "text_content": "Production authentication middleware rejects missing Bearer tokens with HTTP 401 when NODE_ENV is production.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_07_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Under production NODE_ENV settings, requests lacking Bearer headers receive an HTTP 401 rejection.",
+    "evidence": [
+      {
+        "paper_id": "p_7",
+        "text_content": "Under production NODE_ENV settings, requests lacking Bearer headers receive an HTTP 401 rejection.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_07_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Under production NODE_ENV settings, requests lacking Bearer headers receive an HTTP 401 rejection.",
+    "evidence": [
+      {
+        "paper_id": "p_7",
+        "text_content": "Production authentication middleware rejects missing Bearer tokens with HTTP 401 when NODE_ENV is production.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_07_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Production authentication middleware rejects missing Bearer tokens with HTTP 401 when NODE_ENV is production.",
+    "evidence": [
+      {
+        "paper_id": "p_7",
+        "text_content": "Under production NODE_ENV settings, requests lacking Bearer headers receive an HTTP 401 rejection.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_07",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "Production authentication middleware returns HTTP 503 with mock administrator privileges.",
+    "evidence": [
+      {
+        "paper_id": "p_7",
+        "text_content": "Production authentication middleware rejects missing Bearer tokens with HTTP 401 when NODE_ENV is production.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_07",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Electrolysis overpotential decreased to 210 millivolts using cobalt phosphide nanosheet catalysts.",
+    "evidence": [
+      {
+        "paper_id": "p_7",
+        "text_content": "Production authentication middleware rejects missing Bearer tokens with HTTP 401 when NODE_ENV is production.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_08_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Unigram Shannon entropy and sentence-length coefficient of variation quantify lexical predictability and burstiness.",
+    "evidence": [
+      {
+        "paper_id": "p_8",
+        "text_content": "Unigram Shannon entropy and sentence-length coefficient of variation quantify lexical predictability and burstiness.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_08_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Lexical predictability is measured via unigram Shannon entropy alongside sentence-length burstiness variation.",
+    "evidence": [
+      {
+        "paper_id": "p_8",
+        "text_content": "Lexical predictability is measured via unigram Shannon entropy alongside sentence-length burstiness variation.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_08_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Lexical predictability is measured via unigram Shannon entropy alongside sentence-length burstiness variation.",
+    "evidence": [
+      {
+        "paper_id": "p_8",
+        "text_content": "Unigram Shannon entropy and sentence-length coefficient of variation quantify lexical predictability and burstiness.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_08_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Unigram Shannon entropy and sentence-length coefficient of variation quantify lexical predictability and burstiness.",
+    "evidence": [
+      {
+        "paper_id": "p_8",
+        "text_content": "Lexical predictability is measured via unigram Shannon entropy alongside sentence-length burstiness variation.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_08",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "Trigram perplexity across 70B parameters and KL-divergence quantify lexical burstiness.",
+    "evidence": [
+      {
+        "paper_id": "p_8",
+        "text_content": "Unigram Shannon entropy and sentence-length coefficient of variation quantify lexical predictability and burstiness.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_08",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Autonomous underwater gliders mapped sub-ice shelf melt channels along Pine Island Glacier.",
+    "evidence": [
+      {
+        "paper_id": "p_8",
+        "text_content": "Unigram Shannon entropy and sentence-length coefficient of variation quantify lexical predictability and burstiness.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_09_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Structured table extraction via pdfplumber filters blank grid cells and requires at least 2 non-empty rows.",
+    "evidence": [
+      {
+        "paper_id": "p_9",
+        "text_content": "Structured table extraction via pdfplumber filters blank grid cells and requires at least 2 non-empty rows.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_09_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Using pdfplumber, extracted tables retain non-empty grid cells and require a minimum of 2 populated rows.",
+    "evidence": [
+      {
+        "paper_id": "p_9",
+        "text_content": "Using pdfplumber, extracted tables retain non-empty grid cells and require a minimum of 2 populated rows.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_09_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Using pdfplumber, extracted tables retain non-empty grid cells and require a minimum of 2 populated rows.",
+    "evidence": [
+      {
+        "paper_id": "p_9",
+        "text_content": "Structured table extraction via pdfplumber filters blank grid cells and requires at least 2 non-empty rows.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_09_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Structured table extraction via pdfplumber filters blank grid cells and requires at least 2 non-empty rows.",
+    "evidence": [
+      {
+        "paper_id": "p_9",
+        "text_content": "Using pdfplumber, extracted tables retain non-empty grid cells and require a minimum of 2 populated rows.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_09",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "Structured table extraction via pdfplumber drops all headers and requires 150 rows minimum.",
+    "evidence": [
+      {
+        "paper_id": "p_9",
+        "text_content": "Structured table extraction via pdfplumber filters blank grid cells and requires at least 2 non-empty rows.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_09",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "High-entropy refractory alloys exhibited zero brittle fracture at 1400 Kelvin tensile loading.",
+    "evidence": [
+      {
+        "paper_id": "p_9",
+        "text_content": "Structured table extraction via pdfplumber filters blank grid cells and requires at least 2 non-empty rows.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_10_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Cross-encoder scoring evaluates query-document pairs jointly but requires network access when weights are uncached.",
+    "evidence": [
+      {
+        "paper_id": "p_10",
+        "text_content": "Cross-encoder scoring evaluates query-document pairs jointly but requires network access when weights are uncached.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_10_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Pairwise CrossEncoder inference needs local cached weights or network access to evaluate query-passage inputs.",
+    "evidence": [
+      {
+        "paper_id": "p_10",
+        "text_content": "Pairwise CrossEncoder inference needs local cached weights or network access to evaluate query-passage inputs.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_10_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Pairwise CrossEncoder inference needs local cached weights or network access to evaluate query-passage inputs.",
+    "evidence": [
+      {
+        "paper_id": "p_10",
+        "text_content": "Cross-encoder scoring evaluates query-document pairs jointly but requires network access when weights are uncached.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_10_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Cross-encoder scoring evaluates query-document pairs jointly but requires network access when weights are uncached.",
+    "evidence": [
+      {
+        "paper_id": "p_10",
+        "text_content": "Pairwise CrossEncoder inference needs local cached weights or network access to evaluate query-passage inputs.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_10",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "Cross-encoder scoring evaluates only document vectors independently without reading query tokens.",
+    "evidence": [
+      {
+        "paper_id": "p_10",
+        "text_content": "Cross-encoder scoring evaluates query-document pairs jointly but requires network access when weights are uncached.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_10",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Acoustic backscatter telemetry tracked juvenile salmon migration speeds near hydroelectric bypass dams.",
+    "evidence": [
+      {
+        "paper_id": "p_10",
+        "text_content": "Cross-encoder scoring evaluates query-document pairs jointly but requires network access when weights are uncached.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_11_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Sparse TF-IDF similarity flags moderate semantic overlap above cosine threshold 0.70 and high overlap above 0.85.",
+    "evidence": [
+      {
+        "paper_id": "p_11",
+        "text_content": "Sparse TF-IDF similarity flags moderate semantic overlap above cosine threshold 0.70 and high overlap above 0.85.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_11_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "TF-IDF vector cosine flags moderate overlap starting at 0.70 and high similarity beyond 0.85.",
+    "evidence": [
+      {
+        "paper_id": "p_11",
+        "text_content": "TF-IDF vector cosine flags moderate overlap starting at 0.70 and high similarity beyond 0.85.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_11_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "TF-IDF vector cosine flags moderate overlap starting at 0.70 and high similarity beyond 0.85.",
+    "evidence": [
+      {
+        "paper_id": "p_11",
+        "text_content": "Sparse TF-IDF similarity flags moderate semantic overlap above cosine threshold 0.70 and high overlap above 0.85.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_11_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Sparse TF-IDF similarity flags moderate semantic overlap above cosine threshold 0.70 and high overlap above 0.85.",
+    "evidence": [
+      {
+        "paper_id": "p_11",
+        "text_content": "TF-IDF vector cosine flags moderate overlap starting at 0.70 and high similarity beyond 0.85.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_11",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "Sparse TF-IDF similarity flags moderate overlap at 0.15 and high overlap at 0.25.",
+    "evidence": [
+      {
+        "paper_id": "p_11",
+        "text_content": "Sparse TF-IDF similarity flags moderate semantic overlap above cosine threshold 0.70 and high overlap above 0.85.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_11",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Photoemission spectroscopy measured band gap widening across strained monolayer tungsten disulfide.",
+    "evidence": [
+      {
+        "paper_id": "p_11",
+        "text_content": "Sparse TF-IDF similarity flags moderate semantic overlap above cosine threshold 0.70 and high overlap above 0.85.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_12_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Express API gateway exposes 16 Mongoose collections backed by MongoDB 6.0 and BullMQ Redis job queues.",
+    "evidence": [
+      {
+        "paper_id": "p_12",
+        "text_content": "Express API gateway exposes 16 Mongoose collections backed by MongoDB 6.0 and BullMQ Redis job queues.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_12_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "The Express gateway persists 16 MongoDB 6.0 collections while queuing asynchronous workers via BullMQ Redis.",
+    "evidence": [
+      {
+        "paper_id": "p_12",
+        "text_content": "The Express gateway persists 16 MongoDB 6.0 collections while queuing asynchronous workers via BullMQ Redis.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_12_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "The Express gateway persists 16 MongoDB 6.0 collections while queuing asynchronous workers via BullMQ Redis.",
+    "evidence": [
+      {
+        "paper_id": "p_12",
+        "text_content": "Express API gateway exposes 16 Mongoose collections backed by MongoDB 6.0 and BullMQ Redis job queues.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_12_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Express API gateway exposes 16 Mongoose collections backed by MongoDB 6.0 and BullMQ Redis job queues.",
+    "evidence": [
+      {
+        "paper_id": "p_12",
+        "text_content": "The Express gateway persists 16 MongoDB 6.0 collections while queuing asynchronous workers via BullMQ Redis.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_12",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "Express API gateway exposes 2 PostgreSQL tables without any Redis background worker queues.",
+    "evidence": [
+      {
+        "paper_id": "p_12",
+        "text_content": "Express API gateway exposes 16 Mongoose collections backed by MongoDB 6.0 and BullMQ Redis job queues.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_12",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Deep eutectic solvents selective leached lithium and cobalt from spent cathode black mass.",
+    "evidence": [
+      {
+        "paper_id": "p_12",
+        "text_content": "Express API gateway exposes 16 Mongoose collections backed by MongoDB 6.0 and BullMQ Redis job queues.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_13_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Citation coverage auditing inspects bracketed numeric citations like [1] to confirm indexes fall within compiled bounds.",
+    "evidence": [
+      {
+        "paper_id": "p_13",
+        "text_content": "Citation coverage auditing inspects bracketed numeric citations like [1] to confirm indexes fall within compiled bounds.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_13_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Bracketed citation indices such as [1] are checked against the compiled reference count during QA auditing.",
+    "evidence": [
+      {
+        "paper_id": "p_13",
+        "text_content": "Bracketed citation indices such as [1] are checked against the compiled reference count during QA auditing.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_13_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Bracketed citation indices such as [1] are checked against the compiled reference count during QA auditing.",
+    "evidence": [
+      {
+        "paper_id": "p_13",
+        "text_content": "Citation coverage auditing inspects bracketed numeric citations like [1] to confirm indexes fall within compiled bounds.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_13_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Citation coverage auditing inspects bracketed numeric citations like [1] to confirm indexes fall within compiled bounds.",
+    "evidence": [
+      {
+        "paper_id": "p_13",
+        "text_content": "Bracketed citation indices such as [1] are checked against the compiled reference count during QA auditing.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_13",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "Citation coverage auditing rewrites APA author-year references using random DOI suffixes.",
+    "evidence": [
+      {
+        "paper_id": "p_13",
+        "text_content": "Citation coverage auditing inspects bracketed numeric citations like [1] to confirm indexes fall within compiled bounds.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_13",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Subsurface ground-penetrating radar imaged Pleistocene river channels beneath arid alluvial fans.",
+    "evidence": [
+      {
+        "paper_id": "p_13",
+        "text_content": "Citation coverage auditing inspects bracketed numeric citations like [1] to confirm indexes fall within compiled bounds.",
+        "confidence_score": 0.45
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_14_a",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Deterministic feature hashing over word unigrams and bigrams runs with zero PyTorch memory allocation.",
+    "evidence": [
+      {
+        "paper_id": "p_14",
+        "text_content": "Deterministic feature hashing over word unigrams and bigrams runs with zero PyTorch memory allocation.",
+        "confidence_score": 0.92
+      }
+    ]
+  },
+  {
+    "claim_id": "c_dir_14_b",
+    "category": "supported_direct",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Feature hashing of unigram and bigram tokens operates deterministically without allocating PyTorch tensors.",
+    "evidence": [
+      {
+        "paper_id": "p_14",
+        "text_content": "Feature hashing of unigram and bigram tokens operates deterministically without allocating PyTorch tensors.",
+        "confidence_score": 0.9
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_14_a",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Feature hashing of unigram and bigram tokens operates deterministically without allocating PyTorch tensors.",
+    "evidence": [
+      {
+        "paper_id": "p_14",
+        "text_content": "Deterministic feature hashing over word unigrams and bigrams runs with zero PyTorch memory allocation.",
+        "confidence_score": 0.85
+      }
+    ]
+  },
+  {
+    "claim_id": "c_par_14_b",
+    "category": "supported_paraphrase",
+    "expected_status": "verified",
+    "expected_supported": 1,
+    "claim": "Deterministic feature hashing over word unigrams and bigrams runs with zero PyTorch memory allocation.",
+    "evidence": [
+      {
+        "paper_id": "p_14",
+        "text_content": "Feature hashing of unigram and bigram tokens operates deterministically without allocating PyTorch tensors.",
+        "confidence_score": 0.84
+      }
+    ]
+  },
+  {
+    "claim_id": "c_ref_14",
+    "category": "refuted_numeric",
+    "expected_status": "refuted",
+    "expected_supported": 0,
+    "claim": "Deterministic feature hashing requires 16 gigabytes of GPU VRAM to initialize token embeddings.",
+    "evidence": [
+      {
+        "paper_id": "p_14",
+        "text_content": "Deterministic feature hashing over word unigrams and bigrams runs with zero PyTorch memory allocation.",
+        "confidence_score": 0.88
+      }
+    ]
+  },
+  {
+    "claim_id": "c_uns_14",
+    "category": "unsupported_offtopic",
+    "expected_status": "unverified",
+    "expected_supported": 0,
+    "claim": "Laser-induced breakdown spectroscopy quantified trace rare earth elements in coal fly ash.",
+    "evidence": [
+      {
+        "paper_id": "p_14",
+        "text_content": "Deterministic feature hashing over word unigrams and bigrams runs with zero PyTorch memory allocation.",
+        "confidence_score": 0.45
+      }
+    ]
+  }
+]

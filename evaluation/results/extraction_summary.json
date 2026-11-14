@@ -1,0 +1,51 @@
+{
+  "benchmark": "document_extraction_and_validation_v1",
+  "num_synthetic_pdfs": 15,
+  "token_recall": {
+    "mean": 1.0,
+    "std": 0.0,
+    "ci_low": 1.0,
+    "ci_high": 1.0
+  },
+  "doi_exact_match": {
+    "mean": 1.0,
+    "std": 0.0,
+    "ci_low": 1.0,
+    "ci_high": 1.0
+  },
+  "baseline_table_recall": 0.0,
+  "pdfplumber_table_recall": {
+    "mean": 1.0,
+    "std": 0.0,
+    "ci_low": 1.0,
+    "ci_high": 1.0
+  },
+  "table_row_exact": {
+    "mean": 1.0,
+    "std": 0.0,
+    "ci_low": 1.0,
+    "ci_high": 1.0
+  },
+  "latency_ms": {
+    "mean": 74.8813,
+    "std": 50.8218,
+    "ci_low": 59.5547,
+    "ci_high": 101.9713
+  },
+  "real_pdf_artifact_audit": {
+    "filename": "ResearcherGPT_Research_Paper_Final_v2.pdf",
+    "pages": 11,
+    "chunks": 61,
+    "tables_detected": 1,
+    "latency_ms": 2150.63
+  },
+  "paper_validator_check": {
+    "abstract_extracted": "Structured extraction improves downstream synthesis.",
+    "normalized_headings": [
+      "I. INTRODUCTION",
+      "II. METHODOLOGY"
+    ],
+    "deduped_ref_count": 2,
+    "input_ref_count": 3
+  }
+}

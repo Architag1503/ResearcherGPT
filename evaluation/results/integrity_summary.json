@@ -1,0 +1,294 @@
+{
+  "benchmark": "plagiarism_and_ai_integrity_v1",
+  "num_cases": 60,
+  "postfix_overall": {
+    "tp": 40,
+    "fp": 0,
+    "fn": 10,
+    "tn": 10,
+    "precision": 1,
+    "recall": 0.8,
+    "f1": 0.8889,
+    "accuracy": 0.8333,
+    "fpr": 0
+  },
+  "prefix_overall": {
+    "tp": 30,
+    "fp": 0,
+    "fn": 20,
+    "tn": 10,
+    "precision": 1,
+    "recall": 0.6,
+    "f1": 0.75,
+    "accuracy": 0.6667,
+    "fpr": 0
+  },
+  "by_category": {
+    "verbatim_exact": {
+      "n": 10,
+      "postfix_rate": {
+        "mean": 1,
+        "std": 0,
+        "ci_low": 1,
+        "ci_high": 1
+      },
+      "prefix_rate": {
+        "mean": 1,
+        "std": 0,
+        "ci_low": 1,
+        "ci_high": 1
+      },
+      "mean_overall_score": {
+        "mean": 75,
+        "std": 0,
+        "ci_low": 75,
+        "ci_high": 75
+      },
+      "mean_structure_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_formula_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_code_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      }
+    },
+    "localized_patchwrite": {
+      "n": 10,
+      "postfix_rate": {
+        "mean": 1,
+        "std": 0,
+        "ci_low": 1,
+        "ci_high": 1
+      },
+      "prefix_rate": {
+        "mean": 1,
+        "std": 0,
+        "ci_low": 1,
+        "ci_high": 1
+      },
+      "mean_overall_score": {
+        "mean": 38,
+        "std": 0,
+        "ci_low": 38,
+        "ci_high": 38
+      },
+      "mean_structure_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_formula_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_code_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      }
+    },
+    "semantic_paraphrase": {
+      "n": 10,
+      "postfix_rate": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "prefix_rate": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_overall_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_structure_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_formula_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_code_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      }
+    },
+    "structure_formula_code": {
+      "n": 10,
+      "postfix_rate": {
+        "mean": 1,
+        "std": 0,
+        "ci_low": 1,
+        "ci_high": 1
+      },
+      "prefix_rate": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_overall_score": {
+        "mean": 12,
+        "std": 0,
+        "ci_low": 12,
+        "ci_high": 12
+      },
+      "mean_structure_score": {
+        "mean": 100,
+        "std": 0,
+        "ci_low": 100,
+        "ci_high": 100
+      },
+      "mean_formula_score": {
+        "mean": 100,
+        "std": 0,
+        "ci_low": 100,
+        "ci_high": 100
+      },
+      "mean_code_score": {
+        "mean": 100,
+        "std": 0,
+        "ci_low": 100,
+        "ci_high": 100
+      }
+    },
+    "citation_overlap": {
+      "n": 10,
+      "postfix_rate": {
+        "mean": 1,
+        "std": 0,
+        "ci_low": 1,
+        "ci_high": 1
+      },
+      "prefix_rate": {
+        "mean": 1,
+        "std": 0,
+        "ci_low": 1,
+        "ci_high": 1
+      },
+      "mean_overall_score": {
+        "mean": 10,
+        "std": 0,
+        "ci_low": 10,
+        "ci_high": 10
+      },
+      "mean_structure_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_formula_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_code_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      }
+    },
+    "clean_negative_control": {
+      "n": 10,
+      "postfix_rate": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "prefix_rate": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_overall_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_structure_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_formula_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      },
+      "mean_code_score": {
+        "mean": 0,
+        "std": 0,
+        "ci_low": 0,
+        "ci_high": 0
+      }
+    }
+  },
+  "latency_ms": {
+    "mean": 3.4383,
+    "std": 1.8286,
+    "ci_low": 3.0845,
+    "ci_high": 3.9831
+  },
+  "ai_detector_benchmark": {
+    "num_samples": 30,
+    "classification": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 15,
+      "tn": 15,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "accuracy": 0.5,
+      "fpr": 0
+    },
+    "mean_ai_prob_on_ai": {
+      "mean": 35,
+      "std": 0,
+      "ci_low": 35,
+      "ci_high": 35
+    },
+    "mean_ai_prob_on_human": {
+      "mean": 0,
+      "std": 0,
+      "ci_low": 0,
+      "ci_high": 0
+    }
+  }
+}

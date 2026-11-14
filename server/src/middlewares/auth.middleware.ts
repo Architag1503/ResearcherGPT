@@ -11,9 +11,13 @@ export interface AuthenticatedRequest extends Request {
 
 export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
+  const allowDevBypass =
+    process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEV_MOCK_AUTH === 'true';
 
-  // Sandbox bypass check
   if (!authHeader) {
+    if (!allowDevBypass) {
+      return res.status(401).json({ error: 'Authorization header is required.' });
+    }
     req.user = {
       id: '666a7b29d5b51a0211a7c501',
       name: 'Dr. Sarah Jenkins',
@@ -25,6 +29,9 @@ export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: N
 
   const token = authHeader.split(' ')[1];
   if (token === 'mock-token') {
+    if (!allowDevBypass) {
+      return res.status(401).json({ error: 'Mock authentication is disabled in production.' });
+    }
     req.user = {
       id: '666a7b29d5b51a0211a7c501',
       name: 'Dr. Sarah Jenkins',
@@ -36,6 +43,9 @@ export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: N
 
   // Simulated Clerk JWT verify: extract basic header fields
   try {
+    if (!token) {
+      return res.status(401).json({ error: 'Bearer token is missing.' });
+    }
     req.user = {
       id: 'clerk_user_id_123',
       name: 'Academic Scholar',

@@ -1,0 +1,96 @@
+{
+  "benchmark": "claim_grounding_v1",
+  "total_claims": 90,
+  "systems": {
+    "V0_LegacyFallback": {
+      "n_claims": 90,
+      "binary_support_detection": {
+        "tp": 60,
+        "fp": 30,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.6667,
+        "recall": 1.0,
+        "f1": 0.8,
+        "accuracy": 0.6667,
+        "fpr": 1.0
+      },
+      "three_way_accuracy": {
+        "mean": 0.6667,
+        "std": 0.474,
+        "ci_low": 0.5667,
+        "ci_high": 0.7667
+      },
+      "numeric_refutation_recall": 0.0,
+      "latency_ms": {
+        "mean": 0.0003,
+        "std": 0.0003,
+        "ci_low": 0.0003,
+        "ci_high": 0.0004
+      }
+    },
+    "V1_LexicalNumeric": {
+      "n_claims": 90,
+      "binary_support_detection": {
+        "tp": 56,
+        "fp": 0,
+        "fn": 4,
+        "tn": 30,
+        "precision": 1.0,
+        "recall": 0.9333,
+        "f1": 0.9655,
+        "accuracy": 0.9556,
+        "fpr": 0.0
+      },
+      "three_way_accuracy": {
+        "mean": 0.9,
+        "std": 0.3017,
+        "ci_low": 0.8333,
+        "ci_high": 0.9556
+      },
+      "numeric_refutation_recall": 0.6667,
+      "latency_ms": {
+        "mean": 0.0649,
+        "std": 0.0341,
+        "ci_low": 0.0587,
+        "ci_high": 0.0724
+      }
+    },
+    "V2_HybridMiniLMNumeric": {
+      "n_claims": 90,
+      "binary_support_detection": {
+        "tp": 60,
+        "fp": 1,
+        "fn": 0,
+        "tn": 29,
+        "precision": 0.9836,
+        "recall": 1.0,
+        "f1": 0.9917,
+        "accuracy": 0.9889,
+        "fpr": 0.0333
+      },
+      "three_way_accuracy": {
+        "mean": 0.9444,
+        "std": 0.2303,
+        "ci_low": 0.8889,
+        "ci_high": 0.9889
+      },
+      "numeric_refutation_recall": 0.6667,
+      "latency_ms": {
+        "mean": 44.9852,
+        "std": 40.2315,
+        "ci_low": 37.7683,
+        "ci_high": 53.5895
+      }
+    }
+  },
+  "post_draft_section_audit_sample": {
+    "total_claims": 4,
+    "verified_claims": 2,
+    "refuted_claims": 1,
+    "unverified_claims": 1,
+    "valid_citation_refs": 3,
+    "invalid_citation_refs": 1,
+    "citation_validity_rate": 0.75
+  }
+}

@@ -141,6 +141,72 @@ const WEIGHTS = {
 // Phase 1: Document Processing
 // ═══════════════════════════════════════════════════════════════════════════
 
+function extractStructuralElementsFromText(content: string): {
+  headings: string[];
+  formulas: string[];
+  codeBlocks: string[];
+  figureCaptions: string[];
+  tableCaptions: string[];
+} {
+  const headings: string[] = [];
+  const formulas: string[] = [];
+  const codeBlocks: string[] = [];
+  const figureCaptions: string[] = [];
+  const tableCaptions: string[] = [];
+
+  if (!content) {
+    return { headings, formulas, codeBlocks, figureCaptions, tableCaptions };
+  }
+
+  // Extract headings (# Heading or numbered section headers like "1. Introduction" / "2.1 Methods")
+  const headingLines = content.split('\n');
+  for (const line of headingLines) {
+    const mdMatch = line.match(/^\s*#{1,4}\s+(.+)$/);
+    if (mdMatch) {
+      headings.push(mdMatch[1].trim());
+      continue;
+    }
+    const numMatch = line.match(/^\s*\d+(?:\.\d+)*\.?\s+([A-Z][A-Za-z0-9\s,\-:]{2,60})$/);
+    if (numMatch) {
+      headings.push(numMatch[1].trim());
+    }
+  }
+
+  const formulaPatterns = [
+    /\$\$([^$]+)\$\$/g,
+    /\\\[([^\]]+)\\\]/g,
+    /\\begin\{equation\}([\s\S]*?)\\end\{equation\}/g,
+    /\\begin\{align\}([\s\S]*?)\\end\{align\}/g,
+    /\\begin\{aligned\}([\s\S]*?)\\end\{aligned\}/g,
+  ];
+  for (const pattern of formulaPatterns) {
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      formulas.push(match[1].trim());
+    }
+  }
+
+  const codePattern = /```[\s\S]*?```/g;
+  let codeMatch;
+  while ((codeMatch = codePattern.exec(content)) !== null) {
+    codeBlocks.push(codeMatch[0].replace(/```\w*\n?/g, '').replace(/```/g, '').trim());
+  }
+
+  const figPattern = /(?:Figure|Fig\.?)\s+\d+[.:]\s*([^\n]+)/gi;
+  let figMatch;
+  while ((figMatch = figPattern.exec(content)) !== null) {
+    figureCaptions.push(figMatch[1].trim());
+  }
+
+  const tablePattern = /(?:Table)\s+\d+[.:]\s*([^\n]+)/gi;
+  let tableMatch;
+  while ((tableMatch = tablePattern.exec(content)) !== null) {
+    tableCaptions.push(tableMatch[1].trim());
+  }
+
+  return { headings, formulas, codeBlocks, figureCaptions, tableCaptions };
+}
+
 function parseDocument(title: string, sections: PaperSection[], references: string[]): ParsedDocument {
   const sentences: string[] = [];
   const formulas: string[] = [];
@@ -152,42 +218,12 @@ function parseDocument(title: string, sections: PaperSection[], references: stri
   for (const section of sections) {
     sectionHierarchy.push(section.title || section.heading);
     const content = section.content || '';
+    const extracted = extractStructuralElementsFromText(content);
 
-    // Extract formulas (LaTeX patterns)
-    const formulaPatterns = [
-      /\$\$([^$]+)\$\$/g,
-      /\\\[([^\]]+)\\\]/g,
-      /\\begin\{equation\}([\s\S]*?)\\end\{equation\}/g,
-      /\\begin\{align\}([\s\S]*?)\\end\{align\}/g,
-      /\\begin\{aligned\}([\s\S]*?)\\end\{aligned\}/g,
-    ];
-    for (const pattern of formulaPatterns) {
-      let match;
-      while ((match = pattern.exec(content)) !== null) {
-        formulas.push(match[1].trim());
-      }
-    }
-
-    // Extract code blocks
-    const codePattern = /```[\s\S]*?```/g;
-    let codeMatch;
-    while ((codeMatch = codePattern.exec(content)) !== null) {
-      codeBlocks.push(codeMatch[0].replace(/```\w*\n?/g, '').replace(/```/g, '').trim());
-    }
-
-    // Extract figure captions
-    const figPattern = /(?:Figure|Fig\.?)\s+\d+[.:]\s*([^\n]+)/gi;
-    let figMatch;
-    while ((figMatch = figPattern.exec(content)) !== null) {
-      figureCaptions.push(figMatch[1].trim());
-    }
-
-    // Extract table captions
-    const tablePattern = /(?:Table)\s+\d+[.:]\s*([^\n]+)/gi;
-    let tableMatch;
-    while ((tableMatch = tablePattern.exec(content)) !== null) {
-      tableCaptions.push(tableMatch[1].trim());
-    }
+    formulas.push(...extracted.formulas);
+    codeBlocks.push(...extracted.codeBlocks);
+    figureCaptions.push(...extracted.figureCaptions);
+    tableCaptions.push(...extracted.tableCaptions);
 
     // Extract sentences — clean text first
     const cleanText = content
@@ -281,6 +317,10 @@ function winnowingFingerprint(text: string, windowSize: number = 4): number[] {
     shingles.push(hashString(tokens.slice(i, i + SHINGLE_SIZE).join(' ')));
   }
 
+  if (shingles.length < windowSize) {
+    return [Math.min(...shingles)];
+  }
+
   // Winnowing: select minimum hash in each window
   const fingerprints: number[] = [];
   for (let i = 0; i <= shingles.length - windowSize; i++) {
@@ -291,6 +331,16 @@ function winnowingFingerprint(text: string, windowSize: number = 4): number[] {
   return [...new Set(fingerprints)];
 }
 
+function jaccardNumberSet(a: Set<number>, b: Set<number>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let intersect = 0;
+  for (const val of a) {
+    if (b.has(val)) intersect++;
+  }
+  const union = a.size + b.size - intersect;
+  return union > 0 ? intersect / union : 0;
+}
+
 function detectExactPlagiarism(
   paperSentences: string[],
   sourceSentences: { sentence: string; title: string; doi?: string; url?: string }[]
@@ -298,28 +348,32 @@ function detectExactPlagiarism(
   const matches: MatchResult[] = [];
   if (sourceSentences.length === 0 || paperSentences.length === 0) return matches;
 
-  // Pre-compute source shingles and min-hashes ONCE outside the loop
+  // Pre-compute source shingles, MinHash signatures, and Winnowing fingerprints ONCE
   const precomputedSources = sourceSentences
     .map(source => {
       const tokens = tokenize(source.sentence);
-      if (tokens.length < 5) return null;
+      if (tokens.length < SHINGLE_SIZE) return null;
       const shingles = generateShingles(tokens);
       const minHash = generateMinHash(shingles);
-      return { source, minHash };
+      const winnow = new Set(winnowingFingerprint(source.sentence));
+      return { source, minHash, winnow };
     })
-    .filter((s): s is { source: typeof sourceSentences[0]; minHash: number[] } => s !== null);
+    .filter((s): s is { source: typeof sourceSentences[0]; minHash: number[]; winnow: Set<number> } => s !== null);
 
   for (const paperSent of paperSentences) {
     const paperTokens = tokenize(paperSent);
-    if (paperTokens.length < 5) continue;
+    if (paperTokens.length < SHINGLE_SIZE) continue;
 
     const paperShingles = generateShingles(paperTokens);
     const paperMinHash = generateMinHash(paperShingles);
+    const paperWinnow = new Set(winnowingFingerprint(paperSent));
 
     let bestMatch: MatchResult | null = null;
 
-    for (const { source, minHash: sourceMinHash } of precomputedSources) {
-      const similarity = jaccardFromMinHash(paperMinHash, sourceMinHash);
+    for (const { source, minHash: sourceMinHash, winnow: sourceWinnow } of precomputedSources) {
+      const minHashSim = jaccardFromMinHash(paperMinHash, sourceMinHash);
+      const winnowSim = jaccardNumberSet(paperWinnow, sourceWinnow);
+      const similarity = Math.max(minHashSim, winnowSim);
 
       if (similarity > 0.6 && (!bestMatch || similarity > bestMatch.similarity / 100)) {
         bestMatch = {
@@ -329,7 +383,7 @@ function detectExactPlagiarism(
           sourceDOI: source.doi,
           sourceURL: source.url,
           similarity: Math.round(similarity * 100),
-          confidence: 0.95,
+          confidence: winnowSim > 0.6 && minHashSim > 0.6 ? 0.98 : 0.95,
         };
       }
     }
@@ -1021,16 +1075,19 @@ export async function runPlagiarismDetection(
   paperTitle: string,
   paperSections: PaperSection[],
   paperReferences: string[],
-  localPapers: { title: string; content: string; doi?: string; url?: string; references?: string[] }[]
+  localPapers: { title: string; content: string; doi?: string; url?: string; references?: string[] }[],
+  options?: { skipExternalLookup?: boolean }
 ): Promise<PlagiarismResult> {
 
   // ── Phase 1: Document Processing ──────────────────────────────────────
   const doc = parseDocument(paperTitle, paperSections, paperReferences);
 
   // ── Phase 10: Source Discovery (run early to get external sources) ─────
-  const externalSources = await discoverSources(paperTitle, doc.sentences, doc.references);
+  const externalSources = options?.skipExternalLookup
+    ? []
+    : await discoverSources(paperTitle, doc.sentences, doc.references);
 
-  // Build source sentence corpus from local papers + external abstracts
+  // Build source corpus from local papers + external abstracts
   const sourceSentences: { sentence: string; title: string; doi?: string; url?: string }[] = [];
   const sourceCitations: { citations: string[]; title: string }[] = [];
   const sourceHierarchies: { hierarchy: string[]; title: string }[] = [];
@@ -1039,6 +1096,17 @@ export async function runPlagiarismDetection(
 
   // Add local papers
   for (const local of localPapers) {
+    const localExtracted = extractStructuralElementsFromText(local.content || '');
+    if (localExtracted.headings.length > 0) {
+      sourceHierarchies.push({ hierarchy: localExtracted.headings, title: local.title });
+    }
+    for (const formula of localExtracted.formulas) {
+      sourceFormulas.push({ formula, title: local.title });
+    }
+    for (const code of localExtracted.codeBlocks) {
+      sourceCodeBlocks.push({ code, title: local.title });
+    }
+
     const localSentences = local.content
       .split(/(?<=[.!?])\s+/)
       .map(s => s.trim())
@@ -1203,3 +1271,14 @@ export async function runPlagiarismDetection(
 
   return result;
 }
+
+export {
+  parseDocument,
+  winnowingFingerprint,
+  detectExactPlagiarism,
+  detectSemanticPlagiarism,
+  detectStructuralPlagiarism,
+  detectFormulaPlagiarism,
+  detectCodePlagiarism,
+  detectAIContent,
+};

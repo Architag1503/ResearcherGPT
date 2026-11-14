@@ -1,0 +1,796 @@
+{
+  "benchmark": "retrieval_ablation_v1",
+  "num_papers": 60,
+  "num_chunks": 180,
+  "num_queries": 75,
+  "embedding_model": "all-MiniLM-L6-v2 (384d)",
+  "index_timings": {
+    "hash_index_s": 0.032,
+    "minilm_index_s": 119.7514
+  },
+  "configs": {
+    "M0_HashDenseOnly": {
+      "n_queries": 75,
+      "recall_at_5": {
+        "mean": 0.36,
+        "std": 0.4832,
+        "ci_low": 0.2533,
+        "ci_high": 0.4667
+      },
+      "hit_at_1": {
+        "mean": 0.3333,
+        "std": 0.4746,
+        "ci_low": 0.2267,
+        "ci_high": 0.44
+      },
+      "mrr": {
+        "mean": 0.34,
+        "std": 0.4716,
+        "ci_low": 0.24,
+        "ci_high": 0.45
+      },
+      "ndcg_at_5": {
+        "mean": 0.3448,
+        "std": 0.4715,
+        "ci_low": 0.2439,
+        "ci_high": 0.4572
+      },
+      "latency_ms": {
+        "mean": 6.3495,
+        "std": 2.1336,
+        "ci_low": 5.8648,
+        "ci_high": 6.853
+      },
+      "by_stratum": {
+        "lexical_identifier": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          }
+        },
+        "semantic_paraphrase": {
+          "recall_at_5": {
+            "mean": 0.08,
+            "std": 0.2769,
+            "ci_low": 0.0,
+            "ci_high": 0.2
+          },
+          "mrr": {
+            "mean": 0.02,
+            "std": 0.0692,
+            "ci_low": 0.0,
+            "ci_high": 0.05
+          }
+        },
+        "multihop_kg": {
+          "recall_at_5": {
+            "mean": 0.0,
+            "std": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.0
+          },
+          "mrr": {
+            "mean": 0.0,
+            "std": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.0
+          }
+        }
+      },
+      "sig_vs_buggy_cr1_recall5": {
+        "mean_delta": -0.3267,
+        "wilcoxon_p": 1e-06,
+        "perm_p": 0.0002
+      },
+      "sig_vs_dense_only_mrr": {
+        "mean_delta": -0.2216,
+        "wilcoxon_p": 0.000704,
+        "perm_p": 0.002999
+      }
+    },
+    "M1_MiniLMDenseOnly": {
+      "n_queries": 75,
+      "recall_at_5": {
+        "mean": 0.6533,
+        "std": 0.4648,
+        "ci_low": 0.5467,
+        "ci_high": 0.76
+      },
+      "hit_at_1": {
+        "mean": 0.4667,
+        "std": 0.5022,
+        "ci_low": 0.36,
+        "ci_high": 0.5867
+      },
+      "mrr": {
+        "mean": 0.5616,
+        "std": 0.4453,
+        "ci_low": 0.4622,
+        "ci_high": 0.6644
+      },
+      "ndcg_at_5": {
+        "mean": 0.5799,
+        "std": 0.4412,
+        "ci_low": 0.4812,
+        "ci_high": 0.681
+      },
+      "latency_ms": {
+        "mean": 34.1395,
+        "std": 6.1631,
+        "ci_low": 32.7149,
+        "ci_high": 35.5488
+      },
+      "by_stratum": {
+        "lexical_identifier": {
+          "recall_at_5": {
+            "mean": 0.88,
+            "std": 0.3317,
+            "ci_low": 0.76,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 0.6133,
+            "std": 0.3358,
+            "ci_low": 0.4867,
+            "ci_high": 0.74
+          }
+        },
+        "semantic_paraphrase": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          }
+        },
+        "multihop_kg": {
+          "recall_at_5": {
+            "mean": 0.08,
+            "std": 0.1871,
+            "ci_low": 0.02,
+            "ci_high": 0.16
+          },
+          "mrr": {
+            "mean": 0.0713,
+            "std": 0.2128,
+            "ci_low": 0.008,
+            "ci_high": 0.1647
+          }
+        }
+      },
+      "sig_vs_buggy_cr1_recall5": {
+        "mean_delta": -0.0333,
+        "wilcoxon_p": 0.13057,
+        "perm_p": 0.246951
+      },
+      "sig_vs_dense_only_mrr": {
+        "mean_delta": 0.0,
+        "wilcoxon_p": 1.0,
+        "perm_p": 1.0
+      }
+    },
+    "M2_BM25FullCorpus": {
+      "n_queries": 75,
+      "recall_at_5": {
+        "mean": 0.3333,
+        "std": 0.4746,
+        "ci_low": 0.2267,
+        "ci_high": 0.44
+      },
+      "hit_at_1": {
+        "mean": 0.3333,
+        "std": 0.4746,
+        "ci_low": 0.2267,
+        "ci_high": 0.44
+      },
+      "mrr": {
+        "mean": 0.3333,
+        "std": 0.4746,
+        "ci_low": 0.2267,
+        "ci_high": 0.44
+      },
+      "ndcg_at_5": {
+        "mean": 0.3333,
+        "std": 0.4746,
+        "ci_low": 0.2267,
+        "ci_high": 0.44
+      },
+      "latency_ms": {
+        "mean": 3.8179,
+        "std": 1.0412,
+        "ci_low": 3.5908,
+        "ci_high": 4.0628
+      },
+      "by_stratum": {
+        "lexical_identifier": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          }
+        },
+        "semantic_paraphrase": {
+          "recall_at_5": {
+            "mean": 0.0,
+            "std": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.0
+          },
+          "mrr": {
+            "mean": 0.0,
+            "std": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.0
+          }
+        },
+        "multihop_kg": {
+          "recall_at_5": {
+            "mean": 0.0,
+            "std": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.0
+          },
+          "mrr": {
+            "mean": 0.0,
+            "std": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.0
+          }
+        }
+      },
+      "sig_vs_buggy_cr1_recall5": {
+        "mean_delta": -0.3533,
+        "wilcoxon_p": 0.0,
+        "perm_p": 0.0002
+      },
+      "sig_vs_dense_only_mrr": {
+        "mean_delta": -0.2282,
+        "wilcoxon_p": 0.00057,
+        "perm_p": 0.002799
+      }
+    },
+    "M3_PreFixBuggyHybrid_CR1": {
+      "n_queries": 75,
+      "recall_at_5": {
+        "mean": 0.6867,
+        "std": 0.456,
+        "ci_low": 0.58,
+        "ci_high": 0.7867
+      },
+      "hit_at_1": {
+        "mean": 0.4667,
+        "std": 0.5022,
+        "ci_low": 0.36,
+        "ci_high": 0.5867
+      },
+      "mrr": {
+        "mean": 0.5733,
+        "std": 0.4358,
+        "ci_low": 0.4733,
+        "ci_high": 0.6733
+      },
+      "ndcg_at_5": {
+        "mean": 0.5976,
+        "std": 0.429,
+        "ci_low": 0.4995,
+        "ci_high": 0.6955
+      },
+      "latency_ms": {
+        "mean": 32.1669,
+        "std": 7.5461,
+        "ci_low": 30.5005,
+        "ci_high": 33.8288
+      },
+      "by_stratum": {
+        "lexical_identifier": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 0.6567,
+            "std": 0.2704,
+            "ci_low": 0.5567,
+            "ci_high": 0.7633
+          }
+        },
+        "semantic_paraphrase": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          }
+        },
+        "multihop_kg": {
+          "recall_at_5": {
+            "mean": 0.06,
+            "std": 0.1658,
+            "ci_low": 0.0,
+            "ci_high": 0.12
+          },
+          "mrr": {
+            "mean": 0.0633,
+            "std": 0.2115,
+            "ci_low": 0.0,
+            "ci_high": 0.1567
+          }
+        }
+      },
+      "sig_vs_buggy_cr1_recall5": {
+        "mean_delta": 0.0,
+        "wilcoxon_p": 1.0,
+        "perm_p": 1.0
+      },
+      "sig_vs_dense_only_mrr": {
+        "mean_delta": 0.0118,
+        "wilcoxon_p": 0.136217,
+        "perm_p": 0.182763
+      }
+    },
+    "M4_FixedHybrid_NoKG_beta1.0": {
+      "n_queries": 75,
+      "recall_at_5": {
+        "mean": 0.6733,
+        "std": 0.4686,
+        "ci_low": 0.5667,
+        "ci_high": 0.78
+      },
+      "hit_at_1": {
+        "mean": 0.52,
+        "std": 0.503,
+        "ci_low": 0.4,
+        "ci_high": 0.64
+      },
+      "mrr": {
+        "mean": 0.5956,
+        "std": 0.452,
+        "ci_low": 0.4911,
+        "ci_high": 0.7
+      },
+      "ndcg_at_5": {
+        "mean": 0.6123,
+        "std": 0.4463,
+        "ci_low": 0.5103,
+        "ci_high": 0.714
+      },
+      "latency_ms": {
+        "mean": 37.8504,
+        "std": 7.6274,
+        "ci_low": 36.0693,
+        "ci_high": 39.5828
+      },
+      "by_stratum": {
+        "lexical_identifier": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 0.8333,
+            "std": 0.25,
+            "ci_low": 0.7333,
+            "ci_high": 0.92
+          }
+        },
+        "semantic_paraphrase": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 0.9133,
+            "std": 0.2048,
+            "ci_low": 0.8333,
+            "ci_high": 0.98
+          }
+        },
+        "multihop_kg": {
+          "recall_at_5": {
+            "mean": 0.02,
+            "std": 0.1,
+            "ci_low": 0.0,
+            "ci_high": 0.06
+          },
+          "mrr": {
+            "mean": 0.04,
+            "std": 0.2,
+            "ci_low": 0.0,
+            "ci_high": 0.12
+          }
+        }
+      },
+      "sig_vs_buggy_cr1_recall5": {
+        "mean_delta": -0.0133,
+        "wilcoxon_p": 0.157299,
+        "perm_p": 0.489502
+      },
+      "sig_vs_dense_only_mrr": {
+        "mean_delta": 0.034,
+        "wilcoxon_p": 0.207442,
+        "perm_p": 0.254149
+      }
+    },
+    "M5_FixedHybrid_KG_MultOnly_beta1.30": {
+      "n_queries": 75,
+      "recall_at_5": {
+        "mean": 0.7267,
+        "std": 0.4134,
+        "ci_low": 0.6267,
+        "ci_high": 0.82
+      },
+      "hit_at_1": {
+        "mean": 0.6267,
+        "std": 0.4869,
+        "ci_low": 0.52,
+        "ci_high": 0.7333
+      },
+      "mrr": {
+        "mean": 0.7022,
+        "std": 0.4149,
+        "ci_low": 0.6,
+        "ci_high": 0.7956
+      },
+      "ndcg_at_5": {
+        "mean": 0.6777,
+        "std": 0.3928,
+        "ci_low": 0.5858,
+        "ci_high": 0.7648
+      },
+      "latency_ms": {
+        "mean": 35.0193,
+        "std": 7.157,
+        "ci_low": 33.4893,
+        "ci_high": 36.6519
+      },
+      "by_stratum": {
+        "lexical_identifier": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 0.8333,
+            "std": 0.25,
+            "ci_low": 0.7333,
+            "ci_high": 0.92
+          }
+        },
+        "semantic_paraphrase": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 0.9133,
+            "std": 0.2048,
+            "ci_low": 0.8333,
+            "ci_high": 0.98
+          }
+        },
+        "multihop_kg": {
+          "recall_at_5": {
+            "mean": 0.18,
+            "std": 0.2449,
+            "ci_low": 0.1,
+            "ci_high": 0.28
+          },
+          "mrr": {
+            "mean": 0.36,
+            "std": 0.4899,
+            "ci_low": 0.2,
+            "ci_high": 0.56
+          }
+        }
+      },
+      "sig_vs_buggy_cr1_recall5": {
+        "mean_delta": 0.04,
+        "wilcoxon_p": 0.014306,
+        "perm_p": 0.027195
+      },
+      "sig_vs_dense_only_mrr": {
+        "mean_delta": 0.1407,
+        "wilcoxon_p": 0.001977,
+        "perm_p": 0.0012
+      }
+    },
+    "M6_FixedHybrid_KG_Channel_w0.50": {
+      "n_queries": 75,
+      "recall_at_5": {
+        "mean": 0.7267,
+        "std": 0.4134,
+        "ci_low": 0.6267,
+        "ci_high": 0.82
+      },
+      "hit_at_1": {
+        "mean": 0.6133,
+        "std": 0.4903,
+        "ci_low": 0.5067,
+        "ci_high": 0.72
+      },
+      "mrr": {
+        "mean": 0.6956,
+        "std": 0.4141,
+        "ci_low": 0.5978,
+        "ci_high": 0.7889
+      },
+      "ndcg_at_5": {
+        "mean": 0.6747,
+        "std": 0.3942,
+        "ci_low": 0.5829,
+        "ci_high": 0.7616
+      },
+      "latency_ms": {
+        "mean": 38.1706,
+        "std": 8.2941,
+        "ci_low": 36.2709,
+        "ci_high": 40.0506
+      },
+      "by_stratum": {
+        "lexical_identifier": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 0.8333,
+            "std": 0.25,
+            "ci_low": 0.7333,
+            "ci_high": 0.92
+          }
+        },
+        "semantic_paraphrase": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 0.9133,
+            "std": 0.2048,
+            "ci_low": 0.8333,
+            "ci_high": 0.98
+          }
+        },
+        "multihop_kg": {
+          "recall_at_5": {
+            "mean": 0.18,
+            "std": 0.2449,
+            "ci_low": 0.1,
+            "ci_high": 0.28
+          },
+          "mrr": {
+            "mean": 0.34,
+            "std": 0.4726,
+            "ci_low": 0.18,
+            "ci_high": 0.52
+          }
+        }
+      },
+      "sig_vs_buggy_cr1_recall5": {
+        "mean_delta": 0.04,
+        "wilcoxon_p": 0.014306,
+        "perm_p": 0.027195
+      },
+      "sig_vs_dense_only_mrr": {
+        "mean_delta": 0.134,
+        "wilcoxon_p": 0.003031,
+        "perm_p": 0.002
+      }
+    },
+    "M7_FixedHybrid_KG_Channel_w0.75": {
+      "n_queries": 75,
+      "recall_at_5": {
+        "mean": 0.76,
+        "std": 0.3709,
+        "ci_low": 0.6733,
+        "ci_high": 0.8467
+      },
+      "hit_at_1": {
+        "mean": 0.64,
+        "std": 0.4832,
+        "ci_low": 0.5333,
+        "ci_high": 0.7467
+      },
+      "mrr": {
+        "mean": 0.74,
+        "std": 0.3769,
+        "ci_low": 0.6511,
+        "ci_high": 0.8222
+      },
+      "ndcg_at_5": {
+        "mean": 0.7054,
+        "std": 0.3575,
+        "ci_low": 0.6202,
+        "ci_high": 0.7858
+      },
+      "latency_ms": {
+        "mean": 38.1257,
+        "std": 7.9531,
+        "ci_low": 36.42,
+        "ci_high": 40.0346
+      },
+      "by_stratum": {
+        "lexical_identifier": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 0.8333,
+            "std": 0.25,
+            "ci_low": 0.7333,
+            "ci_high": 0.92
+          }
+        },
+        "semantic_paraphrase": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 0.9133,
+            "std": 0.2048,
+            "ci_low": 0.8333,
+            "ci_high": 0.98
+          }
+        },
+        "multihop_kg": {
+          "recall_at_5": {
+            "mean": 0.28,
+            "std": 0.2533,
+            "ci_low": 0.18,
+            "ci_high": 0.38
+          },
+          "mrr": {
+            "mean": 0.4733,
+            "std": 0.4682,
+            "ci_low": 0.3,
+            "ci_high": 0.66
+          }
+        }
+      },
+      "sig_vs_buggy_cr1_recall5": {
+        "mean_delta": 0.0733,
+        "wilcoxon_p": 0.000911,
+        "perm_p": 0.0004
+      },
+      "sig_vs_dense_only_mrr": {
+        "mean_delta": 0.1784,
+        "wilcoxon_p": 0.000526,
+        "perm_p": 0.0002
+      }
+    },
+    "M8_FixedHybrid_KG_Channel_w1.00": {
+      "n_queries": 75,
+      "recall_at_5": {
+        "mean": 0.84,
+        "std": 0.3304,
+        "ci_low": 0.76,
+        "ci_high": 0.9133
+      },
+      "hit_at_1": {
+        "mean": 0.68,
+        "std": 0.4696,
+        "ci_low": 0.5733,
+        "ci_high": 0.7867
+      },
+      "mrr": {
+        "mean": 0.7822,
+        "std": 0.3455,
+        "ci_low": 0.7,
+        "ci_high": 0.86
+      },
+      "ndcg_at_5": {
+        "mean": 0.7678,
+        "std": 0.3168,
+        "ci_low": 0.6931,
+        "ci_high": 0.8402
+      },
+      "latency_ms": {
+        "mean": 38.1657,
+        "std": 7.1973,
+        "ci_low": 36.5565,
+        "ci_high": 39.6945
+      },
+      "by_stratum": {
+        "lexical_identifier": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 0.8333,
+            "std": 0.25,
+            "ci_low": 0.7333,
+            "ci_high": 0.92
+          }
+        },
+        "semantic_paraphrase": {
+          "recall_at_5": {
+            "mean": 1.0,
+            "std": 0.0,
+            "ci_low": 1.0,
+            "ci_high": 1.0
+          },
+          "mrr": {
+            "mean": 0.9133,
+            "std": 0.2048,
+            "ci_low": 0.8333,
+            "ci_high": 0.98
+          }
+        },
+        "multihop_kg": {
+          "recall_at_5": {
+            "mean": 0.52,
+            "std": 0.4203,
+            "ci_low": 0.36,
+            "ci_high": 0.68
+          },
+          "mrr": {
+            "mean": 0.6,
+            "std": 0.4564,
+            "ci_low": 0.42,
+            "ci_high": 0.78
+          }
+        }
+      },
+      "sig_vs_buggy_cr1_recall5": {
+        "mean_delta": 0.1533,
+        "wilcoxon_p": 0.00029,
+        "perm_p": 0.0002
+      },
+      "sig_vs_dense_only_mrr": {
+        "mean_delta": 0.2207,
+        "wilcoxon_p": 8.7e-05,
+        "perm_p": 0.0002
+      }
+    }
+  }
+}

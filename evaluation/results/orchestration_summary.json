@@ -1,0 +1,31 @@
+{
+  "benchmark": "langgraph_offline_orchestration_v1",
+  "note": "Offline structural orchestration timing with deterministic mocked LLM callbacks (excludes remote API network latency).",
+  "num_nodes_compiled": 13,
+  "num_runs": 5,
+  "completion_rate": 1.0,
+  "elapsed_ms": {
+    "mean": 138.096,
+    "std": 59.2434,
+    "ci_low": 104.72,
+    "ci_high": 190.624
+  },
+  "peak_traced_mb": {
+    "mean": 0.295,
+    "std": 0.2045,
+    "ci_low": 0.1977,
+    "ci_high": 0.4771
+  },
+  "qa_support_rate": {
+    "mean": 0.0,
+    "std": 0.0,
+    "ci_low": 0.0,
+    "ci_high": 0.0
+  },
+  "qa_citation_validity": {
+    "mean": 1.0,
+    "std": 0.0,
+    "ci_low": 1.0,
+    "ci_high": 1.0
+  }
+}

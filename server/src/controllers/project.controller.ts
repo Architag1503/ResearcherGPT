@@ -68,7 +68,21 @@ export const createProject = async (req: Request, res: Response) => {
 export const getProjects = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id || 'mock_user_id';
-    const projects = await Project.find({ userId }).sort({ createdAt: -1 });
+    const userEmail = ((req as any).user?.email || '').toLowerCase();
+
+    // Check if user is the primary admin / developer or running in local dev mock
+    const isOwner =
+      userEmail.includes('archit') ||
+      userId === '666a7b29d5b51a0211a7c501' ||
+      userId === 'mock_user_id';
+
+    // Owner sees their projects + legacy unassigned mock projects
+    // New users / friends only see projects they created with their unique Clerk userId
+    const query = isOwner
+      ? { $or: [{ userId }, { userId: '666a7b29d5b51a0211a7c501' }, { userId: 'mock_user_id' }] }
+      : { userId };
+
+    const projects = await Project.find(query).sort({ createdAt: -1 });
     return res.status(200).json(projects);
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
@@ -91,10 +105,24 @@ export const getProjectById = async (req: Request, res: Response) => {
 export const deleteProject = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
-    const project = await Project.findByIdAndDelete(projectId);
+    const userId = (req as any).user?.id;
+    const userEmail = ((req as any).user?.email || '').toLowerCase();
+    const isOwner =
+      userEmail.includes('archit') ||
+      userId === '666a7b29d5b51a0211a7c501' ||
+      userId === 'mock_user_id';
+
+    const project = await Project.findById(projectId);
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
+
+    // Safety check: Prevent users from deleting someone else's project
+    if (userId && !isOwner && project.userId && project.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ error: 'Unauthorized to delete this project.' });
+    }
+
+    await Project.findByIdAndDelete(projectId);
     // Delete all papers, citations, gaps, agent runs, manuscripts, and other entities associated with the project
     await Promise.all([
       Paper.deleteMany({ projectId }),
@@ -368,10 +396,20 @@ export const updateProject = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
     const { name, description } = req.body;
+    const userId = (req as any).user?.id;
+    const userEmail = ((req as any).user?.email || '').toLowerCase();
+    const isOwner =
+      userEmail.includes('archit') ||
+      userId === '666a7b29d5b51a0211a7c501' ||
+      userId === 'mock_user_id';
 
     const project = await Project.findById(projectId);
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (userId && !isOwner && project.userId && project.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ error: 'Unauthorized to update this project.' });
     }
 
     if (name !== undefined) project.name = name;

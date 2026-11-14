@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import { useAuth, UserButton } from '@clerk/nextjs';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { FolderPlus, RefreshCw, ChevronRight, Plus, FileText, BookOpen, Layers, Cpu, BookMarked, Pencil, Trash2 } from 'lucide-react';
 import { getApiUrl } from '../../utils/apiUrl';
@@ -35,6 +36,7 @@ const emptyStats: DashboardStats = {
 
 export default function Dashboard() {
   const router = useRouter();
+  const { isLoaded, userId } = useAuth();
   const [projects, setProjects] = useState<any[]>([]);
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [loading, setLoading] = useState(true);
@@ -128,9 +130,15 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetchProjects();
-    fetchStats();
-  }, []);
+    // If Clerk publishable key is active, wait until Clerk session is loaded
+    const hasClerk =
+      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+      !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith('pk_test_mock');
+    if (!hasClerk || isLoaded) {
+      fetchProjects();
+      fetchStats();
+    }
+  }, [isLoaded, userId]);
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -274,12 +282,15 @@ export default function Dashboard() {
             <h1 className="text-3xl font-extrabold tracking-tight">Academic Workspace</h1>
             <p className="text-zinc-500 text-sm mt-1">Monitor datasets, references, gaps, and run agent pipelines.</p>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="px-5 h-10 rounded-lg bg-indigo-600 text-zinc-100 hover:bg-indigo-500 transition-colors flex items-center gap-2 shadow-lg shadow-indigo-600/10 font-medium text-sm"
-          >
-            <Plus className="w-4 h-4" /> New Project
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowModal(true)}
+              className="px-5 h-10 rounded-lg bg-indigo-600 text-zinc-100 hover:bg-indigo-500 transition-colors flex items-center gap-2 shadow-lg shadow-indigo-600/10 font-medium text-sm"
+            >
+              <Plus className="w-4 h-4" /> New Project
+            </button>
+            <UserButton />
+          </div>
         </div>
 
         {/* API Error Banner */}

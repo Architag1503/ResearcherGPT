@@ -68,34 +68,61 @@ export default function PlagiarismPage() {
         ) : (
           <div className="space-y-6">
             {/* Score Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-5 rounded-2xl border border-zinc-800 bg-zinc-950/40 text-center space-y-1">
-                <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Similarity Score</span>
-                <p className="text-4xl font-extrabold text-indigo-400 mt-1">{report.similarityPercentage}%</p>
-              </div>
-              <div className="p-5 rounded-2xl border border-zinc-800 bg-zinc-950/40 text-center space-y-1">
-                <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Risk Level</span>
-                <p className={`text-4xl font-extrabold mt-1 ${report.riskScore > 30 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                  {report.riskScore}%
-                </p>
-              </div>
-            </div>
+            {(() => {
+              const overall = report.overallScore ?? report.similarityPercentage ?? 0;
+              const risk = report.overallScore ?? report.riskScore ?? 0;
+              const normalizedMatches =
+                report.matches ??
+                [
+                  ...(report.exactMatches || []).map((m: any) => ({
+                    sourceTitle: m.sourceTitle,
+                    similarityPercentage: m.similarity,
+                    text: m.sentence,
+                  })),
+                  ...(report.semanticMatches || []).map((m: any) => ({
+                    sourceTitle: m.sourceTitle,
+                    similarityPercentage: m.similarity,
+                    text: m.sentence,
+                  })),
+                ];
 
-            {/* Overlap list */}
-            <div className="p-6 border border-zinc-800 bg-zinc-950/20 rounded-2xl space-y-4">
-              <h3 className="font-bold text-base">Overlapping Text Snippets</h3>
-              <div className="space-y-3">
-                {report.matches.map((m: any, idx: number) => (
-                  <div key={idx} className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/10 space-y-2">
-                    <div className="flex items-center justify-between text-xs border-b border-zinc-850 pb-1.5">
-                      <span className="font-semibold text-zinc-400">Match Source: {m.sourceTitle}</span>
-                      <span className="text-[10px] text-zinc-500">Overlap: {m.similarityPercentage}%</span>
+              return (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-5 rounded-2xl border border-zinc-800 bg-zinc-950/40 text-center space-y-1">
+                      <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Similarity Score</span>
+                      <p className="text-4xl font-extrabold text-indigo-400 mt-1">{overall}%</p>
                     </div>
-                    <p className="text-xs text-zinc-500 italic leading-relaxed">&ldquo;...{m.text}...&rdquo;</p>
+                    <div className="p-5 rounded-2xl border border-zinc-800 bg-zinc-950/40 text-center space-y-1">
+                      <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Risk Level</span>
+                      <p className={`text-4xl font-extrabold mt-1 ${risk > 30 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        {report.severityLevel ? report.severityLevel.replace('_', ' ').toUpperCase() : `${risk}%`}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
+
+                  {/* Overlap list */}
+                  <div className="p-6 border border-zinc-800 bg-zinc-950/20 rounded-2xl space-y-4">
+                    <h3 className="font-bold text-base">Overlapping Text Snippets</h3>
+                    <div className="space-y-3">
+                      {normalizedMatches.length === 0 ? (
+                        <p className="text-xs text-zinc-500">No overlapping passages flagged above threshold.</p>
+                      ) : (
+                        normalizedMatches.map((m: any, idx: number) => (
+                          <div key={idx} className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/10 space-y-2">
+                            <div className="flex items-center justify-between text-xs border-b border-zinc-850 pb-1.5">
+                              <span className="font-semibold text-zinc-400">Match Source: {m.sourceTitle}</span>
+                              <span className="text-[10px] text-zinc-500">Overlap: {m.similarityPercentage ?? m.similarity}%</span>
+                            </div>
+                            <p className="text-xs text-zinc-500 italic leading-relaxed">&ldquo;...{m.text ?? m.sentence}...&rdquo;</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
       </div>

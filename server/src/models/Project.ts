@@ -10,7 +10,7 @@ export interface IProject extends Document {
 
 const ProjectSchema: Schema = new Schema(
   {
-    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    userId: { type: Schema.Types.Mixed, required: true, index: true },
     name: { type: String, required: true },
     description: { type: String },
   },

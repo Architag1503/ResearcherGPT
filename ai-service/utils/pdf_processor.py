@@ -23,7 +23,7 @@ def ocr_page_multimodal(b64_data: str) -> str:
     if gemini_key and "your_gemini_api_key" not in gemini_key:
         preferred = os.getenv("GEMINI_MODEL")
         models_to_try = [preferred] if preferred else []
-        for m in ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3.6-flash"]:
+        for m in ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.5-flash"]:
             if m not in models_to_try:
                 models_to_try.append(m)
 
@@ -107,7 +107,7 @@ def extract_metadata_with_gemini(first_page_text: str) -> Dict[str, Any]:
 
     preferred = os.getenv("GEMINI_MODEL")
     models_to_try = [preferred] if preferred else []
-    for m in ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3.6-flash"]:
+    for m in ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.5-flash"]:
         if m not in models_to_try:
             models_to_try.append(m)
 
@@ -158,6 +158,40 @@ def extract_metadata_with_gemini(first_page_text: str) -> Dict[str, Any]:
                 print(f"[pdf_processor] Fast fallback for metadata on {gemini_model}: {str(e)}")
                 break
     return {}
+
+def extract_tables_with_pdfplumber(file_path: str, max_pages: int = 30) -> List[Dict[str, Any]]:
+    """
+    Extract structured tables per page using pdfplumber with non-empty row filtering.
+    """
+    extracted_tables: List[Dict[str, Any]] = []
+    try:
+        import pdfplumber
+    except ImportError:
+        return extracted_tables
+
+    try:
+        with pdfplumber.open(file_path) as pdf:
+            for p_idx, page in enumerate(pdf.pages[:max_pages]):
+                raw_tables = page.extract_tables() or []
+                for t_idx, tbl in enumerate(raw_tables):
+                    cleaned_rows = [
+                        [("" if cell is None else str(cell).strip()) for cell in row]
+                        for row in tbl
+                        if row and any(cell is not None and str(cell).strip() for cell in row)
+                    ]
+                    if len(cleaned_rows) >= 2:
+                        extracted_tables.append({
+                            "page_number": p_idx + 1,
+                            "table_index": t_idx,
+                            "row_count": len(cleaned_rows),
+                            "col_count": max((len(r) for r in cleaned_rows), default=0),
+                            "rows": cleaned_rows,
+                        })
+    except Exception as e:
+        print(f"[pdf_processor] pdfplumber table extraction failed: {e}")
+
+    return extracted_tables
+
 
 def extract_pdf_content(file_path: str) -> Dict[str, Any]:
     metadata = {
@@ -264,10 +298,12 @@ def extract_pdf_content(file_path: str) -> Dict[str, Any]:
             if doi_match:
                 metadata["doi"] = doi_match.group(1)
 
+        tables = extract_tables_with_pdfplumber(file_path)
+
         return {
             "metadata": metadata,
             "pages": page_texts,
-            "tables": []
+            "tables": tables
         }
     finally:
         if doc:

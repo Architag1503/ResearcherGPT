@@ -236,11 +236,27 @@ def get_cohere_embeddings_batch(texts: List[str]) -> List[List[float]]:
             return []
     return all_embeddings
 
-def get_fast_fallback_embedding(text: str, dim: int = 1024) -> List[float]:
+def get_fast_fallback_embedding(text: str, dim: int = 384) -> List[float]:
+    """
+    Deterministic zero-RAM feature-hashing bag-of-ngrams embedding.
+    Preserves lexical cosine similarity without requiring PyTorch/API access.
+    """
     import hashlib
-    h = hashlib.sha256(text.encode('utf-8')).digest()
-    np.random.seed(int.from_bytes(h[:4], 'little'))
-    vec = np.random.randn(dim).astype(np.float32)
+    import re
+
+    tokens = re.findall(r"[a-z0-9]+", (text or "").lower())
+    vec = np.zeros(dim, dtype=np.float32)
+    if not tokens:
+        return vec.tolist()
+
+    features = list(tokens) + [f"{tokens[i]}_{tokens[i+1]}" for i in range(len(tokens) - 1)]
+    for idx_offset, feat in enumerate(features):
+        weight = 1.0 if idx_offset < len(tokens) else 0.7
+        digest = hashlib.blake2b(feat.encode("utf-8"), digest_size=8).digest()
+        bucket = int.from_bytes(digest[:4], "little") % dim
+        sign = 1.0 if (digest[4] & 1) == 0 else -1.0
+        vec[bucket] += sign * weight
+
     norm = np.linalg.norm(vec)
     if norm > 0:
         vec = vec / norm
@@ -276,10 +292,16 @@ def ensure_collection(vector_size: int = VECTOR_DIMENSION):
             info = client.get_collection(COLLECTION_NAME)
             current_size = info.config.params.vectors.size
             if current_size != vector_size:
-                print(f"Recreating collection {COLLECTION_NAME} because dimension changed from {current_size} to {vector_size}")
-                client.delete_collection(COLLECTION_NAME)
-                exists = False
-                
+                if os.getenv("QDRANT_RECREATE_ON_MISMATCH", "false").lower() == "true":
+                    print(f"Recreating collection {COLLECTION_NAME} because dimension changed from {current_size} to {vector_size}")
+                    client.delete_collection(COLLECTION_NAME)
+                    exists = False
+                else:
+                    raise ValueError(
+                        f"Qdrant collection '{COLLECTION_NAME}' expects {current_size}d vectors, got {vector_size}d. "
+                        "Set QDRANT_RECREATE_ON_MISMATCH=true or align EMBEDDING_PROVIDER."
+                    )
+
         if not exists:
             client.create_collection(
                 collection_name=COLLECTION_NAME,
@@ -292,84 +314,113 @@ def ensure_collection(vector_size: int = VECTOR_DIMENSION):
 # Run initial setup
 ensure_collection(VECTOR_DIMENSION)
 
-def get_embedding(text: str) -> List[float]:
-    target_dim = get_current_collection_size()
-    
-    # 1. Try Gemini
-    if target_dim == 3072:
-        try:
-            return get_gemini_embedding_single(text)
-        except Exception as e:
-            print(f"[qdrant_service] Gemini embedding failed: {e}. Trying Mistral fallback.")
-            
-    # 2. Try Mistral
-    try:
-        embs = get_mistral_embeddings_batch([text])
-        if embs and len(embs[0]) > 0:
-            return match_vector_dim(embs[0], target_dim)
-    except Exception as e:
-        print(f"[qdrant_service] Mistral embedding failed: {e}. Trying Cohere fallback.")
-        
-    # 3. Try Cohere
-    try:
-        embs = get_cohere_embeddings_batch([text])
-        if embs and len(embs[0]) > 0:
-            return match_vector_dim(embs[0], target_dim)
-    except Exception as e:
-        print(f"[qdrant_service] Cohere embedding failed: {e}. Trying Gemini single fallback.")
+def _resolve_embedding_provider(target_dim: int) -> str:
+    explicit = os.getenv("EMBEDDING_PROVIDER", "auto").lower().strip()
+    if explicit in {"local", "gemini", "mistral", "cohere", "hash"}:
+        return explicit
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if target_dim == 3072 and gemini_key and "your_gemini_api_key" not in gemini_key:
+        return "gemini"
+    return "local"
 
-    # 4. Fallback Gemini if target_dim != 3072
-    try:
-        vec = get_gemini_embedding_single(text)
-        return match_vector_dim(vec, target_dim)
-    except Exception:
-        pass
-        
-    # 5. Lightweight fast zero-RAM fallback (never crash with PyTorch OOM)
-    return get_fast_fallback_embedding(text, target_dim)
+def get_embedding_with_meta(text: str) -> tuple[List[float], str]:
+    target_dim = get_current_collection_size()
+    provider = _resolve_embedding_provider(target_dim)
+
+    if provider == "hash":
+        return get_fast_fallback_embedding(text, target_dim), f"feature-hash-{target_dim}"
+
+    if provider == "gemini" or target_dim == 3072:
+        try:
+            vec = get_gemini_embedding_single(text)
+            if len(vec) == target_dim:
+                return vec, "gemini-embedding-001"
+        except Exception as e:
+            print(f"[qdrant_service] Gemini embedding failed: {e}.")
+            if target_dim == 3072:
+                # Never silently mix alien embedding spaces into 3072d Gemini collection
+                return get_fast_fallback_embedding(text, target_dim), f"feature-hash-{target_dim}"
+
+    if provider in {"local", "auto"} and target_dim == 384:
+        try:
+            model = get_local_model()
+            vec = model.encode(text, normalize_embeddings=True).tolist()
+            return vec, "all-MiniLM-L6-v2"
+        except Exception as e:
+            print(f"[qdrant_service] Local SentenceTransformer failed: {e}.")
+
+    if provider == "mistral":
+        try:
+            embs = get_mistral_embeddings_batch([text])
+            if embs and len(embs[0]) == target_dim:
+                return embs[0], "mistral-embed"
+        except Exception as e:
+            print(f"[qdrant_service] Mistral embedding failed: {e}.")
+
+    if provider == "cohere":
+        try:
+            embs = get_cohere_embeddings_batch([text])
+            if embs and len(embs[0]) == target_dim:
+                return embs[0], "embed-english-v3.0"
+        except Exception as e:
+            print(f"[qdrant_service] Cohere embedding failed: {e}.")
+
+    return get_fast_fallback_embedding(text, target_dim), f"feature-hash-{target_dim}"
+
+def get_embedding(text: str) -> List[float]:
+    vec, _ = get_embedding_with_meta(text)
+    return vec
 
 def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     target_dim = get_current_collection_size()
+    provider = _resolve_embedding_provider(target_dim)
     texts = [c["text_content"] for c in chunks]
-    vectors = []
+    vectors: List[List[float]] = []
+    embedding_model_used = f"feature-hash-{target_dim}"
     points = []
     indexed_results = []
-    
+
     if texts:
-        # Step 1: Attempt Gemini batch embeddings
-        gemini_key = os.getenv("GEMINI_API_KEY")
-        if gemini_key and "your_gemini_api_key" not in gemini_key:
+        if provider == "gemini":
             try:
                 print("Generating embeddings using Gemini API in batch...")
-                vectors = get_gemini_embeddings_batch(texts)
+                candidate = get_gemini_embeddings_batch(texts)
+                if candidate and len(candidate[0]) == target_dim:
+                    vectors = candidate
+                    embedding_model_used = "gemini-embedding-001"
             except Exception as e:
-                print(f"[qdrant_service] Gemini batch embedding failed: {e}. Falling back to Mistral.")
-                vectors = []
+                print(f"[qdrant_service] Gemini batch embedding failed: {e}.")
 
-        # Step 2: Attempt Mistral Embeddings (ultra-fast, zero RAM)
-        if not vectors:
+        if not vectors and provider in {"local", "auto"} and target_dim == 384:
             try:
-                print("Generating embeddings using Mistral Embed API...")
+                model = get_local_model()
+                vectors = model.encode(texts, normalize_embeddings=True).tolist()
+                embedding_model_used = "all-MiniLM-L6-v2"
+            except Exception as e:
+                print(f"[qdrant_service] Local SentenceTransformer batch failed: {e}.")
+
+        if not vectors and provider == "mistral":
+            try:
                 raw_vectors = get_mistral_embeddings_batch(texts)
-                vectors = [match_vector_dim(v, target_dim) for v in raw_vectors]
+                if raw_vectors and len(raw_vectors[0]) == target_dim:
+                    vectors = raw_vectors
+                    embedding_model_used = "mistral-embed"
             except Exception as e:
-                print(f"[qdrant_service] Mistral embed failed: {e}. Falling back to Cohere.")
-                vectors = []
+                print(f"[qdrant_service] Mistral embed failed: {e}.")
 
-        # Step 3: Attempt Cohere Embeddings
-        if not vectors:
+        if not vectors and provider == "cohere":
             try:
-                print("Generating embeddings using Cohere Embed API...")
                 raw_vectors = get_cohere_embeddings_batch(texts)
-                vectors = [match_vector_dim(v, target_dim) for v in raw_vectors]
+                if raw_vectors and len(raw_vectors[0]) == target_dim:
+                    vectors = raw_vectors
+                    embedding_model_used = "embed-english-v3.0"
             except Exception as e:
-                print(f"[qdrant_service] Cohere embed failed: {e}. Falling back to zero-RAM hash projection.")
-                vectors = []
+                print(f"[qdrant_service] Cohere embed failed: {e}.")
 
-        # Step 4: Zero-memory deterministic fallback (never loads PyTorch, preventing 512MB container OOM kills)
         if not vectors:
             vectors = [get_fast_fallback_embedding(t, target_dim) for t in texts]
-    
+            embedding_model_used = f"feature-hash-{target_dim}"
+
     # Ensure collection matches the target vector dimension
     if vectors and len(vectors) > 0:
         actual_dim = len(vectors[0])
@@ -382,16 +433,18 @@ def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -
         text = c["text_content"]
         page_num = c["page_number"]
         chunk_idx = c["chunk_index"]
-        
+
         vector = vectors[idx] if idx < len(vectors) else get_fast_fallback_embedding(text, target_dim)
         point_id = str(uuid.uuid4())
-        
+
         payload = {
             "project_id": project_id,
             "paper_id": paper_id,
             "chunk_index": chunk_idx,
             "text_content": text,
-            "page_number": page_num
+            "page_number": page_num,
+            "embedding_model": embedding_model_used,
+            "embedding_dim": len(vector),
         }
         
         if client:
@@ -491,20 +544,72 @@ def duplicate_paper_vectors(source_paper_id: str, target_paper_id: str, target_p
             
     return indexed_results
 
-def search_relevant_chunks(project_id: str, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+def scroll_project_chunks(project_id: str, paper_id: str = None, max_chunks: int = 5000) -> List[Dict[str, Any]]:
+    """
+    Fetch all indexed chunks for a project (and optional paper_id) for full-corpus BM25 scoring.
+    """
+    chunks: List[Dict[str, Any]] = []
+    if client:
+        try:
+            from qdrant_client.models import Filter, FieldCondition, MatchValue
+            must = [FieldCondition(key="project_id", match=MatchValue(value=project_id))]
+            if paper_id:
+                must.append(FieldCondition(key="paper_id", match=MatchValue(value=paper_id)))
+            scroll_filter = Filter(must=must)
+            offset = None
+            while len(chunks) < max_chunks:
+                batch_limit = min(500, max_chunks - len(chunks))
+                points_batch, next_offset = client.scroll(
+                    collection_name=COLLECTION_NAME,
+                    scroll_filter=scroll_filter,
+                    limit=batch_limit,
+                    offset=offset,
+                    with_vectors=False,
+                )
+                for pt in points_batch:
+                    payload = pt.payload or {}
+                    chunks.append({
+                        "paper_id": payload.get("paper_id"),
+                        "page_number": payload.get("page_number"),
+                        "chunk_index": payload.get("chunk_index"),
+                        "text_content": payload.get("text_content", ""),
+                    })
+                if next_offset is None or not points_batch:
+                    break
+                offset = next_offset
+            return chunks
+        except Exception as e:
+            print(f"[qdrant_service] Project chunk scroll failed, reading fallback memory: {e}")
+
+    for item in fallback_store:
+        payload = item.get("payload", {})
+        if payload.get("project_id") != project_id:
+            continue
+        if paper_id and payload.get("paper_id") != paper_id:
+            continue
+        chunks.append({
+            "paper_id": payload.get("paper_id"),
+            "page_number": payload.get("page_number"),
+            "chunk_index": payload.get("chunk_index"),
+            "text_content": payload.get("text_content", ""),
+        })
+        if len(chunks) >= max_chunks:
+            break
+    return chunks
+
+def search_relevant_chunks(project_id: str, query: str, limit: int = 5, paper_id: str = None) -> List[Dict[str, Any]]:
     query_vector = get_embedding(query)
     results = []
 
     if client:
         try:
+            must = [{"key": "project_id", "match": {"value": project_id}}]
+            if paper_id:
+                must.append({"key": "paper_id", "match": {"value": paper_id}})
             search_result = client.search(
                 collection_name=COLLECTION_NAME,
                 query_vector=query_vector,
-                query_filter={
-                    "must": [
-                        {"key": "project_id", "match": {"value": project_id}}
-                    ]
-                },
+                query_filter={"must": must},
                 limit=limit
             )
             for hit in search_result:
@@ -512,6 +617,7 @@ def search_relevant_chunks(project_id: str, query: str, limit: int = 5) -> List[
                 results.append({
                     "paper_id": payload.get("paper_id"),
                     "page_number": payload.get("page_number"),
+                    "chunk_index": payload.get("chunk_index"),
                     "text_content": payload.get("text_content"),
                     "confidence_score": float(hit.score),
                 })
@@ -525,15 +631,18 @@ def search_relevant_chunks(project_id: str, query: str, limit: int = 5) -> List[
     q_vec = np.array(query_vector)
     
     for item in fallback_store:
-        if item["payload"]["project_id"] == project_id:
+        payload = item["payload"]
+        if payload["project_id"] == project_id and (not paper_id or payload.get("paper_id") == paper_id):
             i_vec = np.array(item["vector"])
+            if q_vec.shape != i_vec.shape:
+                continue
             # Cosine similarity
             dot = np.dot(q_vec, i_vec)
             norm_q = np.linalg.norm(q_vec)
             norm_i = np.linalg.norm(i_vec)
             sim = dot / (norm_q * norm_i) if (norm_q * norm_i) > 0 else 0.0
             
-            memory_matches.append((sim, item["payload"]))
+            memory_matches.append((sim, payload))
             
     # Sort by similarity descending
     memory_matches.sort(key=lambda x: x[0], reverse=True)
@@ -542,6 +651,7 @@ def search_relevant_chunks(project_id: str, query: str, limit: int = 5) -> List[
         results.append({
             "paper_id": payload.get("paper_id"),
             "page_number": payload.get("page_number"),
+            "chunk_index": payload.get("chunk_index"),
             "text_content": payload.get("text_content"),
             "confidence_score": float(sim),
         })

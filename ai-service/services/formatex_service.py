@@ -9,15 +9,16 @@ try:
 except ImportError:
     from paper_validator import PaperValidator
 
-# Base URL and API Key
-BASE_URL = "https://api.formatex.io/api/v1"
-API_KEY = os.getenv("FORMATEX_API_KEY") or "fex_164debc960d90958825678cd389c9c5296a57fbb91e34957a8ba855ac54b8711"
+# Base URL and API Key (read strictly from environment; never hardcode credentials)
+BASE_URL = os.getenv("FORMATEX_BASE_URL", "https://api.formatex.io/api/v1")
+API_KEY = os.getenv("FORMATEX_API_KEY", "")
 
 class FormaTeXService:
     @staticmethod
     def _get_headers() -> Dict[str, str]:
+        api_key = os.getenv("FORMATEX_API_KEY") or API_KEY
         return {
-            "X-API-Key": API_KEY,
+            "X-API-Key": api_key,
             "Content-Type": "application/json"
         }
 
@@ -26,6 +27,9 @@ class FormaTeXService:
         """
         Executes API calls to FormaTeX.io with automatic retries and failover handling.
         """
+        api_key = os.getenv("FORMATEX_API_KEY") or API_KEY
+        if not api_key:
+            return None, "FORMATEX_API_KEY is not configured."
         url = f"{BASE_URL}/{endpoint}"
         headers = cls._get_headers()
         

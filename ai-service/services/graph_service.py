@@ -13,6 +13,7 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "research_password_123")
 class Neo4jClient:
     def __init__(self):
         self.driver = None
+        self.in_memory_graphs: Dict[str, Dict[str, Any]] = {}
         try:
             self.driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
             self.driver.verify_connectivity()
@@ -26,6 +27,10 @@ class Neo4jClient:
             self.driver.close()
 
     def sync_graph(self, project_id: str, nodes: List[Dict[str, Any]], links: List[Dict[str, Any]]):
+        self.in_memory_graphs[project_id] = {
+            "nodes": [dict(n) for n in nodes],
+            "links": [dict(l) for l in links],
+        }
         if not self.driver:
             return
         
@@ -57,6 +62,51 @@ class Neo4jClient:
         except Exception as e:
             print(f"Neo4j sync transaction failed: {e}")
 
+    def query_papers_by_terms(self, project_id: str, words: List[str]) -> List[str]:
+        if not words:
+            return []
+        word_set = {w.strip().lower() for w in words if w and w.strip()}
+        if self.driver:
+            query_cypher = """
+            MATCH (e:Entity {projectId: $projectId})
+            WHERE toLower(e.label) IN $words AND NOT e.type = 'paper'
+            MATCH (e)-[:RELATION]-(p:Entity {type: 'paper', projectId: $projectId})
+            RETURN DISTINCT p.id as paperId
+            """
+            paper_ids = []
+            try:
+                with self.driver.session() as session:
+                    res = session.run(query_cypher, projectId=project_id, words=list(word_set))
+                    for record in res:
+                        p_id = record["paperId"]
+                        if p_id.startswith("paper_"):
+                            paper_ids.append(p_id.replace("paper_", ""))
+                        else:
+                            paper_ids.append(p_id)
+                return paper_ids
+            except Exception as e:
+                print(f"[graph_service] KG search failed: {e}")
+
+        # In-memory NetworkX / graph fallback
+        graph_data = self.in_memory_graphs.get(project_id)
+        if not graph_data:
+            return []
+        nodes_by_id = {n["id"]: n for n in graph_data.get("nodes", []) if "id" in n}
+        matching_entities = {
+            nid for nid, node in nodes_by_id.items()
+            if node.get("type") != "paper" and any(w in str(node.get("label", "")).lower() for w in word_set)
+        }
+        if not matching_entities:
+            return []
+        paper_ids = []
+        for link in graph_data.get("links", []):
+            src, tgt = link.get("source"), link.get("target")
+            if src in matching_entities and nodes_by_id.get(tgt, {}).get("type") == "paper":
+                paper_ids.append(tgt.replace("paper_", ""))
+            elif tgt in matching_entities and nodes_by_id.get(src, {}).get("type") == "paper":
+                paper_ids.append(src.replace("paper_", ""))
+        return list(dict.fromkeys(paper_ids))
+
 neo4j_client = Neo4jClient()
 
 def extract_graph_gemini(paper_title: str, abstract: str) -> Dict[str, Any]:
@@ -66,7 +116,7 @@ def extract_graph_gemini(paper_title: str, abstract: str) -> Dict[str, Any]:
 
     preferred = os.getenv("GEMINI_MODEL")
     models_to_try = [preferred] if preferred else []
-    for m in ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3.6-flash"]:
+    for m in ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.5-flash"]:
         if m not in models_to_try:
             models_to_try.append(m)
 

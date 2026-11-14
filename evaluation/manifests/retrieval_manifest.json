@@ -1,0 +1,3123 @@
+{
+  "project_id": "eval_retrieval_proj",
+  "num_papers": 60,
+  "num_chunks": 180,
+  "num_queries": 75,
+  "documents": [
+    {
+      "paper_id": "doc_000",
+      "domain": "ir_rag_systems",
+      "title": "Study 0 on BM25 lexical scoring",
+      "year": 2021
+    },
+    {
+      "paper_id": "doc_001",
+      "domain": "multi_agent_orchestration",
+      "title": "Study 1 on claim extraction",
+      "year": 2022
+    },
+    {
+      "paper_id": "doc_002",
+      "domain": "document_integrity_extraction",
+      "title": "Study 2 on LaTeX AST parsing",
+      "year": 2023
+    },
+    {
+      "paper_id": "doc_003",
+      "domain": "ir_rag_systems",
+      "title": "Study 3 on bi-encoder embeddings",
+      "year": 2024
+    },
+    {
+      "paper_id": "doc_004",
+      "domain": "multi_agent_orchestration",
+      "title": "Study 4 on consistency auditing",
+      "year": 2025
+    },
+    {
+      "paper_id": "doc_005",
+      "domain": "document_integrity_extraction",
+      "title": "Study 5 on MinHash shingling",
+      "year": 2021
+    },
+    {
+      "paper_id": "doc_006",
+      "domain": "ir_rag_systems",
+      "title": "Study 6 on Reciprocal Rank Fusion",
+      "year": 2022
+    },
+    {
+      "paper_id": "doc_007",
+      "domain": "multi_agent_orchestration",
+      "title": "Study 7 on evidence attribution",
+      "year": 2023
+    },
+    {
+      "paper_id": "doc_008",
+      "domain": "document_integrity_extraction",
+      "title": "Study 8 on table bounding boxes",
+      "year": 2024
+    },
+    {
+      "paper_id": "doc_009",
+      "domain": "ir_rag_systems",
+      "title": "Study 9 on citation grounding",
+      "year": 2025
+    },
+    {
+      "paper_id": "doc_010",
+      "domain": "multi_agent_orchestration",
+      "title": "Study 10 on LangGraph state machines",
+      "year": 2021
+    },
+    {
+      "paper_id": "doc_011",
+      "domain": "document_integrity_extraction",
+      "title": "Study 11 on Winnowing fingerprints",
+      "year": 2022
+    },
+    {
+      "paper_id": "doc_012",
+      "domain": "ir_rag_systems",
+      "title": "Study 12 on Knowledge Graph boosting",
+      "year": 2023
+    },
+    {
+      "paper_id": "doc_013",
+      "domain": "multi_agent_orchestration",
+      "title": "Study 13 on planner routing",
+      "year": 2024
+    },
+    {
+      "paper_id": "doc_014",
+      "domain": "document_integrity_extraction",
+      "title": "Study 14 on entropy burstiness",
+      "year": 2025
+    },
+    {
+      "paper_id": "doc_015",
+      "domain": "ir_rag_systems",
+      "title": "Study 15 on BM25 lexical scoring",
+      "year": 2021
+    },
+    {
+      "paper_id": "doc_016",
+      "domain": "multi_agent_orchestration",
+      "title": "Study 16 on claim extraction",
+      "year": 2022
+    },
+    {
+      "paper_id": "doc_017",
+      "domain": "document_integrity_extraction",
+      "title": "Study 17 on LaTeX AST parsing",
+      "year": 2023
+    },
+    {
+      "paper_id": "doc_018",
+      "domain": "ir_rag_systems",
+      "title": "Study 18 on bi-encoder embeddings",
+      "year": 2024
+    },
+    {
+      "paper_id": "doc_019",
+      "domain": "multi_agent_orchestration",
+      "title": "Study 19 on consistency auditing",
+      "year": 2025
+    },
+    {
+      "paper_id": "doc_020",
+      "domain": "document_integrity_extraction",
+      "title": "Study 20 on MinHash shingling",
+      "year": 2021
+    },
+    {
+      "paper_id": "doc_021",
+      "domain": "ir_rag_systems",
+      "title": "Study 21 on Reciprocal Rank Fusion",
+      "year": 2022
+    },
+    {
+      "paper_id": "doc_022",
+      "domain": "multi_agent_orchestration",
+      "title": "Study 22 on evidence attribution",
+      "year": 2023
+    },
+    {
+      "paper_id": "doc_023",
+      "domain": "document_integrity_extraction",
+      "title": "Study 23 on table bounding boxes",
+      "year": 2024
+    },
+    {
+      "paper_id": "doc_024",
+      "domain": "ir_rag_systems",
+      "title": "Study 24 on citation grounding",
+      "year": 2025
+    },
+    {
+      "paper_id": "doc_025",
+      "domain": "multi_agent_orchestration",
+      "title": "Survey Distractor 25 in LangGraph state machines",
+      "year": 2021
+    },
+    {
+      "paper_id": "doc_026",
+      "domain": "document_integrity_extraction",
+      "title": "Survey Distractor 26 in Winnowing fingerprints",
+      "year": 2022
+    },
+    {
+      "paper_id": "doc_027",
+      "domain": "ir_rag_systems",
+      "title": "Survey Distractor 27 in Knowledge Graph boosting",
+      "year": 2023
+    },
+    {
+      "paper_id": "doc_028",
+      "domain": "multi_agent_orchestration",
+      "title": "Survey Distractor 28 in planner routing",
+      "year": 2024
+    },
+    {
+      "paper_id": "doc_029",
+      "domain": "document_integrity_extraction",
+      "title": "Survey Distractor 29 in entropy burstiness",
+      "year": 2025
+    },
+    {
+      "paper_id": "doc_030",
+      "domain": "ir_rag_systems",
+      "title": "Survey Distractor 30 in BM25 lexical scoring",
+      "year": 2020
+    },
+    {
+      "paper_id": "doc_031",
+      "domain": "multi_agent_orchestration",
+      "title": "Survey Distractor 31 in claim extraction",
+      "year": 2021
+    },
+    {
+      "paper_id": "doc_032",
+      "domain": "document_integrity_extraction",
+      "title": "Survey Distractor 32 in LaTeX AST parsing",
+      "year": 2022
+    },
+    {
+      "paper_id": "doc_033",
+      "domain": "ir_rag_systems",
+      "title": "Survey Distractor 33 in bi-encoder embeddings",
+      "year": 2023
+    },
+    {
+      "paper_id": "doc_034",
+      "domain": "multi_agent_orchestration",
+      "title": "Survey Distractor 34 in consistency auditing",
+      "year": 2024
+    },
+    {
+      "paper_id": "doc_035",
+      "domain": "document_integrity_extraction",
+      "title": "Survey Distractor 35 in MinHash shingling",
+      "year": 2025
+    },
+    {
+      "paper_id": "doc_036",
+      "domain": "ir_rag_systems",
+      "title": "Survey Distractor 36 in Reciprocal Rank Fusion",
+      "year": 2020
+    },
+    {
+      "paper_id": "doc_037",
+      "domain": "multi_agent_orchestration",
+      "title": "Survey Distractor 37 in evidence attribution",
+      "year": 2021
+    },
+    {
+      "paper_id": "doc_038",
+      "domain": "document_integrity_extraction",
+      "title": "Survey Distractor 38 in table bounding boxes",
+      "year": 2022
+    },
+    {
+      "paper_id": "doc_039",
+      "domain": "ir_rag_systems",
+      "title": "Survey Distractor 39 in citation grounding",
+      "year": 2023
+    },
+    {
+      "paper_id": "doc_040",
+      "domain": "multi_agent_orchestration",
+      "title": "Survey Distractor 40 in LangGraph state machines",
+      "year": 2024
+    },
+    {
+      "paper_id": "doc_041",
+      "domain": "document_integrity_extraction",
+      "title": "Survey Distractor 41 in Winnowing fingerprints",
+      "year": 2025
+    },
+    {
+      "paper_id": "doc_042",
+      "domain": "ir_rag_systems",
+      "title": "Survey Distractor 42 in Knowledge Graph boosting",
+      "year": 2020
+    },
+    {
+      "paper_id": "doc_043",
+      "domain": "multi_agent_orchestration",
+      "title": "Survey Distractor 43 in planner routing",
+      "year": 2021
+    },
+    {
+      "paper_id": "doc_044",
+      "domain": "document_integrity_extraction",
+      "title": "Survey Distractor 44 in entropy burstiness",
+      "year": 2022
+    },
+    {
+      "paper_id": "doc_045",
+      "domain": "ir_rag_systems",
+      "title": "Survey Distractor 45 in BM25 lexical scoring",
+      "year": 2023
+    },
+    {
+      "paper_id": "doc_046",
+      "domain": "multi_agent_orchestration",
+      "title": "Survey Distractor 46 in claim extraction",
+      "year": 2024
+    },
+    {
+      "paper_id": "doc_047",
+      "domain": "document_integrity_extraction",
+      "title": "Survey Distractor 47 in LaTeX AST parsing",
+      "year": 2025
+    },
+    {
+      "paper_id": "doc_048",
+      "domain": "ir_rag_systems",
+      "title": "Survey Distractor 48 in bi-encoder embeddings",
+      "year": 2020
+    },
+    {
+      "paper_id": "doc_049",
+      "domain": "multi_agent_orchestration",
+      "title": "Survey Distractor 49 in consistency auditing",
+      "year": 2021
+    },
+    {
+      "paper_id": "doc_050",
+      "domain": "document_integrity_extraction",
+      "title": "Survey Distractor 50 in MinHash shingling",
+      "year": 2022
+    },
+    {
+      "paper_id": "doc_051",
+      "domain": "ir_rag_systems",
+      "title": "Survey Distractor 51 in Reciprocal Rank Fusion",
+      "year": 2023
+    },
+    {
+      "paper_id": "doc_052",
+      "domain": "multi_agent_orchestration",
+      "title": "Survey Distractor 52 in evidence attribution",
+      "year": 2024
+    },
+    {
+      "paper_id": "doc_053",
+      "domain": "document_integrity_extraction",
+      "title": "Survey Distractor 53 in table bounding boxes",
+      "year": 2025
+    },
+    {
+      "paper_id": "doc_054",
+      "domain": "ir_rag_systems",
+      "title": "Survey Distractor 54 in citation grounding",
+      "year": 2020
+    },
+    {
+      "paper_id": "doc_055",
+      "domain": "multi_agent_orchestration",
+      "title": "Survey Distractor 55 in LangGraph state machines",
+      "year": 2021
+    },
+    {
+      "paper_id": "doc_056",
+      "domain": "document_integrity_extraction",
+      "title": "Survey Distractor 56 in Winnowing fingerprints",
+      "year": 2022
+    },
+    {
+      "paper_id": "doc_057",
+      "domain": "ir_rag_systems",
+      "title": "Survey Distractor 57 in Knowledge Graph boosting",
+      "year": 2023
+    },
+    {
+      "paper_id": "doc_058",
+      "domain": "multi_agent_orchestration",
+      "title": "Survey Distractor 58 in planner routing",
+      "year": 2024
+    },
+    {
+      "paper_id": "doc_059",
+      "domain": "document_integrity_extraction",
+      "title": "Survey Distractor 59 in entropy burstiness",
+      "year": 2025
+    }
+  ],
+  "chunks": [
+    {
+      "chunk_id": "doc_000_0",
+      "paper_id": "doc_000",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates scholarly retrieval-augmented generation and hybrid vector indexing across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_000_1",
+      "paper_id": "doc_000",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX100 and diagnostic trace MTR200 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_000_2",
+      "paper_id": "doc_000",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on autonomous astronomical spectroscopy telescope calibration pipeline. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 0."
+    },
+    {
+      "chunk_id": "doc_001_0",
+      "paper_id": "doc_001",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates stateful multi-agent academic planning and claim verification across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_001_1",
+      "paper_id": "doc_001",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX101 and diagnostic trace MTR201 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_001_2",
+      "paper_id": "doc_001",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on cardiovascular echocardiography ventricular strain imaging. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 1."
+    },
+    {
+      "chunk_id": "doc_002_0",
+      "paper_id": "doc_002",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates structural PDF parsing, LaTeX typesetting, and plagiarism detection across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_002_1",
+      "paper_id": "doc_002",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX102 and diagnostic trace MTR202 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_002_2",
+      "paper_id": "doc_002",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on perovskite photovoltaic solar cell degradation stability. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 2."
+    },
+    {
+      "chunk_id": "doc_003_0",
+      "paper_id": "doc_003",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates scholarly retrieval-augmented generation and hybrid vector indexing across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_003_1",
+      "paper_id": "doc_003",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX103 and diagnostic trace MTR203 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_003_2",
+      "paper_id": "doc_003",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on seismic waveform microearthquake arrival picking. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 3."
+    },
+    {
+      "chunk_id": "doc_004_0",
+      "paper_id": "doc_004",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates stateful multi-agent academic planning and claim verification across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_004_1",
+      "paper_id": "doc_004",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX104 and diagnostic trace MTR204 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_004_2",
+      "paper_id": "doc_004",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on oceanic thermohaline circulation salinity buoy array. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 4."
+    },
+    {
+      "chunk_id": "doc_005_0",
+      "paper_id": "doc_005",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates structural PDF parsing, LaTeX typesetting, and plagiarism detection across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_005_1",
+      "paper_id": "doc_005",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX105 and diagnostic trace MTR205 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_005_2",
+      "paper_id": "doc_005",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on protein folding intrinsically disordered peptide dynamics. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 5."
+    },
+    {
+      "chunk_id": "doc_006_0",
+      "paper_id": "doc_006",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates scholarly retrieval-augmented generation and hybrid vector indexing across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_006_1",
+      "paper_id": "doc_006",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX106 and diagnostic trace MTR206 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_006_2",
+      "paper_id": "doc_006",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on compiler loop unrolling register pressure scheduling. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 6."
+    },
+    {
+      "chunk_id": "doc_007_0",
+      "paper_id": "doc_007",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates stateful multi-agent academic planning and claim verification across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_007_1",
+      "paper_id": "doc_007",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX107 and diagnostic trace MTR207 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_007_2",
+      "paper_id": "doc_007",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on federated healthcare differential privacy gradient clipping. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 7."
+    },
+    {
+      "chunk_id": "doc_008_0",
+      "paper_id": "doc_008",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates structural PDF parsing, LaTeX typesetting, and plagiarism detection across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_008_1",
+      "paper_id": "doc_008",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX108 and diagnostic trace MTR208 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_008_2",
+      "paper_id": "doc_008",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on lidar point cloud autonomous vehicle pedestrian tracking. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 8."
+    },
+    {
+      "chunk_id": "doc_009_0",
+      "paper_id": "doc_009",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates scholarly retrieval-augmented generation and hybrid vector indexing across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_009_1",
+      "paper_id": "doc_009",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX109 and diagnostic trace MTR209 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_009_2",
+      "paper_id": "doc_009",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on electrochemical lithium sulfur battery cathode polysulfide. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 9."
+    },
+    {
+      "chunk_id": "doc_010_0",
+      "paper_id": "doc_010",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates stateful multi-agent academic planning and claim verification across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_010_1",
+      "paper_id": "doc_010",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX110 and diagnostic trace MTR210 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_010_2",
+      "paper_id": "doc_010",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on glacier basal sliding subglacial hydrology runoff. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 10."
+    },
+    {
+      "chunk_id": "doc_011_0",
+      "paper_id": "doc_011",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates structural PDF parsing, LaTeX typesetting, and plagiarism detection across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_011_1",
+      "paper_id": "doc_011",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX111 and diagnostic trace MTR211 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_011_2",
+      "paper_id": "doc_011",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on metamaterial acoustic cloaking Helmholtz resonator. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 11."
+    },
+    {
+      "chunk_id": "doc_012_0",
+      "paper_id": "doc_012",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates scholarly retrieval-augmented generation and hybrid vector indexing across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_012_1",
+      "paper_id": "doc_012",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX112 and diagnostic trace MTR212 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_012_2",
+      "paper_id": "doc_012",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on agricultural drought evapotranspiration satellite thermal. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 12."
+    },
+    {
+      "chunk_id": "doc_013_0",
+      "paper_id": "doc_013",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates stateful multi-agent academic planning and claim verification across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_013_1",
+      "paper_id": "doc_013",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX113 and diagnostic trace MTR213 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_013_2",
+      "paper_id": "doc_013",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on quantum error correction surface code stabilizer syndrome. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 13."
+    },
+    {
+      "chunk_id": "doc_014_0",
+      "paper_id": "doc_014",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates structural PDF parsing, LaTeX typesetting, and plagiarism detection across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_014_1",
+      "paper_id": "doc_014",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX114 and diagnostic trace MTR214 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_014_2",
+      "paper_id": "doc_014",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on natural gas pipeline acoustic leak localization. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 14."
+    },
+    {
+      "chunk_id": "doc_015_0",
+      "paper_id": "doc_015",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates scholarly retrieval-augmented generation and hybrid vector indexing across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_015_1",
+      "paper_id": "doc_015",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX115 and diagnostic trace MTR215 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_015_2",
+      "paper_id": "doc_015",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on histopathology whole slide mitotic figure counting. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 15."
+    },
+    {
+      "chunk_id": "doc_016_0",
+      "paper_id": "doc_016",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates stateful multi-agent academic planning and claim verification across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_016_1",
+      "paper_id": "doc_016",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX116 and diagnostic trace MTR216 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_016_2",
+      "paper_id": "doc_016",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on wind turbine blade aerodynamic flutter damping. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 16."
+    },
+    {
+      "chunk_id": "doc_017_0",
+      "paper_id": "doc_017",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates structural PDF parsing, LaTeX typesetting, and plagiarism detection across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_017_1",
+      "paper_id": "doc_017",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX117 and diagnostic trace MTR217 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_017_2",
+      "paper_id": "doc_017",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on medieval manuscript parchment multispectral ink recovery. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 17."
+    },
+    {
+      "chunk_id": "doc_018_0",
+      "paper_id": "doc_018",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates scholarly retrieval-augmented generation and hybrid vector indexing across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_018_1",
+      "paper_id": "doc_018",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX118 and diagnostic trace MTR218 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_018_2",
+      "paper_id": "doc_018",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on semiconductor lithography extreme ultraviolet photoresist. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 18."
+    },
+    {
+      "chunk_id": "doc_019_0",
+      "paper_id": "doc_019",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates stateful multi-agent academic planning and claim verification across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_019_1",
+      "paper_id": "doc_019",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX119 and diagnostic trace MTR219 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_019_2",
+      "paper_id": "doc_019",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on urban traffic signal reinforcement learning queue spillback. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 19."
+    },
+    {
+      "chunk_id": "doc_020_0",
+      "paper_id": "doc_020",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates structural PDF parsing, LaTeX typesetting, and plagiarism detection across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_020_1",
+      "paper_id": "doc_020",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX120 and diagnostic trace MTR220 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_020_2",
+      "paper_id": "doc_020",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on coral reef bleaching thermal stress symbiont expulsion. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 20."
+    },
+    {
+      "chunk_id": "doc_021_0",
+      "paper_id": "doc_021",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates scholarly retrieval-augmented generation and hybrid vector indexing across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_021_1",
+      "paper_id": "doc_021",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX121 and diagnostic trace MTR221 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_021_2",
+      "paper_id": "doc_021",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on speech dereverberation binaural hearing aid beamforming. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 21."
+    },
+    {
+      "chunk_id": "doc_022_0",
+      "paper_id": "doc_022",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates stateful multi-agent academic planning and claim verification across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_022_1",
+      "paper_id": "doc_022",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX122 and diagnostic trace MTR222 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_022_2",
+      "paper_id": "doc_022",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on blockchain zero knowledge succinct arithmetic circuit. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 22."
+    },
+    {
+      "chunk_id": "doc_023_0",
+      "paper_id": "doc_023",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates structural PDF parsing, LaTeX typesetting, and plagiarism detection across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_023_1",
+      "paper_id": "doc_023",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX123 and diagnostic trace MTR223 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_023_2",
+      "paper_id": "doc_023",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on bridge cable stays ambient vibration modal identification. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 23."
+    },
+    {
+      "chunk_id": "doc_024_0",
+      "paper_id": "doc_024",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "This technical paper investigates scholarly retrieval-augmented generation and hybrid vector indexing across large scholarly collections. Modern scientific pipelines frequently combine neural ranking with structured verification to reduce unsupported assertions in automated literature synthesis workflows."
+    },
+    {
+      "chunk_id": "doc_024_1",
+      "paper_id": "doc_024",
+      "chunk_index": 1,
+      "page_number": 3,
+      "text_content": "Benchmark evaluation log RGX124 and diagnostic trace MTR224 evaluate scholarly retrieval-augmented generation and hybrid vector indexing under dense distractor interference."
+    },
+    {
+      "chunk_id": "doc_024_2",
+      "paper_id": "doc_024",
+      "chunk_index": 2,
+      "page_number": 5,
+      "text_content": "Domain study focused on antibiotic resistance plasmid horizontal gene transfer. Experimental validation demonstrates reliable reproducibility under offline evaluation protocol 24."
+    },
+    {
+      "chunk_id": "doc_025_0",
+      "paper_id": "doc_025",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining stateful multi-agent academic planning and claim verification and LangGraph state machines. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_025_1",
+      "paper_id": "doc_025",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining stateful multi-agent academic planning and claim verification and claim extraction. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_025_2",
+      "paper_id": "doc_025",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining stateful multi-agent academic planning and claim verification and evidence attribution. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_026_0",
+      "paper_id": "doc_026",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and MinHash shingling. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_026_1",
+      "paper_id": "doc_026",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and Winnowing fingerprints. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_026_2",
+      "paper_id": "doc_026",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and LaTeX AST parsing. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_027_0",
+      "paper_id": "doc_027",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining scholarly retrieval-augmented generation and hybrid vector indexing and BM25 lexical scoring. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_027_1",
+      "paper_id": "doc_027",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining scholarly retrieval-augmented generation and hybrid vector indexing and Reciprocal Rank Fusion. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_027_2",
+      "paper_id": "doc_027",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining scholarly retrieval-augmented generation and hybrid vector indexing and Knowledge Graph boosting. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_028_0",
+      "paper_id": "doc_028",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining stateful multi-agent academic planning and claim verification and LangGraph state machines. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_028_1",
+      "paper_id": "doc_028",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining stateful multi-agent academic planning and claim verification and claim extraction. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_028_2",
+      "paper_id": "doc_028",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining stateful multi-agent academic planning and claim verification and evidence attribution. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_029_0",
+      "paper_id": "doc_029",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and MinHash shingling. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_029_1",
+      "paper_id": "doc_029",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and Winnowing fingerprints. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_029_2",
+      "paper_id": "doc_029",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and LaTeX AST parsing. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_030_0",
+      "paper_id": "doc_030",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining scholarly retrieval-augmented generation and hybrid vector indexing and BM25 lexical scoring. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_030_1",
+      "paper_id": "doc_030",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining scholarly retrieval-augmented generation and hybrid vector indexing and Reciprocal Rank Fusion. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_030_2",
+      "paper_id": "doc_030",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining scholarly retrieval-augmented generation and hybrid vector indexing and Knowledge Graph boosting. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_031_0",
+      "paper_id": "doc_031",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining stateful multi-agent academic planning and claim verification and LangGraph state machines. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_031_1",
+      "paper_id": "doc_031",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining stateful multi-agent academic planning and claim verification and claim extraction. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_031_2",
+      "paper_id": "doc_031",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining stateful multi-agent academic planning and claim verification and evidence attribution. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_032_0",
+      "paper_id": "doc_032",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and MinHash shingling. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_032_1",
+      "paper_id": "doc_032",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and Winnowing fingerprints. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_032_2",
+      "paper_id": "doc_032",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and LaTeX AST parsing. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_033_0",
+      "paper_id": "doc_033",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining scholarly retrieval-augmented generation and hybrid vector indexing and BM25 lexical scoring. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_033_1",
+      "paper_id": "doc_033",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining scholarly retrieval-augmented generation and hybrid vector indexing and Reciprocal Rank Fusion. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_033_2",
+      "paper_id": "doc_033",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining scholarly retrieval-augmented generation and hybrid vector indexing and Knowledge Graph boosting. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_034_0",
+      "paper_id": "doc_034",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining stateful multi-agent academic planning and claim verification and LangGraph state machines. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_034_1",
+      "paper_id": "doc_034",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining stateful multi-agent academic planning and claim verification and claim extraction. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_034_2",
+      "paper_id": "doc_034",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining stateful multi-agent academic planning and claim verification and evidence attribution. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_035_0",
+      "paper_id": "doc_035",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and MinHash shingling. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_035_1",
+      "paper_id": "doc_035",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and Winnowing fingerprints. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_035_2",
+      "paper_id": "doc_035",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and LaTeX AST parsing. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_036_0",
+      "paper_id": "doc_036",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining scholarly retrieval-augmented generation and hybrid vector indexing and BM25 lexical scoring. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_036_1",
+      "paper_id": "doc_036",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining scholarly retrieval-augmented generation and hybrid vector indexing and Reciprocal Rank Fusion. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_036_2",
+      "paper_id": "doc_036",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining scholarly retrieval-augmented generation and hybrid vector indexing and Knowledge Graph boosting. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_037_0",
+      "paper_id": "doc_037",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining stateful multi-agent academic planning and claim verification and LangGraph state machines. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_037_1",
+      "paper_id": "doc_037",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining stateful multi-agent academic planning and claim verification and claim extraction. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_037_2",
+      "paper_id": "doc_037",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining stateful multi-agent academic planning and claim verification and evidence attribution. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_038_0",
+      "paper_id": "doc_038",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and MinHash shingling. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_038_1",
+      "paper_id": "doc_038",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and Winnowing fingerprints. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_038_2",
+      "paper_id": "doc_038",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and LaTeX AST parsing. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_039_0",
+      "paper_id": "doc_039",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining scholarly retrieval-augmented generation and hybrid vector indexing and BM25 lexical scoring. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_039_1",
+      "paper_id": "doc_039",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining scholarly retrieval-augmented generation and hybrid vector indexing and Reciprocal Rank Fusion. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_039_2",
+      "paper_id": "doc_039",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining scholarly retrieval-augmented generation and hybrid vector indexing and Knowledge Graph boosting. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_040_0",
+      "paper_id": "doc_040",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining stateful multi-agent academic planning and claim verification and LangGraph state machines. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_040_1",
+      "paper_id": "doc_040",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining stateful multi-agent academic planning and claim verification and claim extraction. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_040_2",
+      "paper_id": "doc_040",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining stateful multi-agent academic planning and claim verification and evidence attribution. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_041_0",
+      "paper_id": "doc_041",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and MinHash shingling. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_041_1",
+      "paper_id": "doc_041",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and Winnowing fingerprints. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_041_2",
+      "paper_id": "doc_041",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and LaTeX AST parsing. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_042_0",
+      "paper_id": "doc_042",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining scholarly retrieval-augmented generation and hybrid vector indexing and BM25 lexical scoring. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_042_1",
+      "paper_id": "doc_042",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining scholarly retrieval-augmented generation and hybrid vector indexing and Reciprocal Rank Fusion. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_042_2",
+      "paper_id": "doc_042",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining scholarly retrieval-augmented generation and hybrid vector indexing and Knowledge Graph boosting. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_043_0",
+      "paper_id": "doc_043",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining stateful multi-agent academic planning and claim verification and LangGraph state machines. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_043_1",
+      "paper_id": "doc_043",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining stateful multi-agent academic planning and claim verification and claim extraction. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_043_2",
+      "paper_id": "doc_043",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining stateful multi-agent academic planning and claim verification and evidence attribution. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_044_0",
+      "paper_id": "doc_044",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and MinHash shingling. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_044_1",
+      "paper_id": "doc_044",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and Winnowing fingerprints. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_044_2",
+      "paper_id": "doc_044",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and LaTeX AST parsing. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_045_0",
+      "paper_id": "doc_045",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining scholarly retrieval-augmented generation and hybrid vector indexing and BM25 lexical scoring. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_045_1",
+      "paper_id": "doc_045",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining scholarly retrieval-augmented generation and hybrid vector indexing and Reciprocal Rank Fusion. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_045_2",
+      "paper_id": "doc_045",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining scholarly retrieval-augmented generation and hybrid vector indexing and Knowledge Graph boosting. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_046_0",
+      "paper_id": "doc_046",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining stateful multi-agent academic planning and claim verification and LangGraph state machines. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_046_1",
+      "paper_id": "doc_046",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining stateful multi-agent academic planning and claim verification and claim extraction. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_046_2",
+      "paper_id": "doc_046",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining stateful multi-agent academic planning and claim verification and evidence attribution. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_047_0",
+      "paper_id": "doc_047",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and MinHash shingling. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_047_1",
+      "paper_id": "doc_047",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and Winnowing fingerprints. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_047_2",
+      "paper_id": "doc_047",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and LaTeX AST parsing. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_048_0",
+      "paper_id": "doc_048",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining scholarly retrieval-augmented generation and hybrid vector indexing and BM25 lexical scoring. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_048_1",
+      "paper_id": "doc_048",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining scholarly retrieval-augmented generation and hybrid vector indexing and Reciprocal Rank Fusion. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_048_2",
+      "paper_id": "doc_048",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining scholarly retrieval-augmented generation and hybrid vector indexing and Knowledge Graph boosting. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_049_0",
+      "paper_id": "doc_049",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining stateful multi-agent academic planning and claim verification and LangGraph state machines. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_049_1",
+      "paper_id": "doc_049",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining stateful multi-agent academic planning and claim verification and claim extraction. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_049_2",
+      "paper_id": "doc_049",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining stateful multi-agent academic planning and claim verification and evidence attribution. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_050_0",
+      "paper_id": "doc_050",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and MinHash shingling. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_050_1",
+      "paper_id": "doc_050",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and Winnowing fingerprints. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_050_2",
+      "paper_id": "doc_050",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and LaTeX AST parsing. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_051_0",
+      "paper_id": "doc_051",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining scholarly retrieval-augmented generation and hybrid vector indexing and BM25 lexical scoring. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_051_1",
+      "paper_id": "doc_051",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining scholarly retrieval-augmented generation and hybrid vector indexing and Reciprocal Rank Fusion. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_051_2",
+      "paper_id": "doc_051",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining scholarly retrieval-augmented generation and hybrid vector indexing and Knowledge Graph boosting. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_052_0",
+      "paper_id": "doc_052",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining stateful multi-agent academic planning and claim verification and LangGraph state machines. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_052_1",
+      "paper_id": "doc_052",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining stateful multi-agent academic planning and claim verification and claim extraction. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_052_2",
+      "paper_id": "doc_052",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining stateful multi-agent academic planning and claim verification and evidence attribution. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_053_0",
+      "paper_id": "doc_053",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and MinHash shingling. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_053_1",
+      "paper_id": "doc_053",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and Winnowing fingerprints. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_053_2",
+      "paper_id": "doc_053",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and LaTeX AST parsing. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_054_0",
+      "paper_id": "doc_054",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining scholarly retrieval-augmented generation and hybrid vector indexing and BM25 lexical scoring. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_054_1",
+      "paper_id": "doc_054",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining scholarly retrieval-augmented generation and hybrid vector indexing and Reciprocal Rank Fusion. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_054_2",
+      "paper_id": "doc_054",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining scholarly retrieval-augmented generation and hybrid vector indexing and Knowledge Graph boosting. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_055_0",
+      "paper_id": "doc_055",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining stateful multi-agent academic planning and claim verification and LangGraph state machines. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_055_1",
+      "paper_id": "doc_055",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining stateful multi-agent academic planning and claim verification and claim extraction. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_055_2",
+      "paper_id": "doc_055",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining stateful multi-agent academic planning and claim verification and evidence attribution. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_056_0",
+      "paper_id": "doc_056",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and MinHash shingling. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_056_1",
+      "paper_id": "doc_056",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and Winnowing fingerprints. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_056_2",
+      "paper_id": "doc_056",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and LaTeX AST parsing. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_057_0",
+      "paper_id": "doc_057",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining scholarly retrieval-augmented generation and hybrid vector indexing and BM25 lexical scoring. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_057_1",
+      "paper_id": "doc_057",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining scholarly retrieval-augmented generation and hybrid vector indexing and Reciprocal Rank Fusion. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_057_2",
+      "paper_id": "doc_057",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining scholarly retrieval-augmented generation and hybrid vector indexing and Knowledge Graph boosting. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_058_0",
+      "paper_id": "doc_058",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining stateful multi-agent academic planning and claim verification and LangGraph state machines. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_058_1",
+      "paper_id": "doc_058",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining stateful multi-agent academic planning and claim verification and claim extraction. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_058_2",
+      "paper_id": "doc_058",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining stateful multi-agent academic planning and claim verification and evidence attribution. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_059_0",
+      "paper_id": "doc_059",
+      "chunk_index": 0,
+      "page_number": 1,
+      "text_content": "Comparative survey section 0 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and MinHash shingling. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_059_1",
+      "paper_id": "doc_059",
+      "chunk_index": 1,
+      "page_number": 2,
+      "text_content": "Comparative survey section 1 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and Winnowing fingerprints. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    },
+    {
+      "chunk_id": "doc_059_2",
+      "paper_id": "doc_059",
+      "chunk_index": 2,
+      "page_number": 3,
+      "text_content": "Comparative survey section 2 examining structural PDF parsing, LaTeX typesetting, and plagiarism detection and LaTeX AST parsing. Prior literature discusses vector similarity, BM25 term weighting, knowledge graphs, academic integrity scoring, and multi-agent coordination protocols in distributed software."
+    }
+  ],
+  "knowledge_graph": {
+    "nodes": [
+      {
+        "id": "paper_doc_000",
+        "label": "Study 0",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_0",
+        "label": "MethodNode0",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_001",
+        "label": "Study 1",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_1",
+        "label": "MethodNode1",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_002",
+        "label": "Study 2",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_2",
+        "label": "MethodNode2",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_003",
+        "label": "Study 3",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_3",
+        "label": "MethodNode3",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_004",
+        "label": "Study 4",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_4",
+        "label": "MethodNode4",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_005",
+        "label": "Study 5",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_5",
+        "label": "MethodNode5",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_006",
+        "label": "Study 6",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_6",
+        "label": "MethodNode6",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_007",
+        "label": "Study 7",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_7",
+        "label": "MethodNode7",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_008",
+        "label": "Study 8",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_8",
+        "label": "MethodNode8",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_009",
+        "label": "Study 9",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_9",
+        "label": "MethodNode9",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_010",
+        "label": "Study 10",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_10",
+        "label": "MethodNode10",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_011",
+        "label": "Study 11",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_11",
+        "label": "MethodNode11",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_012",
+        "label": "Study 12",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_12",
+        "label": "MethodNode12",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_013",
+        "label": "Study 13",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_13",
+        "label": "MethodNode13",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_014",
+        "label": "Study 14",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_14",
+        "label": "MethodNode14",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_015",
+        "label": "Study 15",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_15",
+        "label": "MethodNode15",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_016",
+        "label": "Study 16",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_16",
+        "label": "MethodNode16",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_017",
+        "label": "Study 17",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_17",
+        "label": "MethodNode17",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_018",
+        "label": "Study 18",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_18",
+        "label": "MethodNode18",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_019",
+        "label": "Study 19",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_19",
+        "label": "MethodNode19",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_020",
+        "label": "Study 20",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_20",
+        "label": "MethodNode20",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_021",
+        "label": "Study 21",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_21",
+        "label": "MethodNode21",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_022",
+        "label": "Study 22",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_22",
+        "label": "MethodNode22",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_023",
+        "label": "Study 23",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_23",
+        "label": "MethodNode23",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_024",
+        "label": "Study 24",
+        "type": "paper",
+        "val": 2
+      },
+      {
+        "id": "ent_m_24",
+        "label": "MethodNode24",
+        "type": "method",
+        "val": 3
+      },
+      {
+        "id": "paper_doc_025",
+        "label": "Survey Distractor 25",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_026",
+        "label": "Survey Distractor 26",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_027",
+        "label": "Survey Distractor 27",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_028",
+        "label": "Survey Distractor 28",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_029",
+        "label": "Survey Distractor 29",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_030",
+        "label": "Survey Distractor 30",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_031",
+        "label": "Survey Distractor 31",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_032",
+        "label": "Survey Distractor 32",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_033",
+        "label": "Survey Distractor 33",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_034",
+        "label": "Survey Distractor 34",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_035",
+        "label": "Survey Distractor 35",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_036",
+        "label": "Survey Distractor 36",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_037",
+        "label": "Survey Distractor 37",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_038",
+        "label": "Survey Distractor 38",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_039",
+        "label": "Survey Distractor 39",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_040",
+        "label": "Survey Distractor 40",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_041",
+        "label": "Survey Distractor 41",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_042",
+        "label": "Survey Distractor 42",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_043",
+        "label": "Survey Distractor 43",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_044",
+        "label": "Survey Distractor 44",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_045",
+        "label": "Survey Distractor 45",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_046",
+        "label": "Survey Distractor 46",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_047",
+        "label": "Survey Distractor 47",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_048",
+        "label": "Survey Distractor 48",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_049",
+        "label": "Survey Distractor 49",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_050",
+        "label": "Survey Distractor 50",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_051",
+        "label": "Survey Distractor 51",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_052",
+        "label": "Survey Distractor 52",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_053",
+        "label": "Survey Distractor 53",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_054",
+        "label": "Survey Distractor 54",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_055",
+        "label": "Survey Distractor 55",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_056",
+        "label": "Survey Distractor 56",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_057",
+        "label": "Survey Distractor 57",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_058",
+        "label": "Survey Distractor 58",
+        "type": "paper",
+        "val": 1
+      },
+      {
+        "id": "paper_doc_059",
+        "label": "Survey Distractor 59",
+        "type": "paper",
+        "val": 1
+      }
+    ],
+    "links": [
+      {
+        "source": "ent_m_0",
+        "target": "paper_doc_000",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_1",
+        "target": "paper_doc_001",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_2",
+        "target": "paper_doc_002",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_3",
+        "target": "paper_doc_003",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_4",
+        "target": "paper_doc_004",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_5",
+        "target": "paper_doc_005",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_6",
+        "target": "paper_doc_006",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_7",
+        "target": "paper_doc_007",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_8",
+        "target": "paper_doc_008",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_9",
+        "target": "paper_doc_009",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_10",
+        "target": "paper_doc_010",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_11",
+        "target": "paper_doc_011",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_12",
+        "target": "paper_doc_012",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_13",
+        "target": "paper_doc_013",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_14",
+        "target": "paper_doc_014",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_15",
+        "target": "paper_doc_015",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_16",
+        "target": "paper_doc_016",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_17",
+        "target": "paper_doc_017",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_18",
+        "target": "paper_doc_018",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_19",
+        "target": "paper_doc_019",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_20",
+        "target": "paper_doc_020",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_21",
+        "target": "paper_doc_021",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_22",
+        "target": "paper_doc_022",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_23",
+        "target": "paper_doc_023",
+        "label": "evaluates"
+      },
+      {
+        "source": "ent_m_24",
+        "target": "paper_doc_024",
+        "label": "evaluates"
+      }
+    ]
+  },
+  "queries": [
+    {
+      "query_id": "q_lex_00",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX100 MTR200",
+      "relevant_chunk_ids": [
+        "doc_000_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_000"
+      ]
+    },
+    {
+      "query_id": "q_sem_00",
+      "stratum": "semantic_paraphrase",
+      "query": "automated starlight spectral dispersion alignment workflow",
+      "relevant_chunk_ids": [
+        "doc_000_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_000"
+      ]
+    },
+    {
+      "query_id": "q_kg_00",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode0 advance scholarly retrieval-augmented generation and hybrid vector indexing?",
+      "relevant_chunk_ids": [
+        "doc_000_0",
+        "doc_000_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_000"
+      ]
+    },
+    {
+      "query_id": "q_lex_01",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX101 MTR201",
+      "relevant_chunk_ids": [
+        "doc_001_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_001"
+      ]
+    },
+    {
+      "query_id": "q_sem_01",
+      "stratum": "semantic_paraphrase",
+      "query": "ultrasonic heart chamber contraction motion estimation",
+      "relevant_chunk_ids": [
+        "doc_001_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_001"
+      ]
+    },
+    {
+      "query_id": "q_kg_01",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode1 advance stateful multi-agent academic planning and claim verification?",
+      "relevant_chunk_ids": [
+        "doc_001_0",
+        "doc_001_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_001"
+      ]
+    },
+    {
+      "query_id": "q_lex_02",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX102 MTR202",
+      "relevant_chunk_ids": [
+        "doc_002_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_002"
+      ]
+    },
+    {
+      "query_id": "q_sem_02",
+      "stratum": "semantic_paraphrase",
+      "query": "halide crystalline light-harvesting module aging resilience",
+      "relevant_chunk_ids": [
+        "doc_002_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_002"
+      ]
+    },
+    {
+      "query_id": "q_kg_02",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode2 advance structural PDF parsing, LaTeX typesetting, and plagiarism detection?",
+      "relevant_chunk_ids": [
+        "doc_002_0",
+        "doc_002_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_002"
+      ]
+    },
+    {
+      "query_id": "q_lex_03",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX103 MTR203",
+      "relevant_chunk_ids": [
+        "doc_003_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_003"
+      ]
+    },
+    {
+      "query_id": "q_sem_03",
+      "stratum": "semantic_paraphrase",
+      "query": "subsurface crustal tremor onset detection algorithm",
+      "relevant_chunk_ids": [
+        "doc_003_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_003"
+      ]
+    },
+    {
+      "query_id": "q_kg_03",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode3 advance scholarly retrieval-augmented generation and hybrid vector indexing?",
+      "relevant_chunk_ids": [
+        "doc_003_0",
+        "doc_003_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_003"
+      ]
+    },
+    {
+      "query_id": "q_lex_04",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX104 MTR204",
+      "relevant_chunk_ids": [
+        "doc_004_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_004"
+      ]
+    },
+    {
+      "query_id": "q_sem_04",
+      "stratum": "semantic_paraphrase",
+      "query": "deep seawater density stratification autonomous sensor network",
+      "relevant_chunk_ids": [
+        "doc_004_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_004"
+      ]
+    },
+    {
+      "query_id": "q_kg_04",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode4 advance stateful multi-agent academic planning and claim verification?",
+      "relevant_chunk_ids": [
+        "doc_004_0",
+        "doc_004_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_004"
+      ]
+    },
+    {
+      "query_id": "q_lex_05",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX105 MTR205",
+      "relevant_chunk_ids": [
+        "doc_005_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_005"
+      ]
+    },
+    {
+      "query_id": "q_sem_05",
+      "stratum": "semantic_paraphrase",
+      "query": "unstructured amino acid chain conformational flexibility",
+      "relevant_chunk_ids": [
+        "doc_005_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_005"
+      ]
+    },
+    {
+      "query_id": "q_kg_05",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode5 advance structural PDF parsing, LaTeX typesetting, and plagiarism detection?",
+      "relevant_chunk_ids": [
+        "doc_005_0",
+        "doc_005_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_005"
+      ]
+    },
+    {
+      "query_id": "q_lex_06",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX106 MTR206",
+      "relevant_chunk_ids": [
+        "doc_006_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_006"
+      ]
+    },
+    {
+      "query_id": "q_sem_06",
+      "stratum": "semantic_paraphrase",
+      "query": "low-level instruction optimization hardware slot allocation",
+      "relevant_chunk_ids": [
+        "doc_006_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_006"
+      ]
+    },
+    {
+      "query_id": "q_kg_06",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode6 advance scholarly retrieval-augmented generation and hybrid vector indexing?",
+      "relevant_chunk_ids": [
+        "doc_006_0",
+        "doc_006_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_006"
+      ]
+    },
+    {
+      "query_id": "q_lex_07",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX107 MTR207",
+      "relevant_chunk_ids": [
+        "doc_007_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_007"
+      ]
+    },
+    {
+      "query_id": "q_sem_07",
+      "stratum": "semantic_paraphrase",
+      "query": "decentralized clinical training statistical noise bound",
+      "relevant_chunk_ids": [
+        "doc_007_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_007"
+      ]
+    },
+    {
+      "query_id": "q_kg_07",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode7 advance stateful multi-agent academic planning and claim verification?",
+      "relevant_chunk_ids": [
+        "doc_007_0",
+        "doc_007_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_007"
+      ]
+    },
+    {
+      "query_id": "q_lex_08",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX108 MTR208",
+      "relevant_chunk_ids": [
+        "doc_008_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_008"
+      ]
+    },
+    {
+      "query_id": "q_sem_08",
+      "stratum": "semantic_paraphrase",
+      "query": "laser depth scan urban walker trajectory prediction",
+      "relevant_chunk_ids": [
+        "doc_008_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_008"
+      ]
+    },
+    {
+      "query_id": "q_kg_08",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode8 advance structural PDF parsing, LaTeX typesetting, and plagiarism detection?",
+      "relevant_chunk_ids": [
+        "doc_008_0",
+        "doc_008_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_008"
+      ]
+    },
+    {
+      "query_id": "q_lex_09",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX109 MTR209",
+      "relevant_chunk_ids": [
+        "doc_009_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_009"
+      ]
+    },
+    {
+      "query_id": "q_sem_09",
+      "stratum": "semantic_paraphrase",
+      "query": "rechargeable energy storage electrode dissolution mitigation",
+      "relevant_chunk_ids": [
+        "doc_009_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_009"
+      ]
+    },
+    {
+      "query_id": "q_kg_09",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode9 advance scholarly retrieval-augmented generation and hybrid vector indexing?",
+      "relevant_chunk_ids": [
+        "doc_009_0",
+        "doc_009_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_009"
+      ]
+    },
+    {
+      "query_id": "q_lex_10",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX110 MTR210",
+      "relevant_chunk_ids": [
+        "doc_010_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_010"
+      ]
+    },
+    {
+      "query_id": "q_sem_10",
+      "stratum": "semantic_paraphrase",
+      "query": "ice sheet bedrock lubrication meltwater drainage model",
+      "relevant_chunk_ids": [
+        "doc_010_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_010"
+      ]
+    },
+    {
+      "query_id": "q_kg_10",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode10 advance stateful multi-agent academic planning and claim verification?",
+      "relevant_chunk_ids": [
+        "doc_010_0",
+        "doc_010_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_010"
+      ]
+    },
+    {
+      "query_id": "q_lex_11",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX111 MTR211",
+      "relevant_chunk_ids": [
+        "doc_011_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_011"
+      ]
+    },
+    {
+      "query_id": "q_sem_11",
+      "stratum": "semantic_paraphrase",
+      "query": "engineered sound wave redirection cavity array",
+      "relevant_chunk_ids": [
+        "doc_011_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_011"
+      ]
+    },
+    {
+      "query_id": "q_kg_11",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode11 advance structural PDF parsing, LaTeX typesetting, and plagiarism detection?",
+      "relevant_chunk_ids": [
+        "doc_011_0",
+        "doc_011_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_011"
+      ]
+    },
+    {
+      "query_id": "q_lex_12",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX112 MTR212",
+      "relevant_chunk_ids": [
+        "doc_012_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_012"
+      ]
+    },
+    {
+      "query_id": "q_sem_12",
+      "stratum": "semantic_paraphrase",
+      "query": "cropland moisture loss orbital infrared monitoring",
+      "relevant_chunk_ids": [
+        "doc_012_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_012"
+      ]
+    },
+    {
+      "query_id": "q_kg_12",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode12 advance scholarly retrieval-augmented generation and hybrid vector indexing?",
+      "relevant_chunk_ids": [
+        "doc_012_0",
+        "doc_012_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_012"
+      ]
+    },
+    {
+      "query_id": "q_lex_13",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX113 MTR213",
+      "relevant_chunk_ids": [
+        "doc_013_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_013"
+      ]
+    },
+    {
+      "query_id": "q_sem_13",
+      "stratum": "semantic_paraphrase",
+      "query": "fault tolerant qubit parity check measurement",
+      "relevant_chunk_ids": [
+        "doc_013_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_013"
+      ]
+    },
+    {
+      "query_id": "q_kg_13",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode13 advance stateful multi-agent academic planning and claim verification?",
+      "relevant_chunk_ids": [
+        "doc_013_0",
+        "doc_013_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_013"
+      ]
+    },
+    {
+      "query_id": "q_lex_14",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX114 MTR214",
+      "relevant_chunk_ids": [
+        "doc_014_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_014"
+      ]
+    },
+    {
+      "query_id": "q_sem_14",
+      "stratum": "semantic_paraphrase",
+      "query": "pressurized conduit rupture soundwave triangulation",
+      "relevant_chunk_ids": [
+        "doc_014_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_014"
+      ]
+    },
+    {
+      "query_id": "q_kg_14",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode14 advance structural PDF parsing, LaTeX typesetting, and plagiarism detection?",
+      "relevant_chunk_ids": [
+        "doc_014_0",
+        "doc_014_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_014"
+      ]
+    },
+    {
+      "query_id": "q_lex_15",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX115 MTR215",
+      "relevant_chunk_ids": [
+        "doc_015_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_015"
+      ]
+    },
+    {
+      "query_id": "q_sem_15",
+      "stratum": "semantic_paraphrase",
+      "query": "microscopic tissue biopsy cell division identification",
+      "relevant_chunk_ids": [
+        "doc_015_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_015"
+      ]
+    },
+    {
+      "query_id": "q_kg_15",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode15 advance scholarly retrieval-augmented generation and hybrid vector indexing?",
+      "relevant_chunk_ids": [
+        "doc_015_0",
+        "doc_015_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_015"
+      ]
+    },
+    {
+      "query_id": "q_lex_16",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX116 MTR216",
+      "relevant_chunk_ids": [
+        "doc_016_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_016"
+      ]
+    },
+    {
+      "query_id": "q_sem_16",
+      "stratum": "semantic_paraphrase",
+      "query": "rotary energy airfoil vibration suppression control",
+      "relevant_chunk_ids": [
+        "doc_016_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_016"
+      ]
+    },
+    {
+      "query_id": "q_kg_16",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode16 advance stateful multi-agent academic planning and claim verification?",
+      "relevant_chunk_ids": [
+        "doc_016_0",
+        "doc_016_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_016"
+      ]
+    },
+    {
+      "query_id": "q_lex_17",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX117 MTR217",
+      "relevant_chunk_ids": [
+        "doc_017_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_017"
+      ]
+    },
+    {
+      "query_id": "q_sem_17",
+      "stratum": "semantic_paraphrase",
+      "query": "ancient vellum hidden script optical wavelength imaging",
+      "relevant_chunk_ids": [
+        "doc_017_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_017"
+      ]
+    },
+    {
+      "query_id": "q_kg_17",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode17 advance structural PDF parsing, LaTeX typesetting, and plagiarism detection?",
+      "relevant_chunk_ids": [
+        "doc_017_0",
+        "doc_017_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_017"
+      ]
+    },
+    {
+      "query_id": "q_lex_18",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX118 MTR218",
+      "relevant_chunk_ids": [
+        "doc_018_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_018"
+      ]
+    },
+    {
+      "query_id": "q_sem_18",
+      "stratum": "semantic_paraphrase",
+      "query": "microchip patterning short wavelength photosensitive film",
+      "relevant_chunk_ids": [
+        "doc_018_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_018"
+      ]
+    },
+    {
+      "query_id": "q_kg_18",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode18 advance scholarly retrieval-augmented generation and hybrid vector indexing?",
+      "relevant_chunk_ids": [
+        "doc_018_0",
+        "doc_018_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_018"
+      ]
+    },
+    {
+      "query_id": "q_lex_19",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX119 MTR219",
+      "relevant_chunk_ids": [
+        "doc_019_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_019"
+      ]
+    },
+    {
+      "query_id": "q_sem_19",
+      "stratum": "semantic_paraphrase",
+      "query": "city intersection timing congestion overflow prevention",
+      "relevant_chunk_ids": [
+        "doc_019_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_019"
+      ]
+    },
+    {
+      "query_id": "q_kg_19",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode19 advance stateful multi-agent academic planning and claim verification?",
+      "relevant_chunk_ids": [
+        "doc_019_0",
+        "doc_019_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_019"
+      ]
+    },
+    {
+      "query_id": "q_lex_20",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX120 MTR220",
+      "relevant_chunk_ids": [
+        "doc_020_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_020"
+      ]
+    },
+    {
+      "query_id": "q_sem_20",
+      "stratum": "semantic_paraphrase",
+      "query": "marine warming algal loss calcification decline",
+      "relevant_chunk_ids": [
+        "doc_020_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_020"
+      ]
+    },
+    {
+      "query_id": "q_kg_20",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode20 advance structural PDF parsing, LaTeX typesetting, and plagiarism detection?",
+      "relevant_chunk_ids": [
+        "doc_020_0",
+        "doc_020_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_020"
+      ]
+    },
+    {
+      "query_id": "q_lex_21",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX121 MTR221",
+      "relevant_chunk_ids": [
+        "doc_021_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_021"
+      ]
+    },
+    {
+      "query_id": "q_sem_21",
+      "stratum": "semantic_paraphrase",
+      "query": "room echo suppression dual ear directional filtering",
+      "relevant_chunk_ids": [
+        "doc_021_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_021"
+      ]
+    },
+    {
+      "query_id": "q_kg_21",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode21 advance scholarly retrieval-augmented generation and hybrid vector indexing?",
+      "relevant_chunk_ids": [
+        "doc_021_0",
+        "doc_021_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_021"
+      ]
+    },
+    {
+      "query_id": "q_lex_22",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX122 MTR222",
+      "relevant_chunk_ids": [
+        "doc_022_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_022"
+      ]
+    },
+    {
+      "query_id": "q_sem_22",
+      "stratum": "semantic_paraphrase",
+      "query": "cryptographic verifiable computation compact proof constraint",
+      "relevant_chunk_ids": [
+        "doc_022_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_022"
+      ]
+    },
+    {
+      "query_id": "q_kg_22",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode22 advance stateful multi-agent academic planning and claim verification?",
+      "relevant_chunk_ids": [
+        "doc_022_0",
+        "doc_022_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_022"
+      ]
+    },
+    {
+      "query_id": "q_lex_23",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX123 MTR223",
+      "relevant_chunk_ids": [
+        "doc_023_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_023"
+      ]
+    },
+    {
+      "query_id": "q_sem_23",
+      "stratum": "semantic_paraphrase",
+      "query": "suspension span structural oscillation frequency analysis",
+      "relevant_chunk_ids": [
+        "doc_023_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_023"
+      ]
+    },
+    {
+      "query_id": "q_kg_23",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode23 advance structural PDF parsing, LaTeX typesetting, and plagiarism detection?",
+      "relevant_chunk_ids": [
+        "doc_023_0",
+        "doc_023_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_023"
+      ]
+    },
+    {
+      "query_id": "q_lex_24",
+      "stratum": "lexical_identifier",
+      "query": "hybrid vector indexing telemetry RGX124 MTR224",
+      "relevant_chunk_ids": [
+        "doc_024_1"
+      ],
+      "relevant_paper_ids": [
+        "doc_024"
+      ]
+    },
+    {
+      "query_id": "q_sem_24",
+      "stratum": "semantic_paraphrase",
+      "query": "microbial drug immunity mobile DNA exchange",
+      "relevant_chunk_ids": [
+        "doc_024_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_024"
+      ]
+    },
+    {
+      "query_id": "q_kg_24",
+      "stratum": "multihop_kg",
+      "query": "How does MethodNode24 advance scholarly retrieval-augmented generation and hybrid vector indexing?",
+      "relevant_chunk_ids": [
+        "doc_024_0",
+        "doc_024_2"
+      ],
+      "relevant_paper_ids": [
+        "doc_024"
+      ]
+    }
+  ]
+}

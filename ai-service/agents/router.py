@@ -136,7 +136,7 @@ def _call_with_retry(call_fn, max_retries: int = 3, base_delay: float = 5.0):
 
 
 def call_model(agent_role: str, system_prompt: str, user_prompt: str) -> str:
-    model = MODEL_REGISTRY.get(agent_role, "gemini-3.6-flash")
+    model = MODEL_REGISTRY.get(agent_role, "gemini-2.5-flash")
     temp = AGENT_TEMPERATURES.get(agent_role, 0.3)
     
     # Writer gets extra tokens for long content
@@ -390,7 +390,7 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str) -> str:
         try:
             # Fallback 1: Gemini 2.5 Flash - large context, free tier, ideal for writing
             gemini_fb_tokens = 65536 if is_writer else 8192
-            return call_gemini_direct(os.getenv("GEMINI_MODEL", "gemini-3.6-flash"), temp, system_prompt, user_prompt, max_output_tokens=gemini_fb_tokens)
+            return call_gemini_direct(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"), temp, system_prompt, user_prompt, max_output_tokens=gemini_fb_tokens)
         except Exception as gemini_err:
             print(f"[Fallback Fail] Gemini fallback failed: {gemini_err}. Trying Groq fallback...")
             try:
@@ -1954,26 +1954,35 @@ def writer_node(state: AgentWorkflowState) -> AgentWorkflowState:
 
 # Agent 13: QA Node
 def qa_node(state: AgentWorkflowState) -> AgentWorkflowState:
-    report_progress(state["run_id"], "Writing Agent", "running", logs="QA Agent: Validating completeness and final quality check...")
-    
-    qa_result = generate_fallback_data("qa", state["project_id"], state["query"])
-    
+    report_progress(state["run_id"], "Writing Agent", "running", logs="QA Agent: Auditing section completeness, citations, and post-draft claim grounding...")
+
+    from agents.verification.claim_verifier import verify_section_claims
+    qa_summary = verify_section_claims(
+        sections=state.get("paper_sections", []),
+        context_chunks=state.get("research_context", []),
+        citations=state.get("citations", []),
+    )
+
     state["final_output"] = {
         "title": f"Optimizing Research: {state['query']}",
         "sections": state["paper_sections"],
         "citations": state["citations"],
         "research_gaps": state["research_gaps"],
         "fact_checks": state["fact_checks"],
-        "literature_reviews": state.get("literature_reviews", [])
+        "literature_reviews": state.get("literature_reviews", []),
+        "qa_summary": qa_summary,
     }
-    state["logs"].append("QA Agent approved final returns.")
-    
+    state["logs"].append(
+        f"QA Agent audited {qa_summary['section_count']} sections, {qa_summary['total_claims']} claims "
+        f"(support_rate={qa_summary['support_rate']}, citation_validity={qa_summary['citation_validity_rate']})."
+    )
+
     # Finalize Agent Run Status
     report_progress(
         state["run_id"],
         "Writing Agent",
         "completed",
-        logs="Academic draft assembled successfully with QA validation.",
+        logs="Academic draft assembled and audited with post-draft QA verification.",
         overall_status="completed",
         result=state["final_output"]
     )
