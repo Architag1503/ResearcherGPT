@@ -6,7 +6,7 @@ import FactCheck from '../models/FactCheck.js';
 import GeneratedPaper from '../models/GeneratedPaper.js';
 import Paper from '../models/Paper.js';
 import Citation from '../models/Citation.js';
-import { getUserApiKeys, isPrimaryOwner } from '../utils/userKeys.js';
+import { getUserApiKeys, isPrimaryOwner, hasAllRequiredUserKeys } from '../utils/userKeys.js';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
@@ -22,12 +22,12 @@ export const triggerAgentRun = async (req: Request, res: Response) => {
     const userKeys = await getUserApiKeys(userId, req);
     const isOwner = isPrimaryOwner((req as any).user);
 
-    // Protect developer quota: require external users to provide their own Groq or Gemini key
-    if (!isOwner && !userKeys.groq && !userKeys.gemini) {
+    // Protect developer quota: require external users to provide BOTH their own Groq and Gemini keys
+    if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
       return res.status(402).json({
         error: 'API_KEY_REQUIRED',
-        provider: 'groq',
-        message: 'Your personal Groq or Gemini API key is required to run autonomous agents. Please configure your key in LLM API Keys.',
+        provider: !userKeys.groq ? 'groq' : 'gemini',
+        message: 'Your personal Groq and Google Gemini API keys are required to run autonomous agents. Please configure your keys before proceeding.',
       });
     }
 

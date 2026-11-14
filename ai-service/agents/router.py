@@ -60,10 +60,10 @@ AGENT_TEMPERATURES = {
     "quality_assurance": 0.1
 }
 
-def call_gemini_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_output_tokens: int = 8192, api_key: Optional[str] = None) -> str:
-    gemini_key = api_key or os.getenv("GEMINI_API_KEY")
+def call_gemini_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_output_tokens: int = 8192, api_key: Optional[str] = None, is_owner: bool = False) -> str:
+    gemini_key = api_key or (os.getenv("GEMINI_API_KEY") if is_owner else None)
     if not gemini_key or "your_gemini_api_key" in gemini_key:
-        raise ValueError("GEMINI_API_KEY is not configured.")
+        raise ValueError("TOKEN_LIMIT_EXCEEDED:GEMINI: Personal Google Gemini API key is required. Every user must configure their own API key.")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
     headers = {"Content-Type": "application/json"}
     data = {
@@ -95,10 +95,10 @@ def call_gemini_direct(model_name: str, temp: float, system_prompt: str, user_pr
 
     return _call_with_retry(_do_gemini_call, max_retries=2, base_delay=4.0)
 
-def call_openai_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_tokens: int = 8192, api_key: Optional[str] = None) -> str:
-    openai_key = api_key or os.getenv("OPENAI_API_KEY")
+def call_openai_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_tokens: int = 8192, api_key: Optional[str] = None, is_owner: bool = False) -> str:
+    openai_key = api_key or (os.getenv("OPENAI_API_KEY") if is_owner else None)
     if not openai_key or "your_openai_api_key" in openai_key:
-        raise ValueError("OPENAI_API_KEY is not configured.")
+        raise ValueError("TOKEN_LIMIT_EXCEEDED:OPENAI: Personal OpenAI API key is required. Every user must configure their own API key.")
     url = "https://api.openai.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"}
     data = {
@@ -146,11 +146,14 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str, user_api_k
     # Writer gets extra tokens for long content
     is_writer = agent_role in ("writer", "literature_review", "reviewer")
 
+    # Determine if request is from the primary developer/owner
+    is_owner = bool(user_api_keys and (user_api_keys.get("is_owner") is True or user_api_keys.get("isOwner") is True))
+
     # Extract user custom keys if supplied
-    user_groq = (user_api_keys.get("groq") or user_api_keys.get("GROQ_API_KEY")) if user_api_keys else None
-    user_gemini = (user_api_keys.get("gemini") or user_api_keys.get("GEMINI_API_KEY")) if user_api_keys else None
-    user_openai = (user_api_keys.get("openai") or user_api_keys.get("OPENAI_API_KEY")) if user_api_keys else None
-    user_anthropic = (user_api_keys.get("anthropic") or user_api_keys.get("ANTHROPIC_API_KEY")) if user_api_keys else None
+    user_groq = (user_api_keys.get("groq") or user_api_keys.get("groqApiKey") or user_api_keys.get("GROQ_API_KEY")) if user_api_keys else None
+    user_gemini = (user_api_keys.get("gemini") or user_api_keys.get("geminiApiKey") or user_api_keys.get("GEMINI_API_KEY")) if user_api_keys else None
+    user_openai = (user_api_keys.get("openai") or user_api_keys.get("openaiApiKey") or user_api_keys.get("OPENAI_API_KEY")) if user_api_keys else None
+    user_anthropic = (user_api_keys.get("anthropic") or user_api_keys.get("anthropicApiKey") or user_api_keys.get("ANTHROPIC_API_KEY")) if user_api_keys else None
     
     # Parse provider
     provider = None
@@ -162,9 +165,9 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str, user_api_k
         
     try:
         if provider == "groq":
-            groq_key = user_groq or os.getenv("GROQ_API_KEY")
+            groq_key = user_groq or (os.getenv("GROQ_API_KEY") if is_owner else None)
             if not groq_key or "your_groq_api_key" in groq_key:
-                raise ValueError("GROQ_API_KEY is not configured.")
+                raise ValueError("TOKEN_LIMIT_EXCEEDED:GROQ: Personal Groq API key is required. Every user must provide their own Groq API key.")
             url = "https://api.groq.com/openai/v1/chat/completions"
             headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
             data = {
@@ -366,16 +369,16 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str, user_api_k
         elif model.startswith("gemini-"):
             # For writer roles use maximum output tokens (65536 for Gemini 2.5 Flash)
             gemini_max_tokens = 65536 if is_writer else 8192
-            return call_gemini_direct(model, temp, system_prompt, user_prompt, max_output_tokens=gemini_max_tokens, api_key=user_gemini)
+            return call_gemini_direct(model, temp, system_prompt, user_prompt, max_output_tokens=gemini_max_tokens, api_key=user_gemini, is_owner=is_owner)
             
         elif model.startswith("gpt-") or model.startswith("o1-"):
             openai_max_tokens = 16384 if is_writer else 4096
-            return call_openai_direct(model, temp, system_prompt, user_prompt, max_tokens=openai_max_tokens, api_key=user_openai)
+            return call_openai_direct(model, temp, system_prompt, user_prompt, max_tokens=openai_max_tokens, api_key=user_openai, is_owner=is_owner)
             
         elif model.startswith("claude-"):
-            anthropic_key = user_anthropic or os.getenv("ANTHROPIC_API_KEY")
+            anthropic_key = user_anthropic or (os.getenv("ANTHROPIC_API_KEY") if is_owner else None)
             if not anthropic_key or "your_anthropic_api_key" in anthropic_key:
-                raise ValueError("ANTHROPIC_API_KEY is not configured.")
+                raise ValueError("TOKEN_LIMIT_EXCEEDED:ANTHROPIC: Personal Anthropic API key is required. Every user must provide their own key.")
             url = "https://api.anthropic.com/v1/messages"
             headers = {
                 "x-api-key": anthropic_key,
@@ -402,19 +405,25 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str, user_api_k
     except Exception as e:
         if "TOKEN_LIMIT_EXCEEDED" in str(e):
             raise e
+        # Protect developer quota: external users NEVER fall back to server-side keys
+        if not is_owner and not user_gemini:
+            raise e
         print(f"[Fallback] Provider '{provider or 'default'}' for role '{agent_role}' failed: {e}. Trying Gemini fallback...")
         try:
-            # Fallback 1: Gemini 2.5 Flash - large context, free tier, ideal for writing
+            # Fallback 1: Gemini 2.5 Flash
             gemini_fb_tokens = 65536 if is_writer else 8192
-            return call_gemini_direct(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"), temp, system_prompt, user_prompt, max_output_tokens=gemini_fb_tokens, api_key=user_gemini)
+            return call_gemini_direct(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"), temp, system_prompt, user_prompt, max_output_tokens=gemini_fb_tokens, api_key=user_gemini, is_owner=is_owner)
         except Exception as gemini_err:
             if "TOKEN_LIMIT_EXCEEDED" in str(gemini_err):
                 raise gemini_err
+            # If not owner and no Groq key, abort to prevent hitting server tokens
+            if not is_owner and not user_groq:
+                raise gemini_err
             print(f"[Fallback Fail] Gemini fallback failed: {gemini_err}. Trying Groq fallback...")
             try:
-                groq_key = user_groq or os.getenv("GROQ_API_KEY")
+                groq_key = user_groq or (os.getenv("GROQ_API_KEY") if is_owner else None)
                 if not groq_key or "your_groq_api_key" in groq_key:
-                    raise ValueError("GROQ_API_KEY is not configured.")
+                    raise ValueError("GROQ_API_KEY is not configured for user.")
                 url = "https://api.groq.com/openai/v1/chat/completions"
                 headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
                 data = {
@@ -438,6 +447,8 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str, user_api_k
                 return _call_with_retry(_do_groq_fb, max_retries=2, base_delay=8.0)
             except Exception as groq_err:
                 if "TOKEN_LIMIT_EXCEEDED" in str(groq_err):
+                    raise groq_err
+                if not is_owner:
                     raise groq_err
                 print(f"[Fallback Fail] Groq fallback failed: {groq_err}. Trying SambaNova fallback...")
                 try:
@@ -464,7 +475,7 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str, user_api_k
                 except Exception as samba_err:
                     print(f"[Fallback Fail] SambaNova fallback failed: {samba_err}. Trying OpenAI fallback...")
                     try:
-                        return call_openai_direct("gpt-4o-mini", temp, system_prompt, user_prompt, api_key=user_openai)
+                        return call_openai_direct("gpt-4o-mini", temp, system_prompt, user_prompt, api_key=user_openai, is_owner=is_owner)
                     except Exception as openai_err:
                         print(f"[Fallback Fail] All API fallbacks exhausted for role '{agent_role}': {openai_err}")
                         raise openai_err

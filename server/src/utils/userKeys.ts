@@ -6,7 +6,26 @@ export interface ExtractedUserKeys {
   gemini?: string;
   openai?: string;
   anthropic?: string;
+  is_owner?: boolean;
 }
+
+export const isPrimaryOwner = (user?: { id?: string; email?: string }): boolean => {
+  if (!user) return false;
+  const email = (user.email || '').toLowerCase();
+  const id = user.id || '';
+  return (
+    email.includes('archit') ||
+    id === '666a7b29d5b51a0211a7c501' ||
+    id === 'mock_user_id'
+  );
+};
+
+export const hasAllRequiredUserKeys = (keys: ExtractedUserKeys): boolean => {
+  return Boolean(
+    keys.groq && keys.groq.trim().length > 5 &&
+    keys.gemini && keys.gemini.trim().length > 5
+  );
+};
 
 export const getUserApiKeys = async (
   userId: string,
@@ -39,16 +58,8 @@ export const getUserApiKeys = async (
     }
   }
 
-  return keys;
-};
+  const isOwner = isPrimaryOwner((req as any).user);
+  keys.is_owner = isOwner;
 
-export const isPrimaryOwner = (user?: { id?: string; email?: string }): boolean => {
-  if (!user) return false;
-  const email = (user.email || '').toLowerCase();
-  const id = user.id || '';
-  return (
-    email.includes('archit') ||
-    id === '666a7b29d5b51a0211a7c501' ||
-    id === 'mock_user_id'
-  );
+  return keys;
 };

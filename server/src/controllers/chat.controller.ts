@@ -3,7 +3,7 @@ import axios from 'axios';
 import ChatSession from '../models/ChatSession.js';
 import Message from '../models/Message.js';
 import Paper from '../models/Paper.js';
-import { getUserApiKeys, isPrimaryOwner } from '../utils/userKeys.js';
+import { getUserApiKeys, isPrimaryOwner, hasAllRequiredUserKeys } from '../utils/userKeys.js';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
@@ -56,11 +56,11 @@ export const sendMessage = async (req: Request, res: Response) => {
   const isOwner = isPrimaryOwner((req as any).user);
   const userKeys = await getUserApiKeys(userId, req);
 
-  if (!isOwner && !userKeys.groq && !userKeys.gemini) {
+  if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
     return res.status(402).json({
       error: 'API_KEY_REQUIRED',
-      provider: 'groq',
-      message: 'Your personal Groq or Gemini API key is required to use AI Chat. Please configure your key in LLM API Keys.',
+      provider: !userKeys.groq ? 'groq' : 'gemini',
+      message: 'Your personal Groq and Google Gemini API keys are required to use AI Chat. Please configure your keys before proceeding.',
     });
   }
 

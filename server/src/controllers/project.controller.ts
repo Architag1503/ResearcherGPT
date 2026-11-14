@@ -18,7 +18,7 @@ import { bullConfig } from '../config/redis.js';
 import axios from 'axios';
 import { FormaTeXService } from '../services/formatex.service.js';
 import { PaperValidationService } from '../services/paperValidation.service.js';
-import { getUserApiKeys, isPrimaryOwner } from '../utils/userKeys.js';
+import { getUserApiKeys, isPrimaryOwner, hasAllRequiredUserKeys } from '../utils/userKeys.js';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
@@ -39,11 +39,24 @@ export const createProject = async (req: Request, res: Response) => {
     const { name, description } = req.body;
     // In production, req.user will be populated by auth middleware
     const userId = (req as any).user?.id || 'mock_user_id';
+    const isOwner = isPrimaryOwner((req as any).user);
+    const userKeys = await getUserApiKeys(userId, req);
+
+    // Enforce that external users must have configured all required LLM API keys before creating a project
+    if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
+      return res.status(402).json({
+        error: 'API_KEY_REQUIRED',
+        message: 'You must configure your LLM API keys (Groq & Google Gemini) before creating a research project.',
+      });
+    }
 
     let finalDescription = description;
     if (!finalDescription || !finalDescription.trim()) {
       try {
-        const aiRes = await axios.post(`${AI_SERVICE_URL}/api/project/generate-description`, { name });
+        const aiRes = await axios.post(`${AI_SERVICE_URL}/api/project/generate-description`, {
+          name,
+          user_api_keys: userKeys,
+        });
         if (aiRes.data && aiRes.data.success) {
           finalDescription = aiRes.data.description;
         }
@@ -177,6 +190,15 @@ export const generateAIGaps = async (req: Request, res: Response) => {
     }
 
     const userKeys = await getUserApiKeys(userId, req);
+    const isOwner = isPrimaryOwner((req as any).user);
+
+    if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
+      return res.status(402).json({
+        error: 'API_KEY_REQUIRED',
+        message: 'You must configure your LLM API keys (Groq & Google Gemini) before generating AI gaps.',
+      });
+    }
+
     const aiRes = await axios.post(`${AI_SERVICE_URL}/api/project/generate-gaps`, {
       name: project.name,
       description: project.description || '',
@@ -434,6 +456,15 @@ export const generateAIDescription = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Project name is required' });
     }
     const userKeys = await getUserApiKeys(userId, req);
+    const isOwner = isPrimaryOwner((req as any).user);
+
+    if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
+      return res.status(402).json({
+        error: 'API_KEY_REQUIRED',
+        message: 'You must configure your LLM API keys (Groq & Google Gemini) before using AI description generation.',
+      });
+    }
+
     const aiRes = await axios.post(`${AI_SERVICE_URL}/api/project/generate-description`, {
       name,
       user_api_keys: userKeys,

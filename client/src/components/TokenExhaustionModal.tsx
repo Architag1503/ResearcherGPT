@@ -117,13 +117,15 @@ export default function TokenExhaustionModal() {
               </div>
               <div>
                 <h3 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                  <span>API Quota Depleted</span>
+                  <span>{providerName === 'API Key Required' ? 'API Key Configuration Required' : 'API Quota Depleted'}</span>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono font-medium">
                     {providerName}
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                  The API tokens for <strong className="text-zinc-200">{providerName}</strong> were exhausted or rate limited during your operation. Enter a new key below to continue without losing your workspace state.
+                  {providerName === 'API Key Required'
+                    ? 'To run autonomous academic pipelines, please configure your personal LLM API keys below.'
+                    : <>The API tokens for <strong className="text-zinc-200">{providerName}</strong> were exhausted or rate limited during your operation. Enter a new key below to continue without losing your workspace state.</>}
                 </p>
               </div>
             </div>

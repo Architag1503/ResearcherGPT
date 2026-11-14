@@ -8,6 +8,14 @@ export interface UserApiKeys {
   anthropicApiKey?: string;
 }
 
+export const hasRequiredApiKeys = (keys?: UserApiKeys | null): boolean => {
+  if (!keys) return false;
+  return Boolean(
+    keys.groqApiKey && keys.groqApiKey.trim().length > 5 &&
+    keys.geminiApiKey && keys.geminiApiKey.trim().length > 5
+  );
+};
+
 const STORAGE_KEY = 'researchergpt_user_api_keys';
 
 export const getLocalApiKeys = (): UserApiKeys => {

@@ -9,7 +9,8 @@ import { useAuth, UserButton } from '@clerk/nextjs';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { FolderPlus, RefreshCw, ChevronRight, Plus, FileText, BookOpen, Layers, Cpu, BookMarked, Pencil, Trash2, Key } from 'lucide-react';
 import { getApiUrl } from '../../utils/apiUrl';
-import { fetchRemoteApiKeys } from '../../utils/apiKeys';
+import { fetchRemoteApiKeys, getLocalApiKeys, hasRequiredApiKeys } from '../../utils/apiKeys';
+import ApiKeyRequiredModal from '../../components/ApiKeyRequiredModal';
 
 const API_URL = getApiUrl();
 
@@ -50,6 +51,7 @@ export default function Dashboard() {
   const [generationError, setGenerationError] = useState('');
   const [hasConfiguredKeys, setHasConfiguredKeys] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
+  const [showApiKeyRequiredModal, setShowApiKeyRequiredModal] = useState(false);
 
   // Edit Project States
   const [showEditModal, setShowEditModal] = useState(false);
@@ -145,16 +147,40 @@ export default function Dashboard() {
         .then((data) => {
           if (data) {
             setIsOwner(Boolean(data.isOwner));
-            setHasConfiguredKeys(Boolean(data.hasConfiguredKeys || data.isOwner));
+            const local = getLocalApiKeys();
+            const hasLocal = hasRequiredApiKeys(local);
+            const hasRemote = Boolean(data.hasConfiguredKeys);
+            setHasConfiguredKeys(Boolean(data.isOwner || hasLocal || hasRemote));
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          const local = getLocalApiKeys();
+          setHasConfiguredKeys(hasRequiredApiKeys(local));
+        });
     }
   }, [isLoaded, userId]);
+
+  const handleOpenNewProject = () => {
+    const local = getLocalApiKeys();
+    const hasKeys = isOwner || hasConfiguredKeys || hasRequiredApiKeys(local);
+    if (!hasKeys) {
+      setShowApiKeyRequiredModal(true);
+      return;
+    }
+    setShowModal(true);
+  };
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProjectName.trim()) return;
+
+    const local = getLocalApiKeys();
+    const hasKeys = isOwner || hasConfiguredKeys || hasRequiredApiKeys(local);
+    if (!hasKeys) {
+      setShowModal(false);
+      setShowApiKeyRequiredModal(true);
+      return;
+    }
 
     try {
       const res = await axios.post(`${API_URL}/api/projects`, {
@@ -168,7 +194,12 @@ export default function Dashboard() {
       setNewProjectName('');
       setNewProjectDesc('');
       setShowModal(false);
-    } catch (err) {
+    } catch (err: any) {
+      if (err.response?.status === 402 || err.response?.data?.error === 'API_KEY_REQUIRED') {
+        setShowModal(false);
+        setShowApiKeyRequiredModal(true);
+        return;
+      }
       console.error('Failed to create project:', err);
     }
   };
@@ -303,7 +334,7 @@ export default function Dashboard() {
               <span>API Keys</span>
             </Link>
             <button
-              onClick={() => setShowModal(true)}
+              onClick={handleOpenNewProject}
               className="px-5 h-10 rounded-lg bg-indigo-600 text-zinc-100 hover:bg-indigo-500 transition-colors flex items-center gap-2 shadow-lg shadow-indigo-600/10 font-medium text-sm"
             >
               <Plus className="w-4 h-4" /> New Project
@@ -426,14 +457,22 @@ export default function Dashboard() {
               <RefreshCw className="w-5 h-5 animate-spin" /> Loading projects...
             </div>
           ) : projects.length === 0 ? (
-            <div className="py-20 border border-dashed border-zinc-800/80 rounded-xl text-center flex flex-col items-center justify-center gap-2">
+            <div className="py-20 border border-dashed border-zinc-800/80 rounded-xl text-center flex flex-col items-center justify-center gap-2 p-6">
               <FolderPlus className="w-10 h-10 text-zinc-600 mb-2" />
               <p className="text-zinc-400 font-medium">No projects found</p>
-              <p className="text-zinc-600 text-xs">
+              <p className="text-zinc-600 text-xs max-w-sm mb-2">
                 {apiError
                   ? 'Could not load projects — please ensure the server is running.'
-                  : 'Create your first research project workspace above.'}
+                  : 'Get started by creating your first academic research project workspace.'}
               </p>
+              {!apiError && (
+                <button
+                  onClick={handleOpenNewProject}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-1.5 transition-colors shadow-lg shadow-indigo-600/20"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Create Project
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -557,6 +596,17 @@ export default function Dashboard() {
           </motion.div>
         </div>
       )}
+
+      {/* API Key Required Modal */}
+      <ApiKeyRequiredModal
+        isOpen={showApiKeyRequiredModal}
+        onClose={() => setShowApiKeyRequiredModal(false)}
+        onKeysSaved={() => {
+          setShowApiKeyRequiredModal(false);
+          setHasConfiguredKeys(true);
+          setShowModal(true);
+        }}
+      />
 
       {/* Edit Project Modal */}
       {showEditModal && projectToEdit && (
