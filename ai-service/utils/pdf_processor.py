@@ -1,6 +1,7 @@
 import re
 import os
 import json
+import random
 import base64
 import requests
 import fitz  # PyMuPDF
@@ -13,13 +14,33 @@ def clean_text(text: str) -> str:
     text = text.replace('ﬁ', 'fi').replace('ﬂ', 'fl')
     return text.strip()
 
-def ocr_page_multimodal(b64_data: str) -> str:
+def _extract_user_key(user_api_keys: Optional[Dict[str, str]], *names: str) -> Optional[str]:
+    if not user_api_keys or not isinstance(user_api_keys, dict):
+        return None
+    for name in names:
+        val = user_api_keys.get(name)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return None
+
+
+def ocr_page_multimodal(
+    b64_data: str,
+    gemini_api_key: Optional[str] = None,
+    user_api_keys: Optional[Dict[str, str]] = None,
+) -> str:
     """
-    Robust OCR extraction using Google Gemini Multimodal Vision API, with fallback between fast Flash models.
+    Multimodal OCR extraction using ONLY user-uploaded API keys (Gemini Vision -> OpenAI Vision -> Anthropic Vision).
+    Never falls back to personal .env server API keys.
     """
     import time
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    # 1. Try Gemini Flash Vision (fast, multimodal)
+    gemini_key = (gemini_api_key.strip() if isinstance(gemini_api_key, str) and gemini_api_key.strip() else None) or _extract_user_key(
+        user_api_keys, "gemini", "geminiApiKey", "GEMINI_API_KEY"
+    )
+    openai_key = _extract_user_key(user_api_keys, "openai", "openaiApiKey", "OPENAI_API_KEY")
+    anthropic_key = _extract_user_key(user_api_keys, "anthropic", "anthropicApiKey", "ANTHROPIC_API_KEY")
+
+    # 1. Try User's Gemini Flash Vision
     if gemini_key and "your_gemini_api_key" not in gemini_key:
         preferred = os.getenv("GEMINI_MODEL")
         models_to_try = [preferred] if preferred else []
@@ -59,57 +80,99 @@ def ocr_page_multimodal(b64_data: str) -> str:
                             if text:
                                 return text
                 elif res.status_code == 429:
-                    print(f"[pdf_processor] Gemini 429 rate limit on {gemini_model}. Pausing 3s before fallback...")
-                    time.sleep(3)
+                    wait = 2 + random.uniform(0, 1.5)
+                    print(f"[pdf_processor] User Gemini 429 rate limit on {gemini_model}. Pausing {wait:.1f}s before fallback...")
+                    time.sleep(wait)
                 else:
-                    print(f"[pdf_processor] Gemini model {gemini_model} returned {res.status_code}. Trying next fallback...")
+                    print(f"[pdf_processor] User Gemini model {gemini_model} returned {res.status_code}. Trying next fallback...")
             except Exception as e:
-                print(f"[pdf_processor] Gemini model {gemini_model} error: {e}. Trying next fallback...")
+                print(f"[pdf_processor] User Gemini model {gemini_model} error: {e}. Trying next fallback...")
 
-    # 2. Fallback to Mistral Pixtral (if configured)
-    mistral_key = os.getenv("MISTRAL_API_KEY")
-    if mistral_key and "your_mistral_api_key" not in mistral_key:
+    # 2. Fallback to User's OpenAI Vision (gpt-4o-mini)
+    if openai_key and "your_openai_api_key" not in openai_key:
         try:
-            headers = {"Authorization": f"Bearer {mistral_key}", "Content-Type": "application/json"}
+            headers = {"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"}
             payload = {
-                "model": "pixtral-12b-2409",
+                "model": "gpt-4o-mini",
                 "messages": [{
                     "role": "user",
                     "content": [
-                        {"type": "image_url", "image_url": f"data:image/jpeg;base64,{b64_data}"},
-                        {"type": "text", "text": "Transcribe all text from this academic paper page. Return only the plain transcribed text."}
+                        {"type": "text", "text": "Transcribe all text from this academic paper page. Return only the plain transcribed text."},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_data}"}}
                     ]
                 }],
                 "max_tokens": 2000
             }
-            res = requests.post("https://api.mistral.ai/v1/chat/completions", headers=headers, json=payload, timeout=25)
+            res = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=30)
             if res.status_code == 200:
                 text = res.json()["choices"][0]["message"]["content"].strip()
                 if text:
                     return text
-            elif res.status_code == 429:
-                print("[pdf_processor] Mistral Pixtral 429 rate limit. Falling back to plain text.")
-            else:
-                print(f"[pdf_processor] Mistral Pixtral OCR error: {res.status_code} - {res.text[:100]}")
         except Exception as e:
-            print(f"[pdf_processor] Mistral Pixtral OCR exception: {e}")
+            print(f"[pdf_processor] User OpenAI Vision OCR fallback error: {e}")
+
+    # 3. Fallback to User's Anthropic Vision
+    if anthropic_key and "your_anthropic_api_key" not in anthropic_key:
+        try:
+            headers = {
+                "x-api-key": anthropic_key,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "claude-3-5-haiku-latest",
+                "max_tokens": 2000,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {"type": "base64", "media_type": "image/jpeg", "data": b64_data}
+                        },
+                        {"type": "text", "text": "Transcribe all text from this academic paper page. Return only the plain transcribed text."}
+                    ]
+                }]
+            }
+            res = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=30)
+            if res.status_code == 200:
+                text = res.json()["content"][0]["text"].strip()
+                if text:
+                    return text
+        except Exception as e:
+            print(f"[pdf_processor] User Anthropic Vision OCR fallback error: {e}")
 
     return ""
 
-def extract_metadata_with_gemini(first_page_text: str) -> Dict[str, Any]:
-    """
-    Leverages Gemini Flash to accurately extract Title, Authors, Abstract, Year, and DOI from the first page text.
-    """
-    import time
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if not gemini_key or "your_gemini_api_key" in gemini_key:
-        return {}
 
-    preferred = os.getenv("GEMINI_MODEL")
-    models_to_try = [preferred] if preferred else []
-    for m in ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.5-flash"]:
-        if m not in models_to_try:
-            models_to_try.append(m)
+def _parse_metadata_json(text: str) -> Dict[str, Any]:
+    cleaned = text.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]
+    elif cleaned.startswith("```"):
+        cleaned = cleaned[3:]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    return json.loads(cleaned.strip())
+
+
+def extract_metadata_with_gemini(
+    first_page_text: str,
+    gemini_api_key: Optional[str] = None,
+    user_api_keys: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
+    """
+    Extracts Title, Authors, Abstract, Year, and DOI from the first page text using ONLY user-uploaded API keys
+    (User Groq -> User Gemini -> User OpenAI -> User Anthropic). Never uses personal .env keys.
+    """
+    groq_key = _extract_user_key(user_api_keys, "groq", "groqApiKey", "GROQ_API_KEY")
+    gemini_key = (gemini_api_key.strip() if isinstance(gemini_api_key, str) and gemini_api_key.strip() else None) or _extract_user_key(
+        user_api_keys, "gemini", "geminiApiKey", "GEMINI_API_KEY"
+    )
+    openai_key = _extract_user_key(user_api_keys, "openai", "openaiApiKey", "OPENAI_API_KEY")
+    anthropic_key = _extract_user_key(user_api_keys, "anthropic", "anthropicApiKey", "ANTHROPIC_API_KEY")
+
+    if not any([groq_key, gemini_key, openai_key, anthropic_key]):
+        return {}
 
     prompt = f"""
     Analyze the following first-page text of a research paper and extract:
@@ -124,39 +187,92 @@ def extract_metadata_with_gemini(first_page_text: str) -> Dict[str, Any]:
     Output only the JSON, no markdown code block backticks.
     
     First page text:
-    {first_page_text}
+    {first_page_text[:6000]}
     """
 
-    for gemini_model in models_to_try:
-        for attempt in range(2):
+    # 1. Try User's Groq first (very fast and preserves Gemini quota)
+    if groq_key and "your_groq_api_key" not in groq_key:
+        try:
+            res = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.1,
+                    "response_format": {"type": "json_object"},
+                },
+                timeout=15,
+            )
+            if res.status_code == 200:
+                return _parse_metadata_json(res.json()["choices"][0]["message"]["content"])
+        except Exception as e:
+            print(f"[pdf_processor] User Groq metadata extraction fallback: {e}")
+
+    # 2. Try User's Gemini
+    if gemini_key and "your_gemini_api_key" not in gemini_key:
+        preferred = os.getenv("GEMINI_MODEL")
+        models_to_try = [preferred] if preferred else []
+        for m in ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.5-flash"]:
+            if m not in models_to_try:
+                models_to_try.append(m)
+
+        for gemini_model in models_to_try:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={gemini_key}"
-                headers = {"Content-Type": "application/json"}
-                payload = {
-                    "contents": [{"parts": [{"text": prompt}]}]
-                }
-                res = requests.post(url, headers=headers, json=payload, timeout=12)
+                res = requests.post(
+                    url,
+                    headers={"Content-Type": "application/json"},
+                    json={"contents": [{"parts": [{"text": prompt}]}]},
+                    timeout=12,
+                )
                 if res.status_code == 200:
-                    text = res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-                    # Clean up potential markdown formatting
-                    if text.startswith("```json"):
-                        text = text.replace("```json", "").replace("```", "").strip()
-                    elif text.startswith("```"):
-                        text = text.replace("```", "").strip()
-                    return json.loads(text)
-                elif res.status_code == 429:
-                    if attempt == 0:
-                        print(f"[pdf_processor] Gemini 429 on metadata extraction ({gemini_model}). Backing off 3s...")
-                        time.sleep(3)
-                        continue
-                    else:
-                        print(f"[pdf_processor] Gemini 429 on {gemini_model}. Trying next fallback model or heuristic...")
-                        break
-                else:
-                    break
+                    text = res.json()["candidates"][0]["content"]["parts"][0]["text"]
+                    return _parse_metadata_json(text)
             except Exception as e:
-                print(f"[pdf_processor] Fast fallback for metadata on {gemini_model}: {str(e)}")
-                break
+                print(f"[pdf_processor] User Gemini metadata fallback on {gemini_model}: {e}")
+
+    # 3. Try User's OpenAI
+    if openai_key and "your_openai_api_key" not in openai_key:
+        try:
+            res = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.1,
+                    "response_format": {"type": "json_object"},
+                },
+                timeout=15,
+            )
+            if res.status_code == 200:
+                return _parse_metadata_json(res.json()["choices"][0]["message"]["content"])
+        except Exception as e:
+            print(f"[pdf_processor] User OpenAI metadata fallback: {e}")
+
+    # 4. Try User's Anthropic
+    if anthropic_key and "your_anthropic_api_key" not in anthropic_key:
+        try:
+            res = requests.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": anthropic_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "claude-3-5-haiku-latest",
+                    "max_tokens": 1024,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+                timeout=15,
+            )
+            if res.status_code == 200:
+                return _parse_metadata_json(res.json()["content"][0]["text"])
+        except Exception as e:
+            print(f"[pdf_processor] User Anthropic metadata fallback: {e}")
+
     return {}
 
 def extract_tables_with_pdfplumber(file_path: str, max_pages: int = 30) -> List[Dict[str, Any]]:
@@ -193,7 +309,11 @@ def extract_tables_with_pdfplumber(file_path: str, max_pages: int = 30) -> List[
     return extracted_tables
 
 
-def extract_pdf_content(file_path: str) -> Dict[str, Any]:
+def extract_pdf_content(
+    file_path: str,
+    gemini_api_key: Optional[str] = None,
+    user_api_keys: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
     metadata = {
         "title": "",
         "authors": [],
@@ -240,14 +360,13 @@ def extract_pdf_content(file_path: str) -> Dict[str, Any]:
             doc_type = "Mixed"
         metadata["extra_meta"]["document_type"] = doc_type
 
-        # If scanned pages detected, run parallel multimodal OCR (up to 12 pages)
+        # If scanned pages detected, run sequential multimodal OCR with jitter (up to 12 pages)
+        # Sequential (not parallel) to avoid bursting the per-minute Gemini quota.
         if pages_to_ocr:
-            from concurrent.futures import ThreadPoolExecutor
+            import time
             target_ocr_pages = pages_to_ocr[:12]
-            print(f"[pdf_processor] {len(target_ocr_pages)} scanned pages detected. Pre-rendering pages for multimodal OCR...")
+            print(f"[pdf_processor] {len(target_ocr_pages)} scanned pages detected. Running sequential OCR with rate-limit jitter...")
 
-            # Pre-render JPEG images sequentially in the main thread (thread-safe for PyMuPDF)
-            rendered_scanned_pages = []
             for p_idx, p_obj in target_ocr_pages:
                 try:
                     pix = p_obj.get_pixmap(dpi=80)
@@ -255,29 +374,22 @@ def extract_pdf_content(file_path: str) -> Dict[str, Any]:
                     del pix
                     b64_img = base64.b64encode(jpg_bytes).decode("utf-8")
                     del jpg_bytes
-                    rendered_scanned_pages.append((p_idx, b64_img))
+                    ocr_res = ocr_page_multimodal(b64_img, gemini_api_key=gemini_api_key, user_api_keys=user_api_keys)
+                    if ocr_res:
+                        page_texts[p_idx]["text"] = clean_text(ocr_res)
+                    # Small inter-page delay (1-2s jitter) to stay under per-minute quota
+                    time.sleep(1.0 + random.uniform(0, 1.0))
                 except Exception as e:
-                    print(f"[pdf_processor] OCR pre-render failed on page {p_idx+1}: {e}")
+                    print(f"[pdf_processor] OCR failed on page {p_idx+1}: {e}")
 
-            def process_ocr_request(item):
-                p_idx, b64_img = item
-                try:
-                    ocr_res = ocr_page_multimodal(b64_img)
-                    return p_idx, ocr_res
-                except Exception as e:
-                    print(f"[pdf_processor] OCR request failed on page {p_idx+1}: {e}")
-                    return p_idx, ""
-
-            if rendered_scanned_pages:
-                with ThreadPoolExecutor(max_workers=min(2, len(rendered_scanned_pages))) as executor:
-                    for p_idx, ocr_res in executor.map(process_ocr_request, rendered_scanned_pages):
-                        if ocr_res:
-                            page_texts[p_idx]["text"] = clean_text(ocr_res)
-
-        # 2. Extract metadata using Gemini if possible (runs on first page)
+        # 2. Extract metadata using user-uploaded LLM keys if available (runs on first page)
         first_page_text = page_texts[0]["text"] if page_texts else ""
         if first_page_text:
-            gemini_meta = extract_metadata_with_gemini(first_page_text)
+            gemini_meta = extract_metadata_with_gemini(
+                first_page_text,
+                gemini_api_key=gemini_api_key,
+                user_api_keys=user_api_keys,
+            )
             if gemini_meta:
                 metadata["title"] = gemini_meta.get("title") or metadata["title"]
                 metadata["authors"] = gemini_meta.get("authors") or metadata["authors"]

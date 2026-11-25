@@ -1,20 +1,18 @@
-import os
 import json
 import re
-from typing import List
+from typing import List, Optional, Dict, Any
 from agents.router import call_llm
 
-def extract_future_work(text: str) -> List[str]:
+def extract_future_work(text: str, user_api_keys: Optional[Dict[str, Any]] = None) -> List[str]:
     """
     Extracts future work directions, research extensions, and open problems.
     """
     future_directions = []
 
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key and "your_gemini_api_key" not in gemini_key:
+    if user_api_keys:
         system = "You are a Future Work Mining Agent. Extract all future works, open problems, and extensions from the text. Output as a JSON list of strings."
         try:
-            res_text = call_llm(system, f"Future work snippet:\n{text[:4000]}")
+            res_text = call_llm(system, f"Future work snippet:\n{text[:4000]}", user_api_keys=user_api_keys)
             parsed = json.loads(res_text)
             if isinstance(parsed, list):
                 return [str(item) for item in parsed]

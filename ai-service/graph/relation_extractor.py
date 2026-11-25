@@ -1,14 +1,12 @@
-import os
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from agents.router import call_llm
 
-def extract_relations_graph(entities: List[Dict[str, Any]], text: str) -> List[Dict[str, Any]]:
+def extract_relations_graph(entities: List[Dict[str, Any]], text: str, user_api_keys: Optional[Dict[str, str]] = None) -> List[Dict[str, Any]]:
     """
     Identifies semantic relationships connecting the extracted entities.
     """
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key and "your_gemini_api_key" not in gemini_key:
+    if user_api_keys:
         system = (
             "You are a Knowledge Graph Relationship Extractor.\n"
             "Given these entities and the text context, identify the relationships between them. "
@@ -18,7 +16,7 @@ def extract_relations_graph(entities: List[Dict[str, Any]], text: str) -> List[D
             "- label (string describing relation e.g. authored_by, implements, evaluates_on)"
         )
         try:
-            res_text = call_llm(system, f"Entities: {json.dumps(entities)}\n\nContext:\n{text[:2000]}")
+            res_text = call_llm(system, f"Entities: {json.dumps(entities)}\n\nContext:\n{text[:2000]}", user_api_keys=user_api_keys)
             parsed = json.loads(res_text)
             if isinstance(parsed, list):
                 return parsed

@@ -46,9 +46,12 @@ class ProcessPDFRequest(BaseModel):
     file_base64: Optional[str] = None
     storage_url: Optional[str] = None
     reuse_paper_id: Optional[str] = None
+    user_gemini_key: Optional[str] = None  # Per-user Gemini API key to avoid server quota exhaustion
+    user_api_keys: Optional[Dict[str, str]] = None
 
 class GenerateGraphRequest(BaseModel):
     project_id: str
+    user_api_keys: Optional[Dict[str, str]] = None
 
 class ChatStreamRequest(BaseModel):
     query: str
@@ -69,6 +72,7 @@ class AgentRunRequest(BaseModel):
 class ComparisonRequest(BaseModel):
     project_id: str
     paper_ids: List[str]
+    user_api_keys: Optional[Dict[str, str]] = None
 
 @app.post("/api/pdf/process")
 def process_pdf(req: ProcessPDFRequest):
@@ -154,9 +158,17 @@ def process_pdf(req: ProcessPDFRequest):
         if not file_path or not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail=f"PDF file not found at path: {req.file_path}")
 
+        effective_user_keys = dict(req.user_api_keys or {})
+        if req.user_gemini_key and not (effective_user_keys.get("gemini") or effective_user_keys.get("geminiApiKey")):
+            effective_user_keys["gemini"] = req.user_gemini_key
+
         # 1. Parse PDF
         try:
-            parsed = extract_pdf_content(file_path)
+            parsed = extract_pdf_content(
+                file_path,
+                gemini_api_key=req.user_gemini_key or None,
+                user_api_keys=effective_user_keys or None,
+            )
         finally:
             if is_temp_file and os.path.exists(file_path):
                 try:
@@ -167,8 +179,13 @@ def process_pdf(req: ProcessPDFRequest):
         # 2. Chunk Text
         chunks = chunk_text(parsed["pages"], metadata=parsed["metadata"])
         
-        # 3. Create Embeddings & Index in Qdrant
-        indexed_chunks = index_chunks(req.project_id, req.paper_id, chunks)
+        # 3. Create Embeddings & Index in Qdrant (using ONLY user keys or local embeddings)
+        indexed_chunks = index_chunks(
+            req.project_id,
+            req.paper_id,
+            chunks,
+            user_api_keys=effective_user_keys or None,
+        )
 
         import gc
         gc.collect()
@@ -197,8 +214,8 @@ def generate_graph(req: GenerateGraphRequest):
         
         papers = res.json()
         
-        # Build network graph
-        graph_data = build_project_graph(req.project_id, papers)
+        # Build network graph using strictly user keys (with heuristic fallback)
+        graph_data = build_project_graph(req.project_id, papers, user_api_keys=req.user_api_keys)
         
         return {
             "success": True,
@@ -216,10 +233,10 @@ def generate_graph(req: GenerateGraphRequest):
 def chat_stream(req: ChatStreamRequest):
     # Stage 7: Multi-Index Hybrid KG-boosted Retrieval
     try:
-        sources = retrieve_hybrid(req.project_id, req.query, limit=5)
+        sources = retrieve_hybrid(req.project_id, req.query, limit=5, user_api_keys=req.user_api_keys)
     except Exception as e:
         print(f"[chat_stream] Hybrid retrieval failed: {e}. Falling back to standard vector search.")
-        sources = search_relevant_chunks(req.project_id, req.query, limit=5)
+        sources = search_relevant_chunks(req.project_id, req.query, limit=5, user_api_keys=req.user_api_keys)
     
     async def event_generator():
         # Yield sources metadata first
@@ -256,7 +273,7 @@ def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, w
         report_progress(run_id, "Proposal Generation", "running", logs="Executing multi-agent proposal flow...")
         try:
             from workflows.proposal_workflow import execute_proposal_flow
-            res = execute_proposal_flow(project_id, query)
+            res = execute_proposal_flow(project_id, query, user_api_keys=user_api_keys)
             report_progress(run_id, "Proposal Generation", "completed", logs="Proposal generated successfully.", overall_status="completed", result=res["proposal"])
         except Exception as e:
             err_msg = str(e)
@@ -269,7 +286,7 @@ def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, w
         report_progress(run_id, "Survey Generation", "running", logs="Executing multi-agent survey flow...")
         try:
             from workflows.survey_workflow import execute_survey_flow
-            res = execute_survey_flow(project_id, query)
+            res = execute_survey_flow(project_id, query, user_api_keys=user_api_keys)
             report_progress(run_id, "Survey Generation", "completed", logs="Survey generated successfully.", overall_status="completed", result=res["survey"])
         except Exception as e:
             err_msg = str(e)
@@ -291,7 +308,7 @@ def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, w
             if not paper_text:
                 paper_text = f"Manuscript draft regarding: {query}"
             
-            res = execute_review_flow(paper_text, "IEEE")
+            res = execute_review_flow(paper_text, "IEEE", user_api_keys=user_api_keys)
             report_progress(run_id, "Reviewer Agent", "completed", logs="Review generated successfully.", overall_status="completed", result=res["review"])
         except Exception as e:
             err_msg = str(e)
@@ -403,7 +420,7 @@ def get_comparison_matrix(req: ComparisonRequest):
                 f"Abstract: {p.get('abstract', '')}\n\n"
             )
             
-        res_text = call_llm(system, user_prompt)
+        res_text = call_llm(system, user_prompt, user_api_keys=req.user_api_keys)
         rows = json.loads(res_text)
         
         return {
@@ -441,6 +458,7 @@ class LearningNodeGenerateRequest(BaseModel):
     context_papers: List[Dict[str, Any]] = []
     connected_nodes: List[Dict[str, Any]] = []
     connected_links: List[Dict[str, Any]] = []
+    user_api_keys: Optional[Dict[str, str]] = None
 
 class LearningNodeAskRequest(BaseModel):
     project_id: str
@@ -449,6 +467,7 @@ class LearningNodeAskRequest(BaseModel):
     node_type: str
     question: str
     node_details: Dict[str, Any]
+    user_api_keys: Optional[Dict[str, str]] = None
 
 @app.post("/api/graph/learning-node")
 def generate_node_learning(req: LearningNodeGenerateRequest):
@@ -460,7 +479,8 @@ def generate_node_learning(req: LearningNodeGenerateRequest):
             node_type=req.node_type,
             context_papers=req.context_papers,
             connected_nodes=req.connected_nodes,
-            connected_links=req.connected_links
+            connected_links=req.connected_links,
+            user_api_keys=req.user_api_keys
         )
         return result
     except Exception as e:
@@ -474,7 +494,8 @@ def ask_node_learning(req: LearningNodeAskRequest):
             label=req.label,
             node_type=req.node_type,
             question=req.question,
-            node_details=req.node_details
+            node_details=req.node_details,
+            user_api_keys=req.user_api_keys
         )
         return {"success": True, "answer": answer}
     except Exception as e:
@@ -565,6 +586,7 @@ def generate_project_gaps(req: GapsGenerateRequest):
 class SingleGapGenerateRequest(BaseModel):
     name: str
     description: str
+    user_api_keys: Optional[Dict[str, str]] = None
 
 @app.post("/api/project/generate-single-gap")
 def generate_project_single_gap(req: SingleGapGenerateRequest):
@@ -582,7 +604,7 @@ def generate_project_single_gap(req: SingleGapGenerateRequest):
             "Do not output markdown code blocks, XML tags, or any text other than the valid JSON object."
         )
         prompt = f"Project Name: {req.name}\nProject Description: {req.description}"
-        gap_json_str = call_llm(system, prompt).strip()
+        gap_json_str = call_llm(system, prompt, user_api_keys=req.user_api_keys).strip()
         
         # Clean potential markdown output
         if gap_json_str.startswith("```json"):

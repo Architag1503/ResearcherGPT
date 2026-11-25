@@ -11,13 +11,14 @@ try {
   graphWorker = new Worker(
     'knowledge-graph-generation',
     async (job: Job) => {
-      const { projectId } = job.data;
+      const { projectId, userApiKeys } = job.data;
       console.log(`[graphWorker] Generating knowledge graph for project: ${projectId}`);
 
       try {
         // 1. Call AI service to extract nodes and relations
         const response = await axios.post(`${AI_SERVICE_URL}/api/graph/generate`, {
           project_id: projectId,
+          user_api_keys: userApiKeys || null,
         });
 
         const { success, nodes, links, error } = response.data;

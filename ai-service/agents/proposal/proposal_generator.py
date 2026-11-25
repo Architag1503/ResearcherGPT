@@ -1,9 +1,8 @@
-import os
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from agents.router import call_llm
 
-def generate_research_proposal(query: str, context: str) -> Dict[str, Any]:
+def generate_research_proposal(query: str, context: str, user_api_keys: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     """
     Generates a structured research proposal from a given topic and context.
     """
@@ -17,8 +16,7 @@ def generate_research_proposal(query: str, context: str) -> Dict[str, Any]:
         "timeline": []
     }
 
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key and "your_gemini_api_key" not in gemini_key:
+    if user_api_keys:
         system = (
             "You are a Research Proposal Writer.\n"
             "Analyze the query and context, and write a detailed scientific proposal. "
@@ -31,7 +29,7 @@ def generate_research_proposal(query: str, context: str) -> Dict[str, Any]:
             "- timeline (list of strings mapping tasks to months)"
         )
         try:
-            res_text = call_llm(system, f"Topic: {query}\nContext: {context[:2500]}")
+            res_text = call_llm(system, f"Topic: {query}\nContext: {context[:2500]}", user_api_keys=user_api_keys)
             parsed = json.loads(res_text)
             if isinstance(parsed, dict):
                 proposal.update(parsed)

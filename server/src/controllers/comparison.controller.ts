@@ -1,12 +1,15 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
 import Paper from '../models/Paper.js';
+import { getUserApiKeys } from '../utils/userKeys.js';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
 export const getComparisonMatrix = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.query;
+    const userId = (req as any).user?.id || '';
+    const userKeys = await getUserApiKeys(userId, req);
 
     if (!projectId) {
       return res.status(400).json({ error: 'projectId is required' });
@@ -25,6 +28,7 @@ export const getComparisonMatrix = async (req: Request, res: Response) => {
     const response = await axios.post(`${AI_SERVICE_URL}/api/comparison/matrix`, {
       project_id: projectId,
       paper_ids: papers.map(p => p._id.toString()),
+      user_api_keys: userKeys,
     });
 
     return res.status(200).json(response.data);

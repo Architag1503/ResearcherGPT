@@ -20,10 +20,9 @@ export const triggerAgentRun = async (req: Request, res: Response) => {
     }
 
     const userKeys = await getUserApiKeys(userId, req);
-    const isOwner = isPrimaryOwner((req as any).user);
 
-    // Protect developer quota: require external users to provide all 4 compulsory keys
-    if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
+    // Strictly enforce that every user provides all 4 personal LLM API keys (never use personal .env keys)
+    if (!hasAllRequiredUserKeys(userKeys)) {
       return res.status(402).json({
         error: 'API_KEY_REQUIRED',
         provider: !userKeys.groq ? 'groq' : !userKeys.gemini ? 'gemini' : !userKeys.openai ? 'openai' : 'anthropic',

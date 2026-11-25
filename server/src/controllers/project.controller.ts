@@ -39,11 +39,10 @@ export const createProject = async (req: Request, res: Response) => {
     const { name, description } = req.body;
     // In production, req.user will be populated by auth middleware
     const userId = (req as any).user?.id || 'mock_user_id';
-    const isOwner = isPrimaryOwner((req as any).user);
     const userKeys = await getUserApiKeys(userId, req);
 
-    // Enforce that external users must have configured all required LLM API keys before creating a project
-    if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
+    // Enforce that ALL users strictly configure their own LLM API keys (never fall back to personal .env keys)
+    if (!hasAllRequiredUserKeys(userKeys)) {
       return res.status(402).json({
         error: 'API_KEY_REQUIRED',
         message: 'You must configure all 4 LLM API keys (Groq, Google Gemini, OpenAI, and Anthropic Claude) before creating a research project.',
@@ -162,8 +161,10 @@ export const triggerGraphUpdate = async (req: Request, res: Response) => {
       return res.status(503).json({ error: 'Background job queue unavailable (Redis not connected).' });
     }
     const { projectId } = req.params;
+    const userId = (req as any).user?.id || '';
+    const userKeys = await getUserApiKeys(userId, req);
     // Add a job to the graph generation queue
-    const job = await graphQueue.add('knowledge-graph-generation', { projectId });
+    const job = await graphQueue.add('knowledge-graph-generation', { projectId, userApiKeys: userKeys });
     return res.status(202).json({ message: 'Knowledge graph generation triggered', jobId: job.id });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
@@ -190,9 +191,8 @@ export const generateAIGaps = async (req: Request, res: Response) => {
     }
 
     const userKeys = await getUserApiKeys(userId, req);
-    const isOwner = isPrimaryOwner((req as any).user);
 
-    if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
+    if (!hasAllRequiredUserKeys(userKeys)) {
       return res.status(402).json({
         error: 'API_KEY_REQUIRED',
         message: 'You must configure all 4 LLM API keys (Groq, Google Gemini, OpenAI, and Anthropic Claude) before generating AI gaps.',
@@ -283,9 +283,19 @@ export const generateSingleAIGap = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
+    const userId = (req as any).user?.id || '';
+    const userKeys = await getUserApiKeys(userId, req);
+    if (!hasAllRequiredUserKeys(userKeys)) {
+      return res.status(402).json({
+        error: 'API_KEY_REQUIRED',
+        message: 'You must configure all 4 LLM API keys (Groq, Google Gemini, OpenAI, and Anthropic Claude) before generating AI gaps.',
+      });
+    }
+
     const aiRes = await axios.post(`${AI_SERVICE_URL}/api/project/generate-single-gap`, {
       name: project.name,
       description: project.description || '',
+      user_api_keys: userKeys,
     });
 
     if (aiRes.data && aiRes.data.success && aiRes.data.gap) {
@@ -456,9 +466,8 @@ export const generateAIDescription = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Project name is required' });
     }
     const userKeys = await getUserApiKeys(userId, req);
-    const isOwner = isPrimaryOwner((req as any).user);
 
-    if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
+    if (!hasAllRequiredUserKeys(userKeys)) {
       return res.status(402).json({
         error: 'API_KEY_REQUIRED',
         message: 'You must configure all 4 LLM API keys (Groq, Google Gemini, OpenAI, and Anthropic Claude) before using AI description generation.',

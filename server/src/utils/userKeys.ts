@@ -9,15 +9,9 @@ export interface ExtractedUserKeys {
   is_owner?: boolean;
 }
 
-export const isPrimaryOwner = (user?: { id?: string; email?: string }): boolean => {
-  if (!user) return false;
-  const email = (user.email || '').toLowerCase();
-  const id = user.id || '';
-  return (
-    email.includes('archit') ||
-    id === '666a7b29d5b51a0211a7c501' ||
-    id === 'mock_user_id'
-  );
+export const isPrimaryOwner = (_user?: { id?: string; email?: string }): boolean => {
+  // Strictly enforce user-uploaded API keys for every user (never use personal .env keys)
+  return false;
 };
 
 export const hasAllRequiredUserKeys = (keys: ExtractedUserKeys): boolean => {
@@ -46,7 +40,7 @@ export const getUserApiKeys = async (
   if (headerAnthropic) keys.anthropic = headerAnthropic;
 
   // If any key is missing, check database for user
-  if (!keys.groq || !keys.gemini || !keys.openai || !keys.anthropic) {
+  if (userId && (!keys.groq || !keys.gemini || !keys.openai || !keys.anthropic)) {
     try {
       const dbRecord = await UserApiKey.findOne({ userId });
       if (dbRecord) {
@@ -60,8 +54,7 @@ export const getUserApiKeys = async (
     }
   }
 
-  const isOwner = isPrimaryOwner((req as any).user);
-  keys.is_owner = isOwner;
+  keys.is_owner = false;
 
   return keys;
 };

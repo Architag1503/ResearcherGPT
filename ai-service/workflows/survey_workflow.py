@@ -1,11 +1,11 @@
 import os
 import requests
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from agents.survey.survey_generator import generate_survey
 
 EXPRESS_API_URL = os.getenv("EXPRESS_API_URL", "http://localhost:5000")
 
-def execute_survey_flow(project_id: str, query: str) -> Dict[str, Any]:
+def execute_survey_flow(project_id: str, query: str, user_api_keys: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     """
     Survey workflow: generates taxonomy classifications and survey drafts.
     """
@@ -15,7 +15,7 @@ def execute_survey_flow(project_id: str, query: str) -> Dict[str, Any]:
     except:
         papers = []
         
-    survey = generate_survey(query, papers)
+    survey = generate_survey(query, papers, user_api_keys=user_api_keys)
     return {
         "survey": survey
     }

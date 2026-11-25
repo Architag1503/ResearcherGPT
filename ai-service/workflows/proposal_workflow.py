@@ -1,11 +1,11 @@
 import os
 import requests
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from agents.proposal.proposal_generator import generate_research_proposal
 
 EXPRESS_API_URL = os.getenv("EXPRESS_API_URL", "http://localhost:5000")
 
-def execute_proposal_flow(project_id: str, query: str) -> Dict[str, Any]:
+def execute_proposal_flow(project_id: str, query: str, user_api_keys: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     """
     Research proposal workflow: compiles structured proposal layouts.
     """
@@ -16,7 +16,7 @@ def execute_proposal_flow(project_id: str, query: str) -> Dict[str, Any]:
         papers = []
         
     context_str = " ".join([p.get("abstract", "") for p in papers])
-    proposal = generate_research_proposal(query, context_str)
+    proposal = generate_research_proposal(query, context_str, user_api_keys=user_api_keys)
     
     return {
         "proposal": proposal

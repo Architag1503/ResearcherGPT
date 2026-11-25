@@ -1,15 +1,14 @@
-import os
+from typing import Optional, Dict, Any
 from agents.router import call_llm
 
-def write_results(query: str, context: str) -> str:
+def write_results(query: str, context: str, user_api_keys: Optional[Dict[str, Any]] = None) -> str:
     """
     Drafts the Results section of the academic paper.
     """
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key and "your_gemini_api_key" not in gemini_key:
+    if user_api_keys:
         system = "You are an Academic Writer. Draft a formal Results section showing comparative metrics and validation scores."
         try:
-            return call_llm(system, f"Topic: {query}\nContext: {context[:3000]}")
+            return call_llm(system, f"Topic: {query}\nContext: {context[:3000]}", user_api_keys=user_api_keys)
         except Exception as e:
             print(f"[ResultsWriter] LLM draft failed: {e}")
 

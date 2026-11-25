@@ -3,7 +3,7 @@ import time
 import random
 import requests
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from langgraph.graph import StateGraph, END
 from .state import AgentWorkflowState
 from services.qdrant_service import search_relevant_chunks
@@ -61,9 +61,10 @@ AGENT_TEMPERATURES = {
 }
 
 def call_gemini_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_output_tokens: int = 8192, api_key: Optional[str] = None, is_owner: bool = False) -> str:
-    gemini_key = api_key or (os.getenv("GEMINI_API_KEY") if is_owner else None)
+    # Strictly use ONLY the user-provided Google Gemini API key (never personal .env keys)
+    gemini_key = api_key.strip() if isinstance(api_key, str) and api_key.strip() else None
     if not gemini_key or "your_gemini_api_key" in gemini_key:
-        raise ValueError("TOKEN_LIMIT_EXCEEDED:GEMINI: Personal Google Gemini API key is required. Every user must configure their own API key.")
+        raise ValueError("TOKEN_LIMIT_EXCEEDED:GEMINI: Personal Google Gemini API key is required. Please upload your own API key in the application.")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
     headers = {"Content-Type": "application/json"}
     data = {
@@ -96,9 +97,10 @@ def call_gemini_direct(model_name: str, temp: float, system_prompt: str, user_pr
     return _call_with_retry(_do_gemini_call, max_retries=2, base_delay=4.0)
 
 def call_openai_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_tokens: int = 8192, api_key: Optional[str] = None, is_owner: bool = False) -> str:
-    openai_key = api_key or (os.getenv("OPENAI_API_KEY") if is_owner else None)
+    # Strictly use ONLY the user-provided OpenAI API key (never personal .env keys)
+    openai_key = api_key.strip() if isinstance(api_key, str) and api_key.strip() else None
     if not openai_key or "your_openai_api_key" in openai_key:
-        raise ValueError("TOKEN_LIMIT_EXCEEDED:OPENAI: Personal OpenAI API key is required. Every user must configure their own API key.")
+        raise ValueError("TOKEN_LIMIT_EXCEEDED:OPENAI: Personal OpenAI API key is required. Please upload your own API key in the application.")
     url = "https://api.openai.com/v1/chat/completions"
     headers = {"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"}
     data = {
@@ -123,6 +125,60 @@ def call_openai_direct(model_name: str, temp: float, system_prompt: str, user_pr
 
     return _call_with_retry(_do_openai_call, max_retries=2, base_delay=4.0)
 
+def call_anthropic_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_tokens: int = 4096, api_key: Optional[str] = None) -> str:
+    # Strictly use ONLY the user-provided Anthropic API key (never personal .env keys)
+    anthropic_key = api_key.strip() if isinstance(api_key, str) and api_key.strip() else None
+    if not anthropic_key or "your_anthropic_api_key" in anthropic_key:
+        raise ValueError("TOKEN_LIMIT_EXCEEDED:ANTHROPIC: Personal Anthropic API key is required. Please upload your own key in the application.")
+    url = "https://api.anthropic.com/v1/messages"
+    headers = {
+        "x-api-key": anthropic_key,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": model_name,
+        "system": system_prompt,
+        "messages": [{"role": "user", "content": user_prompt}],
+        "temperature": temp,
+        "max_tokens": max_tokens
+    }
+    def _do_anthropic_call():
+        res = requests.post(url, headers=headers, json=data, timeout=300)
+        if res.status_code == 429 or "rate_limit" in res.text.lower() or "quota" in res.text.lower() or "credit" in res.text.lower():
+            raise Exception(f"TOKEN_LIMIT_EXCEEDED:ANTHROPIC: {res.text}")
+        if res.status_code != 200:
+            raise Exception(f"Anthropic API returned {res.status_code}: {res.text}")
+        return res.json()["content"][0]["text"]
+    return _call_with_retry(_do_anthropic_call, max_retries=2, base_delay=4.0)
+
+def call_groq_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_tokens: int = 4096, api_key: Optional[str] = None) -> str:
+    # Strictly use ONLY the user-provided Groq API key (never personal .env keys)
+    groq_key = api_key.strip() if isinstance(api_key, str) and api_key.strip() else None
+    if not groq_key or "your_groq_api_key" in groq_key:
+        raise ValueError("TOKEN_LIMIT_EXCEEDED:GROQ: Personal Groq API key is required. Please upload your own Groq API key in the application.")
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+    data = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": temp,
+        "max_tokens": max_tokens
+    }
+    if "json" in system_prompt.lower():
+        data["response_format"] = {"type": "json_object"}
+    def _do_groq():
+        res = requests.post(url, headers=headers, json=data, timeout=180)
+        if res.status_code == 429 or "rate_limit" in res.text.lower() or "quota" in res.text.lower():
+            raise Exception(f"TOKEN_LIMIT_EXCEEDED:GROQ: {res.text}")
+        if res.status_code != 200:
+            raise Exception(f"Groq API returned {res.status_code}: {res.text}")
+        return res.json()["choices"][0]["message"]["content"]
+    return _call_with_retry(_do_groq, max_retries=2, base_delay=4.0)
+
 def _call_with_retry(call_fn, max_retries: int = 3, base_delay: float = 5.0):
     """Call a function with exponential backoff retry on rate-limit errors (429)."""
     for attempt in range(max_retries):
@@ -139,346 +195,74 @@ def _call_with_retry(call_fn, max_retries: int = 3, base_delay: float = 5.0):
             raise
 
 
+def _extract_user_key(user_api_keys: Optional[Dict[str, str]], *names: str) -> Optional[str]:
+    if not user_api_keys or not isinstance(user_api_keys, dict):
+        return None
+    for name in names:
+        val = user_api_keys.get(name)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return None
+
+
 def call_model(agent_role: str, system_prompt: str, user_prompt: str, user_api_keys: Optional[Dict[str, str]] = None) -> str:
-    model = MODEL_REGISTRY.get(agent_role, "gemini-2.5-flash")
+    model = MODEL_REGISTRY.get(agent_role, "groq/llama-3.3-70b-versatile")
     temp = AGENT_TEMPERATURES.get(agent_role, 0.3)
-    
+
     # Writer gets extra tokens for long content
     is_writer = agent_role in ("writer", "literature_review", "reviewer")
 
-    # Determine if request is from the primary developer/owner
-    is_owner = bool(user_api_keys and (user_api_keys.get("is_owner") is True or user_api_keys.get("isOwner") is True))
+    # Strictly extract ONLY user-uploaded API keys (never fall back to personal .env keys)
+    user_groq = _extract_user_key(user_api_keys, "groq", "groqApiKey", "GROQ_API_KEY")
+    user_gemini = _extract_user_key(user_api_keys, "gemini", "geminiApiKey", "GEMINI_API_KEY")
+    user_openai = _extract_user_key(user_api_keys, "openai", "openaiApiKey", "OPENAI_API_KEY")
+    user_anthropic = _extract_user_key(user_api_keys, "anthropic", "anthropicApiKey", "ANTHROPIC_API_KEY")
 
-    # Extract user custom keys if supplied
-    user_groq = (user_api_keys.get("groq") or user_api_keys.get("groqApiKey") or user_api_keys.get("GROQ_API_KEY")) if user_api_keys else None
-    user_gemini = (user_api_keys.get("gemini") or user_api_keys.get("geminiApiKey") or user_api_keys.get("GEMINI_API_KEY")) if user_api_keys else None
-    user_openai = (user_api_keys.get("openai") or user_api_keys.get("openaiApiKey") or user_api_keys.get("OPENAI_API_KEY")) if user_api_keys else None
-    user_anthropic = (user_api_keys.get("anthropic") or user_api_keys.get("anthropicApiKey") or user_api_keys.get("ANTHROPIC_API_KEY")) if user_api_keys else None
-    
-    # Parse provider
     provider = None
     clean_model = model
     if "/" in model:
         parts = model.split("/", 1)
         provider = parts[0]
         clean_model = parts[1]
-        
-    try:
-        if provider == "groq":
-            groq_key = user_groq or (os.getenv("GROQ_API_KEY") if is_owner else None)
-            if not groq_key or "your_groq_api_key" in groq_key:
-                raise ValueError("TOKEN_LIMIT_EXCEEDED:GROQ: Personal Groq API key is required. Every user must provide their own Groq API key.")
-            url = "https://api.groq.com/openai/v1/chat/completions"
-            headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
-            data = {
-                "model": clean_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": temp,
-                "max_tokens": 8192 if is_writer else 4096
-            }
-            if "json" in system_prompt.lower():
-                data["response_format"] = {"type": "json_object"}
-            def _do_groq():
-                res = requests.post(url, headers=headers, json=data, timeout=180)
-                if res.status_code == 429 or "rate_limit" in res.text.lower() or "quota" in res.text.lower():
-                    raise Exception(f"TOKEN_LIMIT_EXCEEDED:GROQ: {res.text}")
-                if res.status_code != 200:
-                    raise Exception(f"Groq API returned {res.status_code}: {res.text}")
-                return res.json()["choices"][0]["message"]["content"]
-            return _call_with_retry(_do_groq)
-            
-        elif provider == "sambanova":
-            sambanova_key = os.getenv("SAMBANOVA_API_KEY")
-            if not sambanova_key or "your_sambanova_api_key" in sambanova_key:
-                raise ValueError("SAMBANOVA_API_KEY is not configured.")
-            url = "https://api.sambanova.ai/v1/chat/completions"
-            headers = {"Authorization": f"Bearer {sambanova_key}", "Content-Type": "application/json"}
-            data = {
-                "model": clean_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": temp,
-                "max_tokens": 8192 if is_writer else 4096
-            }
-            def _do_samba():
-                res = requests.post(url, headers=headers, json=data, timeout=180)
-                if res.status_code != 200:
-                    raise Exception(f"SambaNova API returned {res.status_code}: {res.text}")
-                return res.json()["choices"][0]["message"]["content"]
-            return _call_with_retry(_do_samba)
-            
-        elif provider == "openrouter":
-            openrouter_key = os.getenv("OPENROUTER_API_KEY")
-            if not openrouter_key or "your_openrouter_api_key" in openrouter_key:
-                raise ValueError("OPENROUTER_API_KEY is not configured.")
-            url = "https://openrouter.ai/api/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {openrouter_key}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "http://localhost:3000",
-                "X-Title": "ResearcherGPT"
-            }
-            data = {
-                "model": clean_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": temp
-            }
-            res = requests.post(url, headers=headers, json=data, timeout=180)
-            if res.status_code != 200:
-                raise Exception(f"OpenRouter API returned {res.status_code}: {res.text}")
-            return res.json()["choices"][0]["message"]["content"]
-            
-        elif provider == "cohere":
-            cohere_key = os.getenv("COHERE_API_KEY")
-            if not cohere_key or "your_cohere_api_key" in cohere_key:
-                raise ValueError("COHERE_API_KEY is not configured.")
-            url = "https://api.cohere.ai/v1/chat"
-            headers = {"Authorization": f"Bearer {cohere_key}", "Content-Type": "application/json"}
-            data = {
-                "model": clean_model,
-                "message": f"{system_prompt}\n\nContext / User prompt:\n{user_prompt}",
-                "temperature": temp
-            }
-            res = requests.post(url, headers=headers, json=data, timeout=180)
-            if res.status_code != 200:
-                raise Exception(f"Cohere API returned {res.status_code}: {res.text}")
-            return res.json().get("text", "")
-            
-        elif provider == "mistral":
-            mistral_key = os.getenv("MISTRAL_API_KEY")
-            if not mistral_key or "your_mistral_api_key" in mistral_key:
-                raise ValueError("MISTRAL_API_KEY is not configured.")
-            url = "https://api.mistral.ai/v1/chat/completions"
-            headers = {"Authorization": f"Bearer {mistral_key}", "Content-Type": "application/json"}
-            data = {
-                "model": clean_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": temp
-            }
-            res = requests.post(url, headers=headers, json=data, timeout=180)
-            if res.status_code != 200:
-                raise Exception(f"Mistral API returned {res.status_code}: {res.text}")
-            return res.json()["choices"][0]["message"]["content"]
-            
-        elif provider == "huggingface":
-            hf_token = os.getenv("HF_TOKEN")
-            if not hf_token or "your_hf_token" in hf_token:
-                raise ValueError("HF_TOKEN is not configured.")
-            url = "https://router.huggingface.co/v1/chat/completions"
-            headers = {"Authorization": f"Bearer {hf_token}", "Content-Type": "application/json"}
-            data = {
-                "model": clean_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": temp
-            }
-            res = requests.post(url, headers=headers, json=data, timeout=180)
-            if res.status_code != 200:
-                raise Exception(f"Hugging Face API returned {res.status_code}: {res.text}")
-            return res.json()["choices"][0]["message"]["content"]
-            
-        elif provider == "github":
-            github_token = os.getenv("GITHUB_TOKEN")
-            if not github_token or "your_github_token" in github_token:
-                raise ValueError("GITHUB_TOKEN is not configured.")
-            url = "https://models.inference.ai.azure.com/chat/completions"
-            headers = {"Authorization": f"Bearer {github_token}", "Content-Type": "application/json"}
-            data = {
-                "model": clean_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": temp
-            }
-            res = requests.post(url, headers=headers, json=data, timeout=180)
-            if res.status_code != 200:
-                raise Exception(f"GitHub Models API returned {res.status_code}: {res.text}")
-            return res.json()["choices"][0]["message"]["content"]
-            
-        elif provider == "together":
-            together_key = os.getenv("TOGETHER_API_KEY")
-            if not together_key or "your_together_api_key" in together_key:
-                raise ValueError("TOGETHER_API_KEY is not configured.")
-            url = "https://api.together.xyz/v1/chat/completions"
-            headers = {"Authorization": f"Bearer {together_key}", "Content-Type": "application/json"}
-            data = {
-                "model": clean_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": temp
-            }
-            res = requests.post(url, headers=headers, json=data, timeout=180)
-            if res.status_code != 200:
-                raise Exception(f"Together AI API returned {res.status_code}: {res.text}")
-            return res.json()["choices"][0]["message"]["content"]
-            
-        elif provider == "cerebras":
-            cerebras_key = os.getenv("CEREBRAS_API_KEY")
-            if not cerebras_key or "your_cerebras_key" in cerebras_key:
-                raise ValueError("CEREBRAS_API_KEY is not configured.")
-            url = "https://api.cerebras.ai/v1/chat/completions"
-            headers = {"Authorization": f"Bearer {cerebras_key}", "Content-Type": "application/json"}
-            data = {
-                "model": clean_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": temp
-            }
-            res = requests.post(url, headers=headers, json=data, timeout=180)
-            if res.status_code != 200:
-                raise Exception(f"Cerebras API returned {res.status_code}: {res.text}")
-            return res.json()["choices"][0]["message"]["content"]
-            
-        elif provider == "deepseek":
-            deepseek_key = os.getenv("DEEPSEEK_API_KEY")
-            if not deepseek_key or "your_deepseek_key" in deepseek_key:
-                raise ValueError("DEEPSEEK_API_KEY is not configured.")
-            url = "https://api.deepseek.com/v1/chat/completions"
-            headers = {"Authorization": f"Bearer {deepseek_key}", "Content-Type": "application/json"}
-            data = {
-                "model": clean_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": temp
-            }
-            res = requests.post(url, headers=headers, json=data, timeout=180)
-            if res.status_code != 200:
-                raise Exception(f"DeepSeek API returned {res.status_code}: {res.text}")
-            return res.json()["choices"][0]["message"]["content"]
-            
-        elif model.startswith("gemini-"):
-            # For writer roles use maximum output tokens (65536 for Gemini 2.5 Flash)
-            gemini_max_tokens = 65536 if is_writer else 8192
-            return call_gemini_direct(model, temp, system_prompt, user_prompt, max_output_tokens=gemini_max_tokens, api_key=user_gemini, is_owner=is_owner)
-            
-        elif model.startswith("gpt-") or model.startswith("o1-"):
-            openai_max_tokens = 16384 if is_writer else 4096
-            return call_openai_direct(model, temp, system_prompt, user_prompt, max_tokens=openai_max_tokens, api_key=user_openai, is_owner=is_owner)
-            
-        elif model.startswith("claude-"):
-            anthropic_key = user_anthropic or (os.getenv("ANTHROPIC_API_KEY") if is_owner else None)
-            if not anthropic_key or "your_anthropic_api_key" in anthropic_key:
-                raise ValueError("TOKEN_LIMIT_EXCEEDED:ANTHROPIC: Personal Anthropic API key is required. Every user must provide their own key.")
-            url = "https://api.anthropic.com/v1/messages"
-            headers = {
-                "x-api-key": anthropic_key,
-                "anthropic-version": "2023-06-01",
-                "Content-Type": "application/json"
-            }
-            data = {
-                "model": model,
-                "system": system_prompt,
-                "messages": [{"role": "user", "content": user_prompt}],
-                "temperature": temp,
-                "max_tokens": 16000 if is_writer else 4096
-            }
-            res = requests.post(url, headers=headers, json=data, timeout=300)
-            if res.status_code == 429 or "rate_limit" in res.text.lower():
-                raise Exception(f"TOKEN_LIMIT_EXCEEDED:ANTHROPIC: {res.text}")
-            if res.status_code != 200:
-                raise Exception(f"Anthropic API returned {res.status_code}: {res.text}")
-            return res.json()["content"][0]["text"]
-            
-        else:
-            raise ValueError(f"Unsupported model name: {model}")
-            
-    except Exception as e:
-        if "TOKEN_LIMIT_EXCEEDED" in str(e):
-            raise e
-        # Protect developer quota: external users NEVER fall back to server-side keys
-        if not is_owner and not user_gemini:
-            raise e
-        print(f"[Fallback] Provider '{provider or 'default'}' for role '{agent_role}' failed: {e}. Trying Gemini fallback...")
+
+    # Build ordered provider attempts strictly from user-supplied keys
+    attempts = []
+    if provider == "groq" and user_groq:
+        attempts.append(("groq", lambda: call_groq_direct(clean_model, temp, system_prompt, user_prompt, max_tokens=8192 if is_writer else 4096, api_key=user_groq)))
+    elif model.startswith("gemini-") and user_gemini:
+        attempts.append(("gemini", lambda: call_gemini_direct(model, temp, system_prompt, user_prompt, max_output_tokens=65536 if is_writer else 8192, api_key=user_gemini)))
+    elif (model.startswith("gpt-") or model.startswith("o1-")) and user_openai:
+        attempts.append(("openai", lambda: call_openai_direct(model, temp, system_prompt, user_prompt, max_tokens=16384 if is_writer else 4096, api_key=user_openai)))
+    elif model.startswith("claude-") and user_anthropic:
+        attempts.append(("anthropic", lambda: call_anthropic_direct(model, temp, system_prompt, user_prompt, max_tokens=16000 if is_writer else 4096, api_key=user_anthropic)))
+
+    # Add remaining user-configured providers as automatic fallback cascade on 429 or transient errors
+    if user_groq and not any(p == "groq" for p, _ in attempts):
+        attempts.append(("groq", lambda: call_groq_direct("llama-3.3-70b-versatile", temp, system_prompt, user_prompt, max_tokens=8192 if is_writer else 4096, api_key=user_groq)))
+    if user_gemini and not any(p == "gemini" for p, _ in attempts):
+        gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        attempts.append(("gemini", lambda: call_gemini_direct(gemini_model, temp, system_prompt, user_prompt, max_output_tokens=65536 if is_writer else 8192, api_key=user_gemini)))
+    if user_openai and not any(p == "openai" for p, _ in attempts):
+        attempts.append(("openai", lambda: call_openai_direct("gpt-4o-mini", temp, system_prompt, user_prompt, max_tokens=16384 if is_writer else 4096, api_key=user_openai)))
+    if user_anthropic and not any(p == "anthropic" for p, _ in attempts):
+        attempts.append(("anthropic", lambda: call_anthropic_direct("claude-3-5-haiku-latest", temp, system_prompt, user_prompt, max_tokens=8192 if is_writer else 4096, api_key=user_anthropic)))
+
+    if not attempts:
+        raise ValueError("TOKEN_LIMIT_EXCEEDED:GROQ: User API keys are required. Please configure your personal API keys in Settings.")
+
+    last_err: Optional[Exception] = None
+    for idx, (prov_name, invoke_fn) in enumerate(attempts):
         try:
-            # Fallback 1: Gemini 2.5 Flash
-            gemini_fb_tokens = 65536 if is_writer else 8192
-            return call_gemini_direct(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"), temp, system_prompt, user_prompt, max_output_tokens=gemini_fb_tokens, api_key=user_gemini, is_owner=is_owner)
-        except Exception as gemini_err:
-            if "TOKEN_LIMIT_EXCEEDED" in str(gemini_err):
-                raise gemini_err
-            # If not owner and no Groq key, abort to prevent hitting server tokens
-            if not is_owner and not user_groq:
-                raise gemini_err
-            print(f"[Fallback Fail] Gemini fallback failed: {gemini_err}. Trying Groq fallback...")
-            try:
-                groq_key = user_groq or (os.getenv("GROQ_API_KEY") if is_owner else None)
-                if not groq_key or "your_groq_api_key" in groq_key:
-                    raise ValueError("GROQ_API_KEY is not configured for user.")
-                url = "https://api.groq.com/openai/v1/chat/completions"
-                headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
-                data = {
-                    "model": "llama-3.3-70b-versatile",
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    "temperature": temp,
-                    "max_tokens": 8192 if is_writer else 4096
-                }
-                if "json" in system_prompt.lower():
-                    data["response_format"] = {"type": "json_object"}
-                def _do_groq_fb():
-                    res = requests.post(url, headers=headers, json=data, timeout=180)
-                    if res.status_code == 429 or "rate_limit" in res.text.lower() or "quota" in res.text.lower():
-                        raise Exception(f"TOKEN_LIMIT_EXCEEDED:GROQ: {res.text}")
-                    if res.status_code != 200:
-                        raise Exception(f"Groq fallback returned {res.status_code}: {res.text}")
-                    return res.json()["choices"][0]["message"]["content"]
-                return _call_with_retry(_do_groq_fb, max_retries=2, base_delay=8.0)
-            except Exception as groq_err:
-                if "TOKEN_LIMIT_EXCEEDED" in str(groq_err):
-                    raise groq_err
-                if not is_owner:
-                    raise groq_err
-                print(f"[Fallback Fail] Groq fallback failed: {groq_err}. Trying SambaNova fallback...")
-                try:
-                    sambanova_key = os.getenv("SAMBANOVA_API_KEY")
-                    if not sambanova_key or "your_sambanova_api_key" in sambanova_key:
-                        raise ValueError("SAMBANOVA_API_KEY is not configured.")
-                    url = "https://api.sambanova.ai/v1/chat/completions"
-                    headers = {"Authorization": f"Bearer {sambanova_key}", "Content-Type": "application/json"}
-                    data = {
-                        "model": "Meta-Llama-3.3-70B-Instruct",
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt}
-                        ],
-                        "temperature": temp,
-                        "max_tokens": 8192 if is_writer else 4096
-                    }
-                    def _do_samba_fb():
-                        res = requests.post(url, headers=headers, json=data, timeout=180)
-                        if res.status_code != 200:
-                            raise Exception(f"SambaNova fallback returned {res.status_code}: {res.text}")
-                        return res.json()["choices"][0]["message"]["content"]
-                    return _call_with_retry(_do_samba_fb, max_retries=2, base_delay=10.0)
-                except Exception as samba_err:
-                    print(f"[Fallback Fail] SambaNova fallback failed: {samba_err}. Trying OpenAI fallback...")
-                    try:
-                        return call_openai_direct("gpt-4o-mini", temp, system_prompt, user_prompt, api_key=user_openai, is_owner=is_owner)
-                    except Exception as openai_err:
-                        print(f"[Fallback Fail] All API fallbacks exhausted for role '{agent_role}': {openai_err}")
-                        raise openai_err
+            return invoke_fn()
+        except Exception as err:
+            last_err = err
+            if idx < len(attempts) - 1:
+                print(f"[Fallback] User provider '{prov_name}' for role '{agent_role}' failed ({err}). Cascading to next user provider...")
+            else:
+                print(f"[Fallback Fail] All user API providers exhausted for role '{agent_role}': {err}")
+
+    assert last_err is not None
+    raise last_err
 
 def call_llm(system_prompt: str, user_prompt: str, user_api_keys: Optional[Dict[str, str]] = None) -> str:
     return call_model("writer", system_prompt, user_prompt, user_api_keys=user_api_keys)
@@ -1215,7 +999,12 @@ def retrieval_node(state: AgentWorkflowState) -> AgentWorkflowState:
     report_progress(state["run_id"], "Research Agent", "running", logs="Retrieval Agent: Querying semantic index and real academic repositories (OpenAlex, arXiv)...")
     
     # 1. Retrieve indexed paper chunks from Qdrant
-    chunks = search_relevant_chunks(state["project_id"], state["query"], limit=8)
+    chunks = search_relevant_chunks(
+        state["project_id"],
+        state["query"],
+        limit=8,
+        user_api_keys=state.get("user_api_keys"),
+    )
     
     # 2. Search verified real academic papers from OpenAlex and arXiv
     academic_papers = search_academic_papers(state["query"], limit=6)

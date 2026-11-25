@@ -4,6 +4,7 @@ import LearningNode from '../models/LearningNode.js';
 import Paper from '../models/Paper.js';
 import GeneratedPaper from '../models/GeneratedPaper.js';
 import KnowledgeGraph from '../models/Graph.js';
+import { getUserApiKeys } from '../utils/userKeys.js';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
@@ -285,6 +286,8 @@ export const getGraphNodeLearningDetails = async (req: Request, res: Response) =
 
     // 5. Query FastAPI AI service to generate learning content
     console.log(`[LearningNodeController] Generating learning node details from AI service for label: ${label} (${type})`);
+    const userId = (req as any).user?.id || '';
+    const userKeys = await getUserApiKeys(userId, req);
     
     let aiData: any = null;
     try {
@@ -295,7 +298,8 @@ export const getGraphNodeLearningDetails = async (req: Request, res: Response) =
         node_type: type,
         context_papers: contextPapers,
         connected_nodes: finalConnectedNodes,
-        connected_links: finalDirectLinks.map((l) => ({ source: l.source, target: l.target, label: l.label }))
+        connected_links: finalDirectLinks.map((l) => ({ source: l.source, target: l.target, label: l.label })),
+        user_api_keys: userKeys,
       }, { timeout: 15000 }); // Add timeout to prevent hanging forever
       
       if (aiResponse.data && aiResponse.data.success) {
@@ -454,6 +458,8 @@ export const askGraphNodeQuestion = async (req: Request, res: Response) => {
     }
 
     // Call FastAPI Ask endpoint
+    const userId = (req as any).user?.id || '';
+    const userKeys = await getUserApiKeys(userId, req);
     const aiResponse = await axios.post(`${AI_SERVICE_URL}/api/graph/learning-node/ask`, {
       project_id: projectId,
       node_id: nodeId,
@@ -464,7 +470,8 @@ export const askGraphNodeQuestion = async (req: Request, res: Response) => {
         explanations: learningNode.explanations,
         whySeeingThis: learningNode.whySeeingThis,
         typeSpecificData: learningNode.typeSpecificData
-      }
+      },
+      user_api_keys: userKeys,
     });
 
     return res.status(200).json({ answer: aiResponse.data.answer });

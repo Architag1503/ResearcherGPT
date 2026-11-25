@@ -1,9 +1,8 @@
-import os
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from agents.router import call_llm
 
-def generate_review_text(text: str, reviewer_style: str = "IEEE") -> Dict[str, Any]:
+def generate_review_text(text: str, reviewer_style: str = "IEEE", user_api_keys: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     """
     Generates peer reviews matching IEEE, ACM, or Springer styles, listing strengths, weaknesses, and suggestions.
     """
@@ -15,8 +14,7 @@ def generate_review_text(text: str, reviewer_style: str = "IEEE") -> Dict[str, A
         "decision": "Major Revision"
     }
 
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key and "your_gemini_api_key" not in gemini_key:
+    if user_api_keys:
         system = (
             f"You are a peer-reviewer for a major academic conference. Behave like a {reviewer_style} reviewer.\n"
             "Analyze the manuscript and output a JSON object containing:\n"
@@ -26,7 +24,7 @@ def generate_review_text(text: str, reviewer_style: str = "IEEE") -> Dict[str, A
             "- decision (string: Accept, Minor Revision, Major Revision, Reject)"
         )
         try:
-            res_text = call_llm(system, f"Manuscript:\n{text[:3000]}")
+            res_text = call_llm(system, f"Manuscript:\n{text[:3000]}", user_api_keys=user_api_keys)
             parsed = json.loads(res_text)
             if isinstance(parsed, dict):
                 review.update(parsed)

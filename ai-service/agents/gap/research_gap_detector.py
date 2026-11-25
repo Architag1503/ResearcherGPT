@@ -1,12 +1,11 @@
-import os
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from agents.router import call_llm
 from .future_work_extractor import extract_future_work
 from .limitation_extractor import extract_limitations
 from .challenge_extractor import extract_challenges
 
-def detect_research_gaps(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def detect_research_gaps(papers: List[Dict[str, Any]], user_api_keys: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """
     Detects critical research gaps by summarizing limitations, challenges,
     and future works across all papers.
@@ -23,9 +22,9 @@ def detect_research_gaps(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not text and "chunks" in p:
             text = " ".join([c.get("textContent", "") for c in p.get("chunks", [])[:3]])
 
-        futures = extract_future_work(text)
-        limits = extract_limitations(text)
-        challenges = extract_challenges(text)
+        futures = extract_future_work(text, user_api_keys=user_api_keys)
+        limits = extract_limitations(text, user_api_keys=user_api_keys)
+        challenges = extract_challenges(text, user_api_keys=user_api_keys)
 
         aggregated_context.append(
             f"Paper: {title}\n"
@@ -34,9 +33,7 @@ def detect_research_gaps(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             f"- Mined Obstacles: {'; '.join(challenges)}\n"
         )
 
-    # Core detection trigger using Gemini
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key and "your_gemini_api_key" not in gemini_key:
+    if user_api_keys:
         system = (
             "You are a Research Gap Detection Specialist.\n"
             "Analyze the limitations, future directions, and obstacles across these papers. "
@@ -48,7 +45,7 @@ def detect_research_gaps(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "- confidence (float between 0 and 1)"
         )
         try:
-            res_text = call_llm(system, "\n".join(aggregated_context))
+            res_text = call_llm(system, "\n".join(aggregated_context), user_api_keys=user_api_keys)
             parsed = json.loads(res_text)
             if isinstance(parsed, list):
                 # Convert paper titles to MongoDB paperIds where possible

@@ -1,6 +1,5 @@
-import os
 import json
-from typing import List
+from typing import List, Dict, Optional
 from agents.router import call_llm
 
 SYNONYM_DICT = {
@@ -12,19 +11,18 @@ SYNONYM_DICT = {
     "gap": ["research opportunities", "methodology limitations", "future research scope"]
 }
 
-def expand_query(query: str) -> List[str]:
+def expand_query(query: str, user_api_keys: Optional[Dict[str, str]] = None) -> List[str]:
     """
     Expands the user query to include related academic keywords and synonyms.
     Returns a list of query variations including the original query.
     """
     queries = [query]
     
-    # 1. Try LLM-based query expansion
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key and "your_gemini_api_key" not in gemini_key:
+    # 1. Try LLM-based query expansion ONLY if user supplied API keys
+    if user_api_keys:
         system = "You are an Academic Query Expander. Generate exactly 2 distinct search queries that are academic variations, synonyms, or terminology expansions of the user's query. Output as a JSON list of strings."
         try:
-            res_text = call_llm(system, f"Original Query: {query}")
+            res_text = call_llm(system, f"Original Query: {query}", user_api_keys=user_api_keys)
             variations = json.loads(res_text)
             if isinstance(variations, list):
                 for v in variations:

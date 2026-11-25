@@ -1,12 +1,11 @@
-import os
+from typing import Dict, Optional
 from agents.router import call_llm
 
-def paraphrase_text(text: str) -> str:
+def paraphrase_text(text: str, user_api_keys: Optional[Dict[str, str]] = None) -> str:
     """
     Paraphrases high-similarity sentences/paragraphs to decrease plagiarism scores.
     """
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key and "your_gemini_api_key" not in gemini_key:
+    if user_api_keys:
         system = (
             "You are an Academic Editor.\n"
             "Paraphrase the provided text segment to lower similarity scores. "
@@ -14,7 +13,7 @@ def paraphrase_text(text: str) -> str:
             "preserves all scientific meaning, and retains citations. Output ONLY the rewritten text."
         )
         try:
-            paraphrased = call_llm(system, text)
+            paraphrased = call_llm(system, text, user_api_keys=user_api_keys)
             if paraphrased and len(paraphrased) > 5:
                 return paraphrased.strip()
         except Exception as e:

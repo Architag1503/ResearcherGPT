@@ -6,6 +6,7 @@ import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { bullConfig } from '../config/redis.js';
 import Paper from '../models/Paper.js';
 import PaperChunk from '../models/PaperChunk.js';
+import { extractPdfFallback } from '../utils/pdfFallback.js';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
@@ -42,7 +43,7 @@ try {
   pdfWorker = new Worker(
     'pdf-processing',
     async (job: Job) => {
-      const { paperId, projectId, storageUrl, checksum, reusePaperId } = job.data;
+      const { paperId, projectId, storageUrl, checksum, reusePaperId, userGeminiKey, userApiKeys } = job.data;
       console.log(`[pdfWorker] Processing paper ${paperId} (project: ${projectId})`);
 
       // Track retry count
@@ -129,8 +130,9 @@ try {
           if (!hasParsed) {
             await updateProgress(paperId, 'Parsing', 40);
 
-            // Parsing & Chunking on AI service with automatic 429 backoff retry
+            // Parsing & Chunking on AI service with automatic 429 backoff retry + local Node fallback
             let response: any = null;
+            let lastAiErr: any = null;
             const maxAiRetries = 3;
             for (let aiAttempt = 0; aiAttempt < maxAiRetries; aiAttempt++) {
               try {
@@ -140,28 +142,69 @@ try {
                   file_base64: fileBase64,
                   storage_url: aiServiceStorageUrl,
                   file_path: localFilePath,
+                  // Forward strictly the user's own keys so OCR/embeddings use per-user keys
+                  user_gemini_key: userGeminiKey || userApiKeys?.gemini || null,
+                  user_api_keys: userApiKeys || (userGeminiKey ? { gemini: userGeminiKey } : null),
                 }, {
                   timeout: 600000, // 10 minutes timeout to allow large papers to process fully
                   maxBodyLength: Infinity,
                   maxContentLength: Infinity
                 });
+                lastAiErr = null;
                 break;
               } catch (aiErr: any) {
-                const is429 = aiErr.response?.status === 429 || String(aiErr.message).includes('429');
-                if (is429 && aiAttempt < maxAiRetries - 1) {
-                  const retryDelay = (aiAttempt + 1) * 7000;
-                  console.warn(`[pdfWorker] AI service returned 429 rate limit. Backing off ${retryDelay / 1000}s (attempt ${aiAttempt + 1}/${maxAiRetries})...`);
-                  await updateProgress(paperId, `Rate Limited (Retrying in ${retryDelay / 1000}s)`, 45);
+                lastAiErr = aiErr;
+                const status = aiErr.response?.status;
+                const is429 = status === 429 || String(aiErr.message).includes('429');
+                const isTransient = is429 || (status >= 500 && status < 600) || ['ECONNREFUSED', 'ETIMEDOUT', 'ECONNRESET'].includes(aiErr.code);
+                if (isTransient && aiAttempt < maxAiRetries - 1) {
+                  const retryAfterHeader = parseInt(aiErr.response?.headers?.['retry-after'] || '', 10);
+                  const baseMs = Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
+                    ? Math.min(retryAfterHeader * 1000, 20000)
+                    : (aiAttempt + 1) * 5000;
+                  const jitterMs = Math.floor(Math.random() * 1500);
+                  const retryDelay = baseMs + jitterMs;
+                  console.warn(`[pdfWorker] AI service transient/429 error (${status || aiErr.message}). Backing off ${(retryDelay / 1000).toFixed(1)}s (attempt ${aiAttempt + 1}/${maxAiRetries})...`);
+                  await updateProgress(paperId, is429 ? `Rate Limited (Retrying in ${Math.round(retryDelay / 1000)}s)` : `Reconnecting to AI parser...`, 45);
                   await new Promise(r => setTimeout(r, retryDelay));
                   continue;
                 }
-                throw aiErr;
+                break;
               }
             }
 
-            const { success, chunks: processedChunks, metadata: processedMeta, error } = response.data;
-            if (!success) {
-              throw new Error(error || 'Failed to process PDF on AI service');
+            let processedChunks: any[] | undefined;
+            let processedMeta: any | undefined;
+
+            const aiReturnedError = lastAiErr || (response?.data && !response.data.success);
+            if (aiReturnedError) {
+              const aiErrMsg = lastAiErr
+                ? (lastAiErr.response?.data?.error || lastAiErr.message)
+                : (response?.data?.error || 'AI service processing failed');
+              console.warn(`[pdfWorker] AI service PDF processing failed (${aiErrMsg}). Engaging local Node.js PDF fallback...`);
+              await updateProgress(paperId, 'Parsing (Fallback Engine)', 50);
+
+              let pdfBuffer: Buffer | null = null;
+              if (storageUrl) {
+                const bucketName = process.env.R2_BUCKET_NAME || 'researcher-gpt';
+                const urlObj = new URL(storageUrl);
+                const key = urlObj.pathname.replace(`/${bucketName}/`, '').replace(/^\//, '');
+                const obj = await s3Client.send(new GetObjectCommand({ Bucket: bucketName, Key: key }));
+                pdfBuffer = await streamToBuffer(obj.Body);
+              } else if (localFilePath && fs.existsSync(localFilePath)) {
+                pdfBuffer = fs.readFileSync(localFilePath);
+              }
+
+              if (!pdfBuffer) {
+                throw lastAiErr || new Error(aiErrMsg);
+              }
+
+              const fallbackResult = await extractPdfFallback(pdfBuffer, paper.title);
+              processedChunks = fallbackResult.chunks;
+              processedMeta = fallbackResult.metadata;
+            } else {
+              processedChunks = response.data.chunks;
+              processedMeta = response.data.metadata;
             }
 
             chunks = processedChunks || [];
@@ -210,6 +253,7 @@ try {
         try {
           await axios.post(`${AI_SERVICE_URL}/api/graph/generate`, {
             project_id: projectId,
+            user_api_keys: userApiKeys || (userGeminiKey ? { gemini: userGeminiKey } : null),
           }, { timeout: 30000 });
           await updateProgress(paperId, 'Graph Construction', 98, 'Graph Construction');
         } catch (err: any) {

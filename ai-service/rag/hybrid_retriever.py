@@ -147,12 +147,13 @@ def retrieve_hybrid(
     dense_weight: float = 1.0,
     bm25_weight: float = 1.0,
     kg_inject_weight: float = 0.75,
+    user_api_keys: Optional[Dict[str, str]] = None,
 ) -> List[Dict[str, Any]]:
     """
     Query dense vector DB, full-corpus BM25 term index, and Knowledge Graph,
     then fuse using Reciprocal Rank Fusion.
     """
-    vector_res = retrieve(project_id, query, paper_id=paper_id, limit=max(limit * 2, 20)) if dense_weight > 0 else []
+    vector_res = retrieve(project_id, query, paper_id=paper_id, limit=max(limit * 2, 20), user_api_keys=user_api_keys) if dense_weight > 0 else []
 
     if corpus_chunks is None:
         corpus_chunks = scroll_project_chunks(project_id, paper_id=paper_id)

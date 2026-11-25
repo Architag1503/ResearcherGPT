@@ -11,13 +11,21 @@ else:
 import uuid
 import numpy as np
 import requests
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from qdrant_client import QdrantClient
 
-# Dynamic config based on whether Gemini API is configured
-gemini_key = os.getenv("GEMINI_API_KEY")
-use_gemini_default = bool(gemini_key and "your_gemini_api_key" not in gemini_key)
-VECTOR_DIMENSION = 3072 if use_gemini_default else 384
+# Default to 384d local embedding dimension; never read server .env GEMINI_API_KEY at startup.
+VECTOR_DIMENSION = 384
+
+
+def _extract_user_key(user_api_keys: Optional[Dict[str, str]], *names: str) -> Optional[str]:
+    if not user_api_keys or not isinstance(user_api_keys, dict):
+        return None
+    for name in names:
+        val = user_api_keys.get(name)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return None
 
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
@@ -55,10 +63,10 @@ def get_local_model():
         _local_model = SentenceTransformer('all-MiniLM-L6-v2')
     return _local_model
 
-def get_gemini_embedding_single(text: str) -> List[float]:
-    gemini_key = os.getenv("GEMINI_API_KEY")
+def get_gemini_embedding_single(text: str, api_key: Optional[str] = None) -> List[float]:
+    gemini_key = api_key.strip() if isinstance(api_key, str) and api_key.strip() else None
     if not gemini_key or "your_gemini_api_key" in gemini_key:
-        raise ValueError("GEMINI_API_KEY not configured")
+        raise ValueError("User Google Gemini API key not provided")
         
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key={gemini_key}"
     headers = {"Content-Type": "application/json"}
@@ -74,10 +82,10 @@ def get_gemini_embedding_single(text: str) -> List[float]:
     res_data = res.json()
     return res_data.get("embedding", {}).get("values", [])
 
-def get_gemini_embeddings_batch(texts: List[str]) -> List[List[float]]:
-    gemini_key = os.getenv("GEMINI_API_KEY")
+def get_gemini_embeddings_batch(texts: List[str], api_key: Optional[str] = None) -> List[List[float]]:
+    gemini_key = api_key.strip() if isinstance(api_key, str) and api_key.strip() else None
     if not gemini_key or "your_gemini_api_key" in gemini_key:
-        raise ValueError("GEMINI_API_KEY not configured")
+        return []
         
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents?key={gemini_key}"
     headers = {"Content-Type": "application/json"}
@@ -136,10 +144,10 @@ def get_gemini_embeddings_batch(texts: List[str]) -> List[List[float]]:
             
     return all_embeddings
 
-def get_mistral_embeddings_batch(texts: List[str]) -> List[List[float]]:
-    mistral_key = os.getenv("MISTRAL_API_KEY")
+def get_mistral_embeddings_batch(texts: List[str], api_key: Optional[str] = None) -> List[List[float]]:
+    mistral_key = api_key.strip() if isinstance(api_key, str) and api_key.strip() else None
     if not mistral_key:
-        raise ValueError("MISTRAL_API_KEY not configured")
+        return []
     
     url = "https://api.mistral.ai/v1/embeddings"
     headers = {"Authorization": f"Bearer {mistral_key}", "Content-Type": "application/json"}
@@ -184,10 +192,10 @@ def get_mistral_embeddings_batch(texts: List[str]) -> List[List[float]]:
             return []
     return all_embeddings
 
-def get_cohere_embeddings_batch(texts: List[str]) -> List[List[float]]:
-    cohere_key = os.getenv("COHERE_API_KEY")
+def get_cohere_embeddings_batch(texts: List[str], api_key: Optional[str] = None) -> List[List[float]]:
+    cohere_key = api_key.strip() if isinstance(api_key, str) and api_key.strip() else None
     if not cohere_key:
-        raise ValueError("COHERE_API_KEY not configured")
+        return []
         
     url = "https://api.cohere.com/v2/embed"
     headers = {"Authorization": f"Bearer {cohere_key}", "Content-Type": "application/json"}
@@ -314,32 +322,36 @@ def ensure_collection(vector_size: int = VECTOR_DIMENSION):
 # Run initial setup
 ensure_collection(VECTOR_DIMENSION)
 
-def _resolve_embedding_provider(target_dim: int) -> str:
+def _resolve_embedding_provider(target_dim: int, user_api_keys: Optional[Dict[str, str]] = None) -> str:
     explicit = os.getenv("EMBEDDING_PROVIDER", "auto").lower().strip()
     if explicit in {"local", "gemini", "mistral", "cohere", "hash"}:
         return explicit
-    gemini_key = os.getenv("GEMINI_API_KEY")
+    gemini_key = _extract_user_key(user_api_keys, "gemini", "geminiApiKey", "GEMINI_API_KEY")
     if target_dim == 3072 and gemini_key and "your_gemini_api_key" not in gemini_key:
         return "gemini"
     return "local"
 
-def get_embedding_with_meta(text: str) -> tuple[List[float], str]:
+def get_embedding_with_meta(text: str, user_api_keys: Optional[Dict[str, str]] = None) -> tuple[List[float], str]:
     target_dim = get_current_collection_size()
-    provider = _resolve_embedding_provider(target_dim)
+    provider = _resolve_embedding_provider(target_dim, user_api_keys=user_api_keys)
+    user_gemini = _extract_user_key(user_api_keys, "gemini", "geminiApiKey", "GEMINI_API_KEY")
 
     if provider == "hash":
         return get_fast_fallback_embedding(text, target_dim), f"feature-hash-{target_dim}"
 
-    if provider == "gemini" or target_dim == 3072:
+    if (provider == "gemini" or target_dim == 3072) and user_gemini:
         try:
-            vec = get_gemini_embedding_single(text)
+            vec = get_gemini_embedding_single(text, api_key=user_gemini)
             if len(vec) == target_dim:
                 return vec, "gemini-embedding-001"
         except Exception as e:
-            print(f"[qdrant_service] Gemini embedding failed: {e}.")
+            print(f"[qdrant_service] User Gemini embedding failed: {e}.")
             if target_dim == 3072:
                 # Never silently mix alien embedding spaces into 3072d Gemini collection
                 return get_fast_fallback_embedding(text, target_dim), f"feature-hash-{target_dim}"
+
+    if target_dim == 3072:
+        return get_fast_fallback_embedding(text, target_dim), f"feature-hash-{target_dim}"
 
     if provider in {"local", "auto"} and target_dim == 384:
         try:
@@ -350,30 +362,40 @@ def get_embedding_with_meta(text: str) -> tuple[List[float], str]:
             print(f"[qdrant_service] Local SentenceTransformer failed: {e}.")
 
     if provider == "mistral":
-        try:
-            embs = get_mistral_embeddings_batch([text])
-            if embs and len(embs[0]) == target_dim:
-                return embs[0], "mistral-embed"
-        except Exception as e:
-            print(f"[qdrant_service] Mistral embedding failed: {e}.")
+        user_mistral = _extract_user_key(user_api_keys, "mistral", "mistralApiKey", "MISTRAL_API_KEY")
+        if user_mistral:
+            try:
+                embs = get_mistral_embeddings_batch([text], api_key=user_mistral)
+                if embs and len(embs[0]) == target_dim:
+                    return embs[0], "mistral-embed"
+            except Exception as e:
+                print(f"[qdrant_service] Mistral embedding failed: {e}.")
 
     if provider == "cohere":
-        try:
-            embs = get_cohere_embeddings_batch([text])
-            if embs and len(embs[0]) == target_dim:
-                return embs[0], "embed-english-v3.0"
-        except Exception as e:
-            print(f"[qdrant_service] Cohere embedding failed: {e}.")
+        user_cohere = _extract_user_key(user_api_keys, "cohere", "cohereApiKey", "COHERE_API_KEY")
+        if user_cohere:
+            try:
+                embs = get_cohere_embeddings_batch([text], api_key=user_cohere)
+                if embs and len(embs[0]) == target_dim:
+                    return embs[0], "embed-english-v3.0"
+            except Exception as e:
+                print(f"[qdrant_service] Cohere embedding failed: {e}.")
 
     return get_fast_fallback_embedding(text, target_dim), f"feature-hash-{target_dim}"
 
-def get_embedding(text: str) -> List[float]:
-    vec, _ = get_embedding_with_meta(text)
+def get_embedding(text: str, user_api_keys: Optional[Dict[str, str]] = None) -> List[float]:
+    vec, _ = get_embedding_with_meta(text, user_api_keys=user_api_keys)
     return vec
 
-def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def index_chunks(
+    project_id: str,
+    paper_id: str,
+    chunks: List[Dict[str, Any]],
+    user_api_keys: Optional[Dict[str, str]] = None,
+) -> List[Dict[str, Any]]:
     target_dim = get_current_collection_size()
-    provider = _resolve_embedding_provider(target_dim)
+    provider = _resolve_embedding_provider(target_dim, user_api_keys=user_api_keys)
+    user_gemini = _extract_user_key(user_api_keys, "gemini", "geminiApiKey", "GEMINI_API_KEY")
     texts = [c["text_content"] for c in chunks]
     vectors: List[List[float]] = []
     embedding_model_used = f"feature-hash-{target_dim}"
@@ -381,15 +403,15 @@ def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -
     indexed_results = []
 
     if texts:
-        if provider == "gemini":
+        if provider == "gemini" and user_gemini:
             try:
-                print("Generating embeddings using Gemini API in batch...")
-                candidate = get_gemini_embeddings_batch(texts)
+                print("Generating embeddings using user Gemini API key in batch...")
+                candidate = get_gemini_embeddings_batch(texts, api_key=user_gemini)
                 if candidate and len(candidate[0]) == target_dim:
                     vectors = candidate
                     embedding_model_used = "gemini-embedding-001"
             except Exception as e:
-                print(f"[qdrant_service] Gemini batch embedding failed: {e}.")
+                print(f"[qdrant_service] User Gemini batch embedding failed: {e}.")
 
         if not vectors and provider in {"local", "auto"} and target_dim == 384:
             try:
@@ -400,22 +422,26 @@ def index_chunks(project_id: str, paper_id: str, chunks: List[Dict[str, Any]]) -
                 print(f"[qdrant_service] Local SentenceTransformer batch failed: {e}.")
 
         if not vectors and provider == "mistral":
-            try:
-                raw_vectors = get_mistral_embeddings_batch(texts)
-                if raw_vectors and len(raw_vectors[0]) == target_dim:
-                    vectors = raw_vectors
-                    embedding_model_used = "mistral-embed"
-            except Exception as e:
-                print(f"[qdrant_service] Mistral embed failed: {e}.")
+            user_mistral = _extract_user_key(user_api_keys, "mistral", "mistralApiKey", "MISTRAL_API_KEY")
+            if user_mistral:
+                try:
+                    raw_vectors = get_mistral_embeddings_batch(texts, api_key=user_mistral)
+                    if raw_vectors and len(raw_vectors[0]) == target_dim:
+                        vectors = raw_vectors
+                        embedding_model_used = "mistral-embed"
+                except Exception as e:
+                    print(f"[qdrant_service] Mistral embed failed: {e}.")
 
         if not vectors and provider == "cohere":
-            try:
-                raw_vectors = get_cohere_embeddings_batch(texts)
-                if raw_vectors and len(raw_vectors[0]) == target_dim:
-                    vectors = raw_vectors
-                    embedding_model_used = "embed-english-v3.0"
-            except Exception as e:
-                print(f"[qdrant_service] Cohere embed failed: {e}.")
+            user_cohere = _extract_user_key(user_api_keys, "cohere", "cohereApiKey", "COHERE_API_KEY")
+            if user_cohere:
+                try:
+                    raw_vectors = get_cohere_embeddings_batch(texts, api_key=user_cohere)
+                    if raw_vectors and len(raw_vectors[0]) == target_dim:
+                        vectors = raw_vectors
+                        embedding_model_used = "embed-english-v3.0"
+                except Exception as e:
+                    print(f"[qdrant_service] Cohere embed failed: {e}.")
 
         if not vectors:
             vectors = [get_fast_fallback_embedding(t, target_dim) for t in texts]
@@ -597,8 +623,14 @@ def scroll_project_chunks(project_id: str, paper_id: str = None, max_chunks: int
             break
     return chunks
 
-def search_relevant_chunks(project_id: str, query: str, limit: int = 5, paper_id: str = None) -> List[Dict[str, Any]]:
-    query_vector = get_embedding(query)
+def search_relevant_chunks(
+    project_id: str,
+    query: str,
+    limit: int = 5,
+    paper_id: str = None,
+    user_api_keys: Optional[Dict[str, str]] = None,
+) -> List[Dict[str, Any]]:
+    query_vector = get_embedding(query, user_api_keys=user_api_keys)
     results = []
 
     if client:

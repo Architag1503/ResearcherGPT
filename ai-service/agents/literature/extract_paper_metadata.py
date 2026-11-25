@@ -1,10 +1,9 @@
-import os
 import json
 import re
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from agents.router import call_llm
 
-def extract_metadata(title: str, text: str) -> Dict[str, Any]:
+def extract_metadata(title: str, text: str, user_api_keys: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Extracts structured academic metadata (title, authors, year, venue) from paper text.
     """
@@ -15,11 +14,10 @@ def extract_metadata(title: str, text: str) -> Dict[str, Any]:
         "venue": "Academic Press"
     }
 
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key and "your_gemini_api_key" not in gemini_key:
+    if user_api_keys:
         system = "You are an Academic Metadata Extractor. Parse the paper content and extract: title, authors (list of strings), year (integer), venue/journal (string). Output as a JSON object."
         try:
-            res_text = call_llm(system, f"Paper content snippet:\n{text[:2500]}")
+            res_text = call_llm(system, f"Paper content snippet:\n{text[:2500]}", user_api_keys=user_api_keys)
             parsed = json.loads(res_text)
             if isinstance(parsed, dict):
                 meta["title"] = parsed.get("title") or meta["title"]

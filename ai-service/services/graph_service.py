@@ -2,7 +2,7 @@ import os
 import re
 import json
 import requests
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import networkx as nx
 from neo4j import GraphDatabase
 
@@ -109,8 +109,23 @@ class Neo4jClient:
 
 neo4j_client = Neo4jClient()
 
-def extract_graph_gemini(paper_title: str, abstract: str) -> Dict[str, Any]:
-    gemini_key = os.getenv("GEMINI_API_KEY")
+def _extract_user_key(user_api_keys: Optional[Dict[str, str]], *names: str) -> Optional[str]:
+    if not user_api_keys or not isinstance(user_api_keys, dict):
+        return None
+    for name in names:
+        val = user_api_keys.get(name)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return None
+
+
+def extract_graph_gemini(
+    paper_title: str,
+    abstract: str,
+    user_api_keys: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
+    # Strictly use ONLY user-provided API keys (never personal .env keys)
+    gemini_key = _extract_user_key(user_api_keys, "gemini", "geminiApiKey", "GEMINI_API_KEY")
     if not gemini_key or "your_gemini_api_key" in gemini_key:
         return {}
 
@@ -215,7 +230,11 @@ ENTITY_TYPE_CONFIG = {
 
 _paper_graph_cache: Dict[str, Any] = {}
 
-def build_project_graph(project_id: str, papers: List[Dict[str, Any]]) -> Dict[str, Any]:
+def build_project_graph(
+    project_id: str,
+    papers: List[Dict[str, Any]],
+    user_api_keys: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
     G = nx.Graph()
     nodes: Dict[str, Dict[str, Any]] = {}
     
@@ -235,21 +254,24 @@ def build_project_graph(project_id: str, papers: List[Dict[str, Any]]) -> Dict[s
             "color": "#6366f1"
         }
         
-        # Query Gemini for rich KG entities with caching (avoids re-extracting previous papers on every new upload)
+        # Query user's Gemini for rich KG entities with caching (avoids re-extracting previous papers on every new upload)
         pid_str = str(paper_id)
         if pid_str in _paper_graph_cache:
             gemini_graph = _paper_graph_cache[pid_str]
         else:
-            gemini_graph = extract_graph_gemini(paper_title, abstract)
+            gemini_graph = extract_graph_gemini(paper_title, abstract, user_api_keys=user_api_keys)
             if gemini_graph and gemini_graph.get("entities"):
                 _paper_graph_cache[pid_str] = gemini_graph
         
         if gemini_graph and gemini_graph.get("entities"):
             # Add Gemini scientific entities and link to Paper node
             for ent in gemini_graph["entities"]:
-                ent_id = ent["id"]
-                if ent_id == p_node_id:
+                if not isinstance(ent, dict):
                     continue
+                ent_id = ent.get("id") or ent.get("label") or ent.get("name")
+                if not ent_id or ent_id == p_node_id:
+                    continue
+                ent_id = str(ent_id)
                 ent_type = str(ent.get("type", "concept")).lower()
                 cfg = ENTITY_TYPE_CONFIG.get(ent_type, {"color": "#06b6d4", "val": 2})
                 ent_label = ent.get("label") or ent.get("name") or ent.get("id") or "Unknown"

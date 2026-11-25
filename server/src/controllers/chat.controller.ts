@@ -53,10 +53,9 @@ export const sendMessage = async (req: Request, res: Response) => {
   }
 
   const userId = (req as any).user?.id || 'mock_user_id';
-  const isOwner = isPrimaryOwner((req as any).user);
   const userKeys = await getUserApiKeys(userId, req);
 
-  if (!isOwner && !hasAllRequiredUserKeys(userKeys)) {
+  if (!hasAllRequiredUserKeys(userKeys)) {
     return res.status(402).json({
       error: 'API_KEY_REQUIRED',
       provider: !userKeys.groq ? 'groq' : !userKeys.gemini ? 'gemini' : !userKeys.openai ? 'openai' : 'anthropic',

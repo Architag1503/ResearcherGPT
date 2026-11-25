@@ -1,13 +1,19 @@
 import os
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 from services.qdrant_service import client, COLLECTION_NAME, get_embedding, fallback_store
 
-def retrieve(project_id: str, query: str, paper_id: str = None, limit: int = 10) -> List[Dict[str, Any]]:
+def retrieve(
+    project_id: str,
+    query: str,
+    paper_id: str = None,
+    limit: int = 10,
+    user_api_keys: Optional[Dict[str, str]] = None,
+) -> List[Dict[str, Any]]:
     """
     Retrieve top-k relevant chunks from Qdrant vector database with metadata filters.
     """
-    query_vector = get_embedding(query)
+    query_vector = get_embedding(query, user_api_keys=user_api_keys)
     results = []
 
     # 1. Build Qdrant filter conditions

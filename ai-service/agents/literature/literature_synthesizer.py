@@ -1,9 +1,9 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from .extract_paper_metadata import extract_metadata
 from .methodology_extractor import extract_methodology
 from .limitation_extractor import extract_limitations
 
-def synthesize_literature(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def synthesize_literature(papers: List[Dict[str, Any]], user_api_keys: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """
     Orchestrates the synthesis of all uploaded papers, extracting metadata,
     methodologies, and limitations to construct a structured database representation.
@@ -18,13 +18,13 @@ def synthesize_literature(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             text = " ".join([c.get("textContent", "") for c in p.get("chunks", [])[:5]])
 
         # 1. Extract Metadata
-        meta = extract_metadata(title, text)
+        meta = extract_metadata(title, text, user_api_keys=user_api_keys)
         
         # 2. Extract Methodology
-        methods = extract_methodology(text)
+        methods = extract_methodology(text, user_api_keys=user_api_keys)
         
         # 3. Extract Limitations
-        limits = extract_limitations(text)
+        limits = extract_limitations(text, user_api_keys=user_api_keys)
 
         synthesized_items.append({
             "paper_id": str(p.get("_id", "Unknown")),

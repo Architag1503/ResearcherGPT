@@ -26,7 +26,7 @@ export const getUserApiKeysHandler = async (req: Request, res: Response) => {
     };
 
     const hasConfiguredKeys = Boolean(
-      (groqKey && geminiKey && openaiKey && anthropicKey) || isOwner
+      groqKey && geminiKey && openaiKey && anthropicKey
     );
 
     return res.status(200).json({

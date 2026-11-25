@@ -150,7 +150,7 @@ export default function Dashboard() {
             const local = getLocalApiKeys();
             const hasLocal = hasRequiredApiKeys(local);
             const hasRemote = Boolean(data.hasConfiguredKeys);
-            setHasConfiguredKeys(Boolean(data.isOwner || hasLocal || hasRemote));
+            setHasConfiguredKeys(Boolean(hasLocal || hasRemote));
           }
         })
         .catch(() => {

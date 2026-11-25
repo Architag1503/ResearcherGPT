@@ -183,6 +183,89 @@ class Phase1RegressionTests(unittest.TestCase):
             if os.path.exists(pdf_path):
                 os.remove(pdf_path)
 
+    def test_strict_user_keys_and_429_resilience_during_pdf_processing(self):
+        import tempfile
+        import fitz
+        from unittest.mock import patch, MagicMock
+        from agents import router
+        from utils import pdf_processor
+        from services import graph_service
+
+        # Even if personal .env keys exist, call_model must refuse to use them when user_api_keys is empty
+        prev_env = {k: os.environ.get(k) for k in ("GEMINI_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")}
+        os.environ["GEMINI_API_KEY"] = "env_personal_gemini_key"
+        os.environ["GROQ_API_KEY"] = "env_personal_groq_key"
+        os.environ["OPENAI_API_KEY"] = "env_personal_openai_key"
+        os.environ["ANTHROPIC_API_KEY"] = "env_personal_anthropic_key"
+        try:
+            with self.assertRaises(ValueError):
+                router.call_model("writer", "system", "user", user_api_keys={"is_owner": True})
+
+            # Verify call_model cascades from user Groq 429 -> user Gemini key (never .env keys)
+            seen_urls = []
+            def fake_post(url, headers=None, json=None, timeout=None):
+                seen_urls.append((url, (headers or {}).get("Authorization", "")))
+                resp = MagicMock()
+                if "groq.com" in url:
+                    resp.status_code = 429
+                    resp.text = "rate_limit"
+                    return resp
+                resp.status_code = 200
+                resp.text = "{}"
+                resp.json.return_value = {"candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": "user_gemini_ok"}]}}]}
+                return resp
+
+            with patch("agents.router.requests.post", side_effect=fake_post), patch("agents.router.time.sleep"):
+                out = router.call_model(
+                    "writer",
+                    "system",
+                    "hello",
+                    user_api_keys={"groq": "user_groq_123", "gemini": "user_gemini_456", "is_owner": True},
+                )
+            self.assertEqual(out, "user_gemini_ok")
+            self.assertTrue(any("key=user_gemini_456" in u for u, _ in seen_urls))
+            self.assertFalse(any("env_personal" in u or "env_personal" in auth for u, auth in seen_urls))
+
+            # Verify PDF extraction + chunking + indexing + graph succeed even if user API returns 429
+            doc = fitz.open()
+            page = doc.new_page()
+            page.insert_text((72, 72), "GraphRAG Paper Title\nAbstract: We study multi-hop retrieval.")
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tf:
+                pdf_path = tf.name
+            try:
+                doc.save(pdf_path)
+                doc.close()
+
+                def always_429(url, headers=None, json=None, timeout=None):
+                    resp = MagicMock()
+                    resp.status_code = 429
+                    resp.text = "rate_limit_exceeded"
+                    return resp
+
+                with patch("utils.pdf_processor.requests.post", side_effect=always_429), \
+                     patch("services.qdrant_service.requests.post", side_effect=always_429), \
+                     patch("services.graph_service.requests.post", side_effect=always_429), \
+                     patch("time.sleep"):
+                    parsed = pdf_processor.extract_pdf_content(pdf_path, user_api_keys={"gemini": "user_gemini_456"})
+                    chunks = pdf_processor.chunk_text(parsed["pages"], metadata=parsed["metadata"])
+                    indexed = qdrant_service.index_chunks("proj-429", "paper-429", chunks, user_api_keys={"gemini": "user_gemini_456"})
+                    graph = graph_service.build_project_graph(
+                        "proj-429",
+                        [{"_id": "paper-429", "title": parsed["metadata"]["title"], "abstract": "Transformer RAG", "authors": ["Alice"]}],
+                        user_api_keys={"gemini": "user_gemini_456"},
+                    )
+                self.assertGreaterEqual(len(indexed), 1)
+                self.assertGreaterEqual(len(graph["nodes"]), 1)
+            finally:
+                if os.path.exists(pdf_path):
+                    os.remove(pdf_path)
+        finally:
+            for k, v in prev_env.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

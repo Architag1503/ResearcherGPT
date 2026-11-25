@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from agents.router import call_llm
 
 def parse_json_safely(text: str) -> Any:
@@ -20,7 +20,8 @@ def generate_learning_node_details(
     node_type: str,
     context_papers: List[Dict[str, Any]],
     connected_nodes: List[Dict[str, Any]],
-    connected_links: List[Dict[str, Any]]
+    connected_links: List[Dict[str, Any]],
+    user_api_keys: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     # format papers context
     papers_context_str = ""
@@ -136,7 +137,7 @@ Ensure all sections are completely filled out. Be verbose, accurate, and pedagog
 Generate the JSON payload now:
 """
 
-    response_text = call_llm(system_prompt, user_prompt)
+    response_text = call_llm(system_prompt, user_prompt, user_api_keys=user_api_keys)
     try:
         parsed_data = parse_json_safely(response_text)
         return {
@@ -160,7 +161,8 @@ def answer_learning_node_question(
     label: str,
     node_type: str,
     question: str,
-    node_details: Dict[str, Any]
+    node_details: Dict[str, Any],
+    user_api_keys: Optional[Dict[str, str]] = None,
 ) -> str:
     system_prompt = (
         "You are an expert AI Tutor helping a college student understand academic research.\n"
@@ -178,4 +180,4 @@ Student's Question: {question}
 
 Please answer the student's question directly and informatively:
 """
-    return call_llm(system_prompt, user_prompt)
+    return call_llm(system_prompt, user_prompt, user_api_keys=user_api_keys)

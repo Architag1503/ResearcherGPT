@@ -7,6 +7,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import Paper from '../models/Paper.js';
 import PaperChunk from '../models/PaperChunk.js';
 import { bullConfig } from '../config/redis.js';
+import { getUserApiKeys } from '../utils/userKeys.js';
 
 const s3Client = new S3Client({
   endpoint: process.env.R2_ENDPOINT || 'https://10daf3809212776719f5a55b3f6b0f6e.r2.cloudflarestorage.com',
@@ -45,6 +46,10 @@ export const uploadPaper = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.body;
     const file = req.file;
+    // Extract user API keys (header or DB) so we can forward ONLY user keys to the AI service
+    const userId = (req as any).user?.id || (req as any).auth?.userId || '';
+    const userKeys = await getUserApiKeys(userId, req);
+    const userGeminiKey = userKeys.gemini || undefined;
 
     if (!projectId) {
       return res.status(400).json({ error: 'projectId is required' });
@@ -213,6 +218,9 @@ export const uploadPaper = async (req: Request, res: Response) => {
         checksum,
         reusePaperId: existingPaper ? existingPaper._id : undefined,
         processingVersion: '1.0.0',
+        // Forward strictly the user's own API keys so OCR/embeddings/graph use per-user keys
+        userGeminiKey: userGeminiKey || null,
+        userApiKeys: userKeys,
       });
       jobId = job.id;
       
@@ -406,6 +414,9 @@ export const retryPaperProcessing = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Paper not found' });
     }
 
+    const userId = (req as any).user?.id || (req as any).auth?.userId || '';
+    const userKeys = await getUserApiKeys(userId, req);
+
     paper.status = 'pending';
     paper.currentStage = 'Queued';
     paper.progress = 10;
@@ -420,6 +431,8 @@ export const retryPaperProcessing = async (req: Request, res: Response) => {
         storageUrl: paper.storageUrl,
         checksum: paper.checksum,
         processingVersion: '1.0.0',
+        userGeminiKey: userKeys.gemini || null,
+        userApiKeys: userKeys,
       });
 
       return res.status(200).json({

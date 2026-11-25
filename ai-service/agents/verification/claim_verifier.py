@@ -78,6 +78,7 @@ def verify_claim(
     use_semantic: bool = False,
     semantic_encoder: Any = None,
     allow_llm: bool = True,
+    user_api_keys: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """
     Compares a scientific claim against retrieved source evidence,
@@ -88,8 +89,7 @@ def verify_claim(
         for idx, e in enumerate(evidence)
     ])
 
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if allow_llm and gemini_key and "your_gemini_api_key" not in gemini_key:
+    if allow_llm and user_api_keys:
         system = (
             "You are an Academic Fact Verification Agent.\n"
             "Compare the claim against the provided snippets. Determine if the claim is:\n"
@@ -103,7 +103,7 @@ def verify_claim(
         )
         try:
             from agents.router import call_llm
-            res_text = call_llm(system, f"Claim: {claim}\n\nEvidence Snippets:\n{evidence_text}")
+            res_text = call_llm(system, f"Claim: {claim}\n\nEvidence Snippets:\n{evidence_text}", user_api_keys=user_api_keys)
             parsed = json.loads(res_text)
             if isinstance(parsed, dict):
                 return parsed

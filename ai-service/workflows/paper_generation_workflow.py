@@ -1,6 +1,6 @@
 import os
 import requests
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from agents.writer.outline_generator import generate_outline
 from agents.writer.abstract_writer import write_abstract
 from agents.writer.introduction_writer import write_introduction
@@ -14,7 +14,7 @@ from plagiarism.plagiarism_report_generator import generate_plagiarism_report
 
 EXPRESS_API_URL = os.getenv("EXPRESS_API_URL", "http://localhost:5000")
 
-def execute_paper_generation_flow(project_id: str, query: str) -> Dict[str, Any]:
+def execute_paper_generation_flow(project_id: str, query: str, user_api_keys: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Paper generation workflow: drafts paper outlines, sections, formats bibliographies,
     runs plagiarism audits, and saves the output in MongoDB.
@@ -29,11 +29,11 @@ def execute_paper_generation_flow(project_id: str, query: str) -> Dict[str, Any]
     context_str = " ".join([p.get("abstract", "") for p in papers])
     
     # 2. Outline
-    outline = generate_outline(query, context_str)
+    outline = generate_outline(query, context_str, user_api_keys=user_api_keys)
     
     # 3. Draft Sections
-    abstract = write_abstract(query, context_str)
-    intro = write_introduction(query, context_str)
+    abstract = write_abstract(query, context_str, user_api_keys=user_api_keys)
+    intro = write_introduction(query, context_str, user_api_keys=user_api_keys)
     
     reviews = []
     for p in papers:
@@ -42,11 +42,11 @@ def execute_paper_generation_flow(project_id: str, query: str) -> Dict[str, Any]
             "year": p.get("year", 2024),
             "method": p.get("title", "")
         })
-    lit_review = write_literature_review(query, reviews)
-    methodology = write_methodology(query, context_str)
-    results = write_results(query, context_str)
-    discussion = write_discussion(query, [])
-    conclusion = write_conclusion(query, context_str)
+    lit_review = write_literature_review(query, reviews, user_api_keys=user_api_keys)
+    methodology = write_methodology(query, context_str, user_api_keys=user_api_keys)
+    results = write_results(query, context_str, user_api_keys=user_api_keys)
+    discussion = write_discussion(query, [], user_api_keys=user_api_keys)
+    conclusion = write_conclusion(query, context_str, user_api_keys=user_api_keys)
     
     # Fetch citations to compile references section
     try:

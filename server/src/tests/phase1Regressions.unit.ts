@@ -7,6 +7,10 @@ import {
   detectAIContent,
 } from '../utils/plagiarismEngine.js';
 import { authMiddleware, AuthenticatedRequest } from '../middlewares/auth.middleware.js';
+import { extractPdfFallback } from '../utils/pdfFallback.js';
+import { isPrimaryOwner, getUserApiKeys } from '../utils/userKeys.js';
+import fs from 'fs';
+import path from 'path';
 
 async function runTests() {
   // 1. Winnowing fingerprint produces non-empty hashes even for 5-token sentences
@@ -121,6 +125,23 @@ async function runTests() {
     else process.env.NODE_ENV = prevEnv;
     if (prevBypass === undefined) delete process.env.ALLOW_DEV_MOCK_AUTH;
     else process.env.ALLOW_DEV_MOCK_AUTH = prevBypass;
+  }
+
+  // 6. Strict user-only API key enforcement (never unlock .env owner bypass)
+  assert.equal(isPrimaryOwner({ id: '666a7b29d5b51a0211a7c501', email: 'archit@test.edu' }), false);
+  const extractedKeys = await getUserApiKeys('', {
+    headers: { 'x-gemini-api-key': 'user_gemini_test_key' },
+  } as any);
+  assert.equal(extractedKeys.gemini, 'user_gemini_test_key');
+  assert.equal(extractedKeys.is_owner, false);
+
+  // 7. Local Node PDF fallback parses real PDFs without calling external AI providers
+  const samplePdfPath = path.resolve(process.cwd(), '../Inference_Scaled_GraphRAG.pdf');
+  if (fs.existsSync(samplePdfPath)) {
+    const pdfBuf = fs.readFileSync(samplePdfPath);
+    const parsedFallback = await extractPdfFallback(pdfBuf, 'Fallback Title');
+    assert.ok(parsedFallback.chunks.length >= 1, 'Fallback parser should produce at least 1 chunk');
+    assert.ok(parsedFallback.chunks[0].text_content.length > 50, 'Fallback chunk should contain extracted PDF text');
   }
 
   console.log('ALL SERVER PHASE 1 UNIT TESTS PASSED');

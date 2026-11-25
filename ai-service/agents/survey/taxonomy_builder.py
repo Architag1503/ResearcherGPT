@@ -1,16 +1,14 @@
-import os
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from agents.router import call_llm
 
-def build_taxonomy(papers: List[Dict[str, Any]]) -> Dict[str, Any]:
+def build_taxonomy(papers: List[Dict[str, Any]], user_api_keys: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     """
     Constructs a hierarchical taxonomy classification of the papers in the workspace library.
     """
     titles = [p.get("title", "Untitled") for p in papers]
     
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key and "your_gemini_api_key" not in gemini_key:
+    if user_api_keys:
         system = (
             "You are an Academic Classification Agent.\n"
             "Build a hierarchical taxonomy tree categorizing these research papers. "
@@ -20,7 +18,7 @@ def build_taxonomy(papers: List[Dict[str, Any]]) -> Dict[str, Any]:
             "- papers (list of paper titles in this category)"
         )
         try:
-            res_text = call_llm(system, f"Paper Titles: {json.dumps(titles)}")
+            res_text = call_llm(system, f"Paper Titles: {json.dumps(titles)}", user_api_keys=user_api_keys)
             parsed = json.loads(res_text)
             if isinstance(parsed, dict):
                 return parsed

@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import requests
 import os
 from rag.hybrid_retriever import retrieve_hybrid
@@ -6,12 +6,12 @@ from agents.literature.literature_synthesizer import synthesize_literature
 
 EXPRESS_API_URL = os.getenv("EXPRESS_API_URL", "http://localhost:5000")
 
-def execute_research_flow(project_id: str, query: str) -> Dict[str, Any]:
+def execute_research_flow(project_id: str, query: str, user_api_keys: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     RAG Research workflow: executes hybrid searches and synthesizes literature.
     """
     # 1. Fetch relevant vector chunks
-    chunks = retrieve_hybrid(project_id, query, limit=5)
+    chunks = retrieve_hybrid(project_id, query, limit=5, user_api_keys=user_api_keys)
     
     # 2. Fetch processed papers from MongoDB via API Gateway
     try:
@@ -22,7 +22,7 @@ def execute_research_flow(project_id: str, query: str) -> Dict[str, Any]:
         papers = []
 
     # 3. Synthesize Literature Review
-    reviews = synthesize_literature(papers)
+    reviews = synthesize_literature(papers, user_api_keys=user_api_keys)
     
     return {
         "query": query,
