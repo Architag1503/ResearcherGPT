@@ -1,0 +1,820 @@
+=== PAGE 1 ===
+ResearcherGPT: A Distributed Multi-Agent
+Cognitive Framework for Autonomous Academic
+Literature Synthesis, Layout-Aware Extraction, and
+Multi-Scale Attribution
+Archit Gupta
+Department of Artificial Intelligence and Data Science
+Email: architag1503@gmail.com
+Tanishq Sharma
+Department of Artificial Intelligence and Data Science
+Email: tanishq2228@gmail.com
+Abstract—Modern scientific inquiry is constrained by the rapid
+expansion of academic literature, rendering exhaustive synthe-
+sis, contradiction discovery, and layout-preserving manuscript
+compilation difficult to perform manually. Existing Retrieval-
+Augmented Generation (RAG) paradigms can suffer from seman-
+tic fragmentation, context dilution across multi-hop relationships,
+hallucinated bibliographies, and loss of non-textual artifacts such
+as LATEX equations, tables, and multimodal figures. This paper
+presents ResearcherGPT, a distributed cognitive framework for
+automating the academic literature pipeline. Its four principal
+components are: (1) a tri-hybrid retrieval engine combining dense
+embeddings (d= 3072ord= 384), sparse BM25 lexical retrieval,
+and Neo4j property-graph traversal through Reciprocal Rank
+Fusion (RRF), with a graph boost factor ofβ= 1.30; (2)
+a LangGraph multi-agent state machine backed by Redis and
+coordinating thirteen specialized agents with fallback routing
+across Groq, Gemini, SambaNova, and OpenAI; (3) FormaTeX,
+a layout-aware PDF extraction and manuscript synthesis engine
+targeting IEEE, ACM, Springer, and Elsevier styles; and (4) an
+eleven-phase integrity pipeline combiningk-shingle MinHash,
+Winnowing fingerprints, Abstract Syntax Tree (AST) edit dis-
+tance, and external OpenAlex bibliographic resolution. The sup-
+plied evaluation reports 96.4% citation factual validity, a 41.8%
+reduction in cross-agent synchronization latency, and 92.7% RRF
+Recall@5. These figures are reproduced as supplied and are not
+independently validated in this typesetting conversion.
+Index Terms—Multi-agent systems, retrieval-augmented gener-
+ation, knowledge graphs, reciprocal rank fusion, scientific paper
+synthesis, MinHash, Winnowing, L ATEX compilation, academic
+integrity.
+I. INTRODUCTION
+The velocity of peer-reviewed publication has surpassed hu-
+man comprehension capacity. Across computational sciences,
+large numbers of preprints and journal articles are indexed
+annually across repositories and scholarly databases such
+as arXiv, IEEE Xplore, and PubMed. Scholars must digest
+large volumes of literature, isolate methodological contribu-
+tions, detect empirical contradictions between experiments,
+identify open research gaps, and draft publication-compliant
+manuscripts.
+Large Language Models (LLMs), including GPT-family
+models, Gemini, and LLaMA-family models, demonstrate
+strong linguistic capabilities. However, their naive application
+to scholarly synthesis exposes several limitations:
+•Context fragmentation and semantic drift:conventional
+RAG systems partition documents into token chunks.
+Dense vector retrieval may fail to preserve relations such
+as a method being evaluated on a particular dataset and
+compared against a baseline.
+•Bibliographic hallucination:generative models may pro-
+duce nonexistent Digital Object Identifiers (DOIs), com-
+bine real author names with fabricated titles, or attribute
+claims to sources that do not support them.
+•Loss of scientific artifacts:academic documents contain
+mathematical notation, multi-column tables, figures, and
+diagrams. Text-only PDF extraction can flatten these
+structures and scramble equations or table relationships.
+•Agent deadlocks and state corruption:multi-agent review
+and synthesis workflows can encounter cyclic dependen-
+cies, concurrent state-update races, and excessive context
+growth when state history is not partitioned and check-
+pointed.
+We introduce ResearcherGPT, a distributed academic
+workspace and multi-agent framework designed to automate
+literature synthesis while grounding generated claims in
+retrieved evidence.
+A. Problem Statement and Scope
+An autonomous research assistant for this setting should
+satisfy five operational criteria:
+1)Relational grounding:combine semantic intent, lexi-
+cal precision, and ontological relationships, such as a
+method evaluated on a dataset and compared with a
+baseline.
+2)Attribution veracity:associate generated claims with
+primary evidence chunks and sentence-level provenance.
+3)Structural integrity:preserve mathematical syntax, tab-
+ular data, and visual schematics through extraction,
+reasoning, and recompilation.
+
+=== PAGE 2 ===
+4)Fault-tolerant coordination:coordinate agents over
+shared state while providing deterministic fallback be-
+havior under provider rate limits.
+5)Multi-vector integrity analysis:assess verbatim overlap,
+semantic paraphrase, citation-network similarity, for-
+mula structure, and statistical writing signals.
+B. System Overview
+ResearcherGPT uses a decoupled three-tier architecture. The
+client tier is based on Next.js 15 and React 19, with Zustand
+state synchronization, a TipTap drafting canvas, KaTeX for-
+mula rendering, and a WebGL-based conceptual visualization.
+The API tier uses Node.js and Express with TypeScript,
+BullMQ, and Redis for asynchronous job scheduling, and
+MongoDB Atlas for document persistence. The cognitive tier
+is a Python FastAPI service hosting LangGraph workflows,
+Qdrant vector search, Neo4j knowledge graphs, document
+extraction, and FormaTeX compilation.
+The principal contributions are:
+1) A tri-hybrid rank-fusion mechanism combining dense
+embeddings, BM25 lexical retrieval, and Neo4j graph
+traversal with a graph-context boost.
+2) A LangGraph workflow coordinating thirteen special-
+ized agents through shared typed state and a model-
+routing fallback registry.
+3) An eleven-phase integrity pipeline combining lexical,
+semantic, structural, formula, figure, table, code, and
+bibliographic checks.
+4) FormaTeX, a layout-aware extraction and compilation
+engine that reconstructs tables and mathematical struc-
+tures and emits manuscripts in multiple publication
+styles.
+II. LITERATUREREVIEW ANDRELATEDWORK
+A. Evolution of Retrieval-Augmented Generation
+Retrieval-Augmented Generation was formalized by Lewis
+et al. to mitigate parametric-memory hallucinations by ground-
+ing model outputs in retrieved documents [1]. Early implemen-
+tations used dense vector representations from dual-encoder
+architectures. Dense Passage Retrieval (DPR) demonstrated
+the effectiveness of learned query–passage representations
+for open-domain question answering [2], while Sentence-
+BERT enabled semantically meaningful sentence embeddings
+through Siamese network training [3]. Hierarchical Navigable
+Small World (HNSW) graphs provide efficient approximate
+nearest-neighbor search [4]. However, dense retrieval can miss
+exact technical identifiers, uncommon terminology, and ex-
+plicit lexical matches. BM25 remains a strong sparse retrieval
+baseline [5]. Reciprocal Rank Fusion combines heterogeneous
+ranked lists without requiring score calibration [6].
+B. Knowledge Graphs and Multi-Hop Retrieval
+Graph-based retrieval augments vector similarity with ex-
+plicit entity and relation structure. GraphRAG uses graph
+communities and summaries to support query-focused syn-
+thesis across distributed information [7]. ResearcherGPT uses
+a project-scoped property graph to represent papers, authors,
+methods, datasets, and concepts. This representation is in-
+tended to support retrieval paths that are difficult to recover
+from isolated text chunks.
+C. Multi-Agent Systems in Scientific Discovery
+Frameworks such as AutoGen, CrewAI, and LangGraph
+support decomposition of complex language-model workflows
+into role-specific agents and graph-based execution [8]–[10].
+Scholarly tools such as Semantic Scholar, Elicit, and Con-
+sensus support literature discovery; ResearcherGPT focuses
+on iterative synthesis, claim cross-examination, contradiction
+discovery, and manuscript compilation.
+D. Layout-Aware Document Extraction
+Academic PDF extraction is difficult because visual-spatial
+information is encoded through positioned text, drawing prim-
+itives, and bounding boxes. PyMuPDF and pdfplumber expose
+layout information useful for reconstructing reading order
+and tables [11]. ResearcherGPT combines coordinate-based
+heuristics with vision-assisted fallbacks to handle non-standard
+figures, inline matrices, and scanned pages.
+E. Plagiarism Detection and Academic Integrity
+Winnowing uses local fingerprints to detect shared sub-
+strings while controlling fingerprint density [12]. MinHash es-
+timates Jaccard similarity between shingle sets [13]. Academic
+integrity assessment also requires semantic and structural
+checks, as discussed in the literature on plagiarism detection
+[14]. ResearcherGPT combines these approaches with formula
+AST comparison and bibliographic resolution.
+III. PROPOSEDMETHODOLOGY
+The methodology comprises three formal components: tri-
+hybrid retrieval, distributed multi-agent state synchronization,
+and multi-phase academic integrity verification.
+A. Tri-Hybrid Reciprocal Rank Fusion Retrieval
+Letqdenote a scholarly query and let
+D={c 1, c2, . . . , cN }(1)
+denote the set of chunks extracted from papers in project space
+P.
+1) Dense Semantic Retrieval:Each chunkc i is mapped to
+an embedding vectorv i ∈R d, where the described configu-
+rations used∈ {384,3072}. The query is embedded in the
+same vector space. Qdrant uses HNSW approximate nearest-
+neighbor search to retrieve the top-2Kcandidates, denoted
+Rdense.
+
+=== PAGE 3 ===
+Next.js 15 / React 19 Client
+TipTap, Zustand, KaTeX, WebGL canvas
+Express.js TypeScript Gateway
+Authentication, rate limiting, validation
+Redis / BullMQ
+Job queue and locks
+MongoDB Atlas
+Document persistence
+FastAPI Cognitive AI Engine / Python 3.12
+LangGraph: 13 agents and model routing
+Qdrant
+Dense HNSW
+Neo4j
+Knowledge graph
+FormaTeX + integrity
+Extraction and compilation
+Fig. 1. High-level distributed architecture of ResearcherGPT.
+2) Sparse Lexical Retrieval:The lexical branch uses BM25
+to recover exact technical terms and identifiers. For query
+termst j, the BM25 score is
+BM25(q, c) =
+∑︂
+tj ∈q
+IDF(tj) f(t j, c)(k1 + 1)
+f(t j, c) +k1
+(︂
+1−b+b |c|
+avgdl
+)︂ ,
+(2)
+wheref(t j, c)is the term frequency in chunkc,|c|is its length,
+andavgdlis the average chunk length. The implementation
+specifiesk 1 = 1.5andb= 0.75. The inverse document
+frequency is
+IDF(tj) = ln
+(︃ N−n(t j) + 0.5
+n(tj) + 0.5 + 1
+)︃
+,(3)
+wheren(t j)is the number of chunks containing termt j. This
+producesR lexical.
+3) Knowledge-Graph Association:LetG= (V, E)be the
+Neo4j labeled-property graph. Its vertices are partitioned into
+paper, author, method, dataset, and concept entities:
+V=V paper ∪V author ∪V method ∪V dataset ∪V concept.(4)
+Typed edges represent relations such asauthored_by,
+implements,evaluates_on, andrelates_to. Query
+terms longer than three characters are matched to graph
+entities, and adjacent paper nodes are collected for boosting.
+A representative traversal is shown below.
+Listing 1. Representative Neo4j Cypher traversal
+MATCH (e:Entity {projectId: $projectId})
+WHERE toLower(e.label) IN $words
+AND NOT e.type = ’paper’
+MATCH (e)-[r:RELATION]-
+(p:Entity {type: ’paper’, projectId: $projectId
+})
+RETURN DISTINCT p.id AS paperId
+The resulting set of graph-boosted paper identifiers is denoted
+byP boost ⊆V paper.
+Scholarly queryq
+Dense encoder
+Qdrant HNSW
+Lexical tokenizer
+BM25 scoring
+Entity extraction
+Neo4j traversal
+RRF rank fusion + graph boost
+Fused and reranked
+top-Kchunks
+Fig. 2. Tri-hybrid retrieval pipeline with knowledge-graph boosting.
+4) Reciprocal Rank Fusion:For each chunkcappearing in
+either ranking, the augmented RRF score is
+SRRF(c) =
+⎛
+⎝ ∑︂
+m∈{dense,lexical}
+1
+k+r m(c)
+⎞
+⎠ β(c),(5)
+wherek= 60is the smoothing constant andr m(c)is the
+one-based rank ofcin rankingR m. The graph boost is
+β(c) =
+{︄
+1.30,paper_id(c)∈P boost,
+1.00,otherwise. (6)
+The fused scores are sorted in descending order to obtain the
+final top-Kchunks.
+B. Distributed Multi-Agent State Synchronization
+The manuscript synthesis workflow is represented as a
+directed state-transition graphM= (A, T), whereAis the
+set of thirteen specialized agents andTis the set of guarded
+transitions. The global execution state is represented as
+S=⟨P id, Rid, q, Cctx, Dpapers, Lreviews , Mmeth, Mcomp,
+Ttrend, Ggaps, Xconf licts, Vf acts, Ssections, Of inal⟩.
+(7)
+
+=== PAGE 4 ===
+Start Planner Research Literature
+Methodology Comparison Gap analysis
+Contradiction Fact check Review
+Writing Quality assurance End
+Fig. 3. Illustrative principal path through the multi-agent research workflow.
+The complete orchestration contains thirteen roles, including supervisor and
+planner.
+Each agentA j maps the current state to an augmented state:
+Aj :S t →S t+1, S t+1 =S t ∪∆S Aj .(8)
+The described implementation serializes state transitions using
+Redis distributed mutex locks. The supplied design character-
+izes the orchestration as a DAG with completion guards; any
+conditional retry or review loop should be represented explic-
+itly in the deployed LangGraph topology when documenting
+the implementation.
+1) Fallback-Resilient Model Registry:To avoid execution
+stalls caused by HTTP 429 rate-limit responses, agents use a
+tiered model registry:
+Priority(Aj) = [Groq LLaMA-3.3-70B→Gemini-2.5-Flash
+→SambaNova→OpenAI GPT-4o].
+(9)
+Retries use exponential backoff with randomized jitter:
+tbackoff =t base2attempt +U(0,2),(10)
+wheret base = 5.0seconds andattempt∈ {0,1,2,3}.
+C. Eleven-Phase Academic Integrity Formalism
+The academic-integrity engine operates across eleven
+phases: document processing, exact matching, semantic match-
+ing, citation-network analysis, structural matching, formula
+matching, figure-caption matching, table-structure comparison,
+code similarity, external discovery, and AI-content heuristics.
+1) Winnowing Fingerprinting:Given a normalized charac-
+ter streamT, the method generatesk-grams withk= 20. Each
+k-gram is hashed using 32-bit Fowler–Noll–V o (FNV-1a):
+hi = FNV-1a(T[i:i+k]).(11)
+For a sliding window of sizew= 40, the minimum hash
+is selected; ties retain the rightmost minimum. The stated
+detection guarantee is for duplicate substrings of length
+t≥w+k−1.(12)
+1. Document
+processing
+2. Exact
+matching
+3. Semantic
+matching
+4. Citation
+network
+5. Structural
+matching
+6. Formula
+matching
+7. Figure
+captions
+8. Table
+structure
+9. Code
+similarity
+10. External
+discovery
+11. AI-content
+heuristics
+Fig. 4. Eleven phases of the academic-integrity and plagiarism-verification
+engine.
+2) MinHash Jaccard Approximation:A document is rep-
+resented by its set of uniquek-shingles,S(D). A signature
+of lengthM= 128is constructed from unique five-token
+shingles (k= 5) using independent universal hash functions:
+ha(x) = (ax+b) modp.(13)
+Them-th signature component is
+sigm(D) = min
+s∈S(D)
+hm(s).(14)
+The estimated Jaccard similarity is
+ˆ︁J(D 1, D2) = 1
+M
+M∑︂
+m=1
+I[sigm(D1) = sigm(D2)].(15)
+3) Formula AST Plagiarism:Mathematical expressions ex-
+tracted from inline or display-math delimiters are parsed into
+LATEX ASTs. Variable names are alpha-converted to canonical
+symbols to normalize substitutions. Zhang–Shasha tree-edit
+distance evaluates structural similarity [15]:
+TED(T1, T2) = min
+Γ
+∑︂
+(u,v)∈Γ
+cost(u→v),(16)
+where edit operations include node deletion, insertion, and
+label substitution.
+4) AI-Content Detection Heuristics:For token sequence
+X= (x 1, . . . , xN ), perplexity is calculated from cross-
+entropy:
+PPL(X) = exp
+(︄
+− 1
+N
+N∑︂
+i=1
+logP θ(xi |x <i)
+)︄
+.(17)
+Burstiness is defined as the coefficient of variation of sentence
+lengthsL={l 1, . . . , lS}:
+Burstiness = σL
+µL
+=
+√︂
+1
+S
+∑︁S
+i=1(li − ¯l)2
+1
+S
+∑︁S
+i=1 li
+.(18)
+The supplied manuscript states that human-authored text often
+exhibits burstiness of at least 0.45, while raw LLM generations
+may cluster at or below 0.22. These are heuristic observations,
+not universal authorship thresholds.
+IV. SYSTEMARCHITECTURE ANDIMPLEMENTATION
+ResearcherGPT is implemented as a distributed system
+spanning backend services, retrieval infrastructure, agent
+workflows, integrity checks, and document compilation.
+
+=== PAGE 5 ===
+Algorithm 1Tri-Hybrid RRF Retrieval with Knowledge-
+Graph Boosting
+Require:Project IDp, queryq, result limitK
+Ensure:Ranked list of fused chunksF
+1:q v ←DenseEmbed(q)
+2:R d ←QdrantSearch(q v, p,2K)
+3:R l ←BM25Search(q, q-candidate corpus)
+4:W q ←ExtractTokens(q,minlen = 4)
+5:P b ← ∅
+6:ifNeo4j is connectedthen
+7:P b ←CypherPaperTraversal(p, Wq)
+8:end if
+9:Initialize score mapsand chunk mapM
+10:for allR∈ {R d, Rl}do
+11:for allchunkcat one-based rankrinRdo
+12:id←ChunkID(c);M[id]←c
+13:β←1.30ifpaperID(c)∈P b, else1.00
+14:s[id]←s[id] +β/(60 +r)
+15:end for
+16:end for
+17:F←chunks sorted by descendings
+18:returnfirstKelements ofF
+A. Tri-Hybrid Retrieval Algorithm
+Algorithm 1 summarizes the retrieval procedure. The
+lexical-search corpus and candidate-generation details should
+be aligned with the production implementation when reporting
+reproducible experiments.
+B. Thirteen Specialized Cognitive Agents
+The multi-agent workflow decomposes academic
+manuscript preparation into thirteen roles. Their
+responsibilities and target models are listed in Table I.
+C. Fact Verification Engine
+To reduce unsupported citations and empirical claims, the
+Fact Verification Agent extracts claims, retrieves supporting
+chunks, and classifies each claim as validated, conflicting, or
+unverified. Algorithm 2 presents the procedure.
+D. FormaTeX Layout Compilation and Mathematical Recov-
+ery
+FormaTeX addresses the mismatch between web-based
+WYSIWYG representations and strict typesetting require-
+ments.Table extraction and normalization:PDF bounding
+boxes are parsed into a normalized topological grid. The
+resulting table representation is emitted as structured HTML
+and translated to L ATEX table environments using booktabs
+rules and automatically calculated column widths.
+Formula recovery:inline and display mathematical expres-
+sions are extracted using delimiter-aware parsing and validated
+through an AST parser. Ligatures and malformed fractions are
+normalized to standard LATEX constructs.
+Algorithm 2Real-Time Claim Extraction and Multi-Hop
+Grounding
+Require:Draft sectionT sec, project IDp, thresholdθ= 0.85
+Ensure:Verification reportV
+1:C←Split(T sec)filtered for empirical or attribution
+claims
+2:V←EmptyReport()
+3:for allc∈Cdo
+4:v c ←DenseEmbed(c)
+5:E c ←QdrantSearch(v c, p,3)
+6:r←AuditLLM(c, E c)
+7:ifr.status=VALIDATEDandr.conf idence≥θ
+then
+8:Add claim and source location to validated set in
+V
+9:else ifr.status=CONFLICTINGthen
+10:Add claim and conflicting evidence toV
+11:Rewrite claim against retrieved evidence
+12:else
+13:Add claim to unverified set inV
+14:Prune or qualify unsupported claim
+15:end if
+16:end for
+17:returnV
+Multi-style document generation:the system describes
+formatters for IEEEtran, ACM SIGCONF, Springer LNCS,
+and Elsevier article styles. This paper uses the IEEEtran
+conference class. The specified mappings are IEEE:
+IEEEtran[conference], ACM:acmart[sigconf],
+Springer:sn-jnl[sn-mathphys], and Elsevier:
+elsarticle[review,3p,times]. For PDF table
+recovery, coordinate bounding boxes are mapped to a
+normalized grid, then emitted as HTMLtheadandtbody
+structures before LATEX conversion. Target tables usetable
+environments and booktabs rules.
+V. RESULTS ANDDISCUSSION
+The supplied manuscript reports quantitative and qualitative
+evaluations across computer systems, machine learning, and
+computational biology. The following tables reproduce the
+reported figures; they are not independently audited in this
+conversion.
+A. Experimental Setup and Benchmark Corpus
+The reported evaluation corpus contains 250 peer-reviewed
+papers published in IEEE, ACM, and NeurIPS venues between
+2021 and 2024. Documents were ingested using layout-aware
+coordinate extraction and indexed in Qdrant alongside a Neo4j
+5.12 graph deployment. Three baseline architectures are de-
+scribed:
+•Monolithic RAG:a single LLM prompt supplied with top-
+kdense-vector chunks retrieved through HNSW cosine
+search.
+
+=== PAGE 6 ===
+TABLE I
+SPECIALIZEDAGENTSPECIFICATIONS IN THELANGGRAPHORCHESTRATIONTOPOLOGY
+No. Agent role Primary model target Core responsibility
+1 Supervisor Groq LLaMA-3.3-70B (T= 0.2) Orchestrates execution path and evaluates state completion.
+2 Planner Groq LLaMA-3.3-70B (T= 0.3) Decomposes the research question into a sub-topic directed acyclic graph.
+3 Researcher Groq LLaMA-3.3-70B (T= 0.3) Executes tri-hybrid vector and graph queries over Qdrant and Neo4j.
+4 Literature Review Groq LLaMA-3.3-70B (T= 0.4) Extracts authors, years, architectures, datasets, and metrics.
+5 Methodology Extractor Groq LLaMA-3.3-70B (T= 0.2) Formalizes mathematical algorithms and hyperparameters.
+6 Comparison Agent Groq LLaMA-3.3-70B (T= 0.2) Builds cross-paper empirical performance matrices.
+7 Trend Analysis Groq LLaMA-3.3-70B (T= 0.5) Evaluates temporal progression of architectures and methods.
+8 Gap Analysis Groq LLaMA-3.3-70B (T= 0.3) Identifies methodological and dataset gaps.
+9 Contradiction Agent Groq LLaMA-3.3-70B (T= 0.1) Mines empirical conflicts and divergent findings.
+10 Fact Verification Groq LLaMA-3.3-70B (T= 0.0) Validates generated claims against primary source chunks.
+11 Reviewer Agent Groq LLaMA-3.3-70B (T= 0.3) Simulates peer-review critique under conference rubrics.
+12 Writing Agent Gemini 2.5 Flash (T= 0.6) Synthesizes section prose in academic format.
+13 Quality Assurance Groq LLaMA-3.3-70B (T= 0.1) Audits citation balance, formatting, and mathematical integrity.
+TABLE II
+RETRIEVALPERFORMANCEACROSSSEARCHCONFIGURATIONS
+Strategy MRR@5 MRR@10 NDCG@10 Recall@5
+Dense HNSW 0.612 0.648 0.684 0.724
+BM25 0.584 0.619 0.651 0.691
+Dense + BM25 0.732 0.765 0.789 0.812
+GraphRAG 0.694 0.731 0.758 0.785
+Tri-Hybrid RRF 0.841 0.879 0.912 0.927
+•Sequential chained pipeline:a multi-step LangChain
+workflow performing retrieval, summarization, and draft-
+ing without state-machine branching.
+•GraphRAG baseline:a retrieval setup using commu-
+nity summaries derived from knowledge-graph clustering
+without sparse lexical fusion.
+B. Retrieval Efficacy and Rank-Fusion Precision
+Retrieval performance is evaluated using Mean Recipro-
+cal Rank (MRR), Normalized Discounted Cumulative Gain
+(NDCG), and Recall across 300 technical queries requiring
+multi-hop reasoning. The reported Tri-Hybrid RRF mecha-
+nism achieves MRR@10 of 0.879 and Recall@5 of 0.927.
+Relative to dense vector retrieval, Recall@5 increases by 20.3
+percentage points. The Neo4j topological boost (β= 1.30) is
+intended to promote method- and dataset-related chunks that
+may have weak lexical overlap with a query.
+C. Factual Grounding and Citation Accuracy
+The supplied evaluation audits 1,200 extracted factual
+claims. Citations are categorized as accurate attribution, inac-
+curate attribution, or hallucinated paper. The reported system
+reduces hallucinated citations to 0.2% (two cases among 1,200
+inspected citations), compared with 8.8% for monolithic RAG.
+The manuscript attributes this reduction to the Fact Verification
+Agent and bibliographic resolution through CrossRef and
+OpenAlex.
+D. Plagiarism and Attribution Engine Performance
+The eleven-phase engine is evaluated against a synthetic
+benchmark of 150 papers containing planted variants: ver-
+batim copying, paraphrased plagiarism, structural mimicry,
+TABLE III
+FACTUALGROUNDING ANDCITATIONINTEGRITY
+Architecture Accurate Inaccurate Hallucinated
+Monolithic RAG 71.4% 19.8% 8.8% (106)
+Chained pipeline 78.2% 16.1% 5.7% (68)
+GraphRAG 84.6% 12.9% 2.5% (30)
+ResearcherGPT 96.4% 3.4% 0.2% (2)
+and mathematical borrowing. The reported single-phase results
+exhibit distinct blind spots: Winnowing detects 21.4% of
+paraphrased content, while semantic cosine detects 32.1%
+of formula manipulation. The complete suite is reported to
+achieve balanced detection across the four categories.
+E. Multi-Agent Latency and Resource Consumption
+The manuscript reports execution wall-clock time and peak
+memory for different target manuscript lengths. For a 15-page
+synthesis, ResearcherGPT is reported to require 291.4 seconds
+(approximately 4.8 minutes), compared with 145.8 seconds for
+a monolithic model. The supplied abstract additionally reports
+a 41.8% reduction in cross-agent synchronization latency;
+because no absolute synchronization-latency measurements or
+calculation protocol were included in the supplied material,
+this figure is retained as a reported result rather than indepen-
+dently derived here. The workflow is described as producing
+verified citations, layout-compliant LATEX, a conceptual knowl-
+edge graph, and contradiction matrices.
+F . Ablation Studies
+The supplied manuscript reports three ablation experiments:
+•Knowledge-graph boost:settingβ= 1.0and removing
+Neo4j traversal reduces Recall@5 from 92.7% to 81.2%.
+•Fact verification:disabling the Fact Verification Agent re-
+duces factual attribution accuracy from 96.4% to 79.1%,
+while hallucinated citations increase from 0.2% to 4.9%.
+•Model fallback registry:restricting execution to Gemini
+2.5 Pro is reported to produce a 34.2% workflow fail-
+ure rate under HTTP 429 quota exceptions. The multi-
+provider registry completed all 150 reported test runs.
+
+=== PAGE 7 ===
+TABLE IV
+DETECTIONRATESACROSSACADEMICMISCONDUCTTYPES
+Detection phase Verbatim Paraphrase Structural Formula AST
+Exact Winnowing 99.8% 21.4% 12.0% 8.2%
+MinHash signatures 98.4% 34.6% 18.5% 11.4%
+Semantic cosine (TF–IDF) 88.2% 89.1% 45.2% 32.1%
+LATEX AST tree distance 31.0% 42.0% 28.6% 94.6%
+Full eleven-phase suite 99.8% 94.2% 91.8% 96.2%
+TABLE V
+EXECUTIONTIME ANDMEMORYPROFILES
+Length Monolithic Chained Ours Peak MB
+5 pages 42.5 s 78.4 s 94.2 s 412
+10 pages 89.1 s 164.2 s 182.6 s 648
+15 pages 145.8 s 278.0 s 291.4 s 894
+TABLE VI
+EXECUTION-LATENCYBREAKDOWN FOR A15-PAGEMANUSCRIPT
+Component Seconds Share
+PDF ingestion and OCR 24.2 8.3%
+Vector and graph indexing 31.5 10.8%
+Research and literature agents 42.1 14.4%
+Gap and contradiction detection 38.6 13.2%
+Fact verification 56.4 19.4%
+Writing and section drafting 68.2 23.4%
+FormaTeX compilation 30.4 10.4%
+Total 291.4 100.0%
+G. Limitations and Ethical Considerations
+The principal design trade-off in ResearcherGPT is between
+fluent generative synthesis and strict factual grounding. A
+confidence threshold ofθ= 0.85in the Fact Verification Agent
+is described as reducing citation errors to 0.2%; however, strict
+verification can constrain the Writing Agent from proposing
+novel theoretical connections. A dual-track drafting mode
+could distinguish verified historical claims from exploratory
+hypotheses.
+The enterprise stack comprising Neo4j, Qdrant, Redis,
+MongoDB, and multiple model-provider endpoints introduces
+operational complexity and API cost. For libraries exceed-
+ing 1,000 papers, local graph synchronization latency may
+exceed 120 seconds. BullMQ background workers decouple
+ingestion from user-facing query interfaces, although further
+optimization remains necessary. ResearcherGPT is intended
+to support literature aggregation, contradiction discovery, and
+formatting compliance; it is not intended to replace original
+human scholarship or bypass peer review. Its integrity engine
+audits drafts for verbatim copying, paraphrased borrowing, and
+synthetic-text distribution markers.
+H. Extended Technical Roadmap
+The following extensions are proposed as future research
+directions rather than claims of completed implementation:
+1)Reinforcement-learned adaptive agent routing:the cur-
+rent deterministic DAG assigns a predefined sequence of
+agents, with conditional peer-review branches. A future
+adaptive policy could select agent actions from the cur-
+rent state snapshot using a Partially Observable Markov
+Decision Process (POMDP), with Proximal Policy Op-
+timization (PPO) or Monte Carlo Tree Search (MCTS)
+as candidate strategies. The policy would dynamically
+allocate reasoning and verification effort while retaining
+fact-checking gates.
+2)Formal proof checking and reproducibility:Lean 4 and
+Mathlib could provide a proof-checking interface for
+mathematical claims that admit formalization. A sand-
+box based on WebAssembly or eBPF could execute
+selected code artifacts under isolation, supporting repro-
+ducibility checks for extracted algorithms and empirical
+metrics. These mechanisms would complement, not re-
+place, source-level verification.
+3)Vector graphics and collaborative research:program-
+matic coordinate compilation through TikZ and Asymp-
+tote could preserve scalable visual artifacts during
+manuscript generation. A CRDT-based collaborative
+canvas (e.g., Yjs with TipTap and WebSockets) could
+support concurrent human–agent editing and conflict-
+free synchronization. Continuous ingestion through
+graph and scholarly APIs could further keep project
+knowledge meshes current.
+VI. CONCLUSION ANDFUTUREWORK
+A. Comprehensive Synthesis and Retrospective Conclusion
+ResearcherGPT is presented as a distributed multi-agent
+framework for scholarly literature synthesis, layout preserva-
+tion, and attribution verification. Conventional RAG systems
+remain limited by semantic context dilution, bibliographic
+and metric hallucinations, loss of visual-spatial structures,
+and brittle orchestration under shared-state contention or API
+failures.
+ResearcherGPT addresses these challenges through four in-
+tegrated capabilities. Tri-Hybrid Reciprocal Rank Fusion com-
+bines dense vector retrieval, sparse lexical retrieval (BM25),
+and graph traversal (Neo4j). In the reported evaluation, this de-
+sign achieved MRR@10 of 0.879 and Recall@5 of 0.927, link-
+ing method- and dataset-related chunks to queries. A thirteen-
+agent LangGraph workflow coordinates extraction, synthesis,
+contradiction analysis, verification, and review through typed
+state and transactional synchronization. FormaTeX recon-
+structs document structure and supports multi-journal L ATEX
+output while retaining mathematical expressions and table
+
+=== PAGE 8 ===
+TABLE VII
+PROPOSEDRESEARCHERGPT TECHNICALROADMAP
+Extension Technical direction Candidate technologies Potential outcome
+Adaptive routing POMDP-based policy using
+MCTS/PPO
+LangGraph, Ray, LibTorch Lower token cost and improved
+coherence
+Formal verification Interactive theorem proving Lean 4, Mathlib, REPL Mechanically checked mathematical
+proofs
+Vectorized visuals Coordinate-based TikZ/Asymptote
+generation
+TikZ, Asymptote, LATEX Resolution-independent diagrams
+Streaming graph mesh Continuous ingestion with scholarly
+metadata
+Neo4j, Kafka, OpenAlex Faster paper propagation
+Code sandbox Isolated execution for reproducibility Docker, Wasmtime, eBPF Reproducible empirical verification
+Real-time co-authoring CRDT-based collaborative canvas Yjs, TipTap, WebSockets Low-latency human–agent collaboration
+topology. The eleven-phase integrity engine combines lexi-
+cal fingerprints, semantic similarity, formula-tree comparison,
+bibliographic checks, and attribution analysis; the reported
+evaluation found 96.4% factual citation validity.
+These outcomes should be interpreted in light of the sup-
+plied experimental description. The numerical results are re-
+produced from the source manuscript and require independent
+replication with released datasets, query sets, implementation
+versions, and evaluation scripts before they can be treated
+as verified empirical findings. The framework is intended
+as a research-assistance system: human researchers remain
+responsible for validating evidence, interpreting results, and
+making scholarly contributions.
+B. Current System and Extended Technical Roadmap
+The current design includes retrieval fusion, agent orches-
+tration, document-layout reconstruction, and integrity checks.
+The roadmap extends this foundation through adaptive routing,
+formal proof verification, native vector diagram generation,
+streaming knowledge-graph updates, isolated code execution,
+and real-time co-authoring. These are proposed extensions and
+are not represented as completed components.
+C. Actionable Future Work
+Future work should prioritize reproducible benchmarking
+and transparent evaluation. The proposed directions include: (i)
+RL-guided adaptive graph routing using MCTS/PPO; (ii) Lean
+4/Mathlib proof verification for formalizable mathematical
+claims; (iii) native TikZ/Asymptote vector visual generation;
+(iv) a streaming federated academic knowledge mesh; (v) We-
+bAssembly/eBPF isolated code execution; and (vi) CRDT/Yjs
+real-time co-authoring. In particular, a future streaming mesh
+could incrementally synchronize new scholarly records and
+preprints to avoid propagating stale evidence.
+ACKNOWLEDGMENT
+The author thanks the researchers and maintainers of the
+open-source tools and scholarly infrastructure referenced in
+this work.
+REFERENCES
+[1] P. Lewis, E. Perez, A. Piktus, F. Petroni, V . Karpukhin, N. Goyal, H.
+Küttler, M. Lewis, W. Yih, T. Rocktäschel, S. Riedel, and D. Kiela,
+“Retrieval-augmented generation for knowledge-intensive NLP tasks,”
+inAdvances in Neural Information Processing Systems, vol. 33, 2020,
+pp. 9459–9474.
+[2] V . Karpukhin, B. Oguz, S. Min, P. Lewis, L. Wu, S. Edunov, D.
+Chen, and W. Yih, “Dense passage retrieval for open-domain question
+answering,” inProc. EMNLP, 2020, pp. 6769–6781.
+[3] N. Reimers and I. Gurevych, “Sentence-BERT: Sentence embeddings
+using Siamese BERT-networks,” inProc. EMNLP-IJCNLP, 2019, pp.
+3982–3992.
+[4] Y . A. Malkov and D. A. Yashunin, “Efficient and robust approximate
+nearest neighbors using hierarchical navigable small world graphs,”
+IEEE Trans. Pattern Anal. Mach. Intell., vol. 42, no. 4, pp. 824–836,
+Apr. 2020.
+[5] S. Robertson and H. Zaragoza, “The probabilistic relevance framework:
+BM25 and beyond,”Foundations and Trends in Information Retrieval,
+vol. 3, no. 4, pp. 333–389, 2009.
+[6] G. V . Cormack, C. L. Clarke, and S. Buettcher, “Reciprocal rank fusion
+outperforms Condorcet and individual rank learning methods,” inProc.
+32nd ACM SIGIR, 2009, pp. 758–759.
+[7] D. Edge, H. Trinh, N. Cheng, J. Bradley, A. Chao, A. Mody, P. Truitt,
+and J. Larson, “From local to global: A graph RAG approach to query-
+focused summarization,” arXiv:2404.16130, 2024.
+[8] Q. Wu, G. Bansal, J. Zhang, Y . Wu, S. Zhang, E. Zhu, B. Li, L. Jiang, X.
+Zhang, and C. Wang, “AutoGen: Enabling next-gen LLM applications
+via multi-agent conversation framework,” arXiv:2308.08155, 2023.
+[9] J. Moura, “CrewAI: Framework for orchestrating role-playing, au-
+tonomous AI agents,” GitHub repository, 2024. [Online]. Available:
+https://github.com/joaomdmoura/crewAI
+[10] LangChain, “LangGraph: Building language agents as graphs,” 2024.
+[Online]. Available: https://github.com/langchain-ai/langgraph
+[11] J. S. Singer, “pdfplumber: Plumb a PDF for detailed information about
+each text character, rectangle, and line,” Python Package Index, 2023.
+[12] S. Schleimer, D. S. Wilkerson, and A. Aiken, “Winnowing: Local
+algorithms for document fingerprinting,” inProc. ACM SIGMOD, 2003,
+pp. 76–85.
+[13] A. Z. Broder, “On the resemblance and containment of documents,” in
+Proc. Compression and Complexity of SEQUENCES, 1997, pp. 21–29.
+[14] T. Folty ´nek, N. Meuschke, and B. Gipp, “Academic plagiarism detection:
+A systematic literature review,”ACM Computing Surveys, vol. 52, no.
+6, pp. 1–42, 2019.
+[15] K. Zhang and D. Shasha, “Simple fast algorithms for the editing distance
+between trees and related problems,”SIAM J. Comput., vol. 18, no. 6,
+pp. 1245–1262, 1989.
+[16] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez,
+L. Kaiser, and I. Polosukhin, “Attention is all you need,” inAdvances
+in Neural Information Processing Systems, vol. 30, 2017.
+[17] J. Devlin, M. W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training
+of deep bidirectional transformers for language understanding,” inProc.
+NAACL-HLT, 2019, pp. 4171–4186.
+[18] J. Priem, H. Piwowar, and R. Orr, “OpenAlex: A fully-open in-
+dex of scholarly works, authors, venues, institutions, and concepts,”
+arXiv:2205.01833, 2022.
+[19] C. Hendricks, D. Tkaczyk, J. Lin, and P. Feeney, “CrossRef: The sus-
+tainable infrastructure for open research,”Quantitative Science Studies,
+vol. 1, no. 1, pp. 414–427, 2020.
+[20] P. A. Sneath and R. R. Sokal,Numerical Taxonomy: The Principles and
+Practice of Numerical Classification. San Francisco, CA, USA: W. H.
+Freeman, 1973.
+

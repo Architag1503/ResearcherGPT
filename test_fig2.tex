@@ -1,0 +1,103 @@
+\documentclass[journal,compsoc]{IEEEtran}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc,backgrounds}
+\usepackage{xcolor}
+
+\definecolor{densecol}{RGB}{236,244,252}
+\definecolor{denseborder}{RGB}{41,128,185}
+\definecolor{lexcol}{RGB}{237,247,242}
+\definecolor{lexborder}{RGB}{39,174,96}
+\definecolor{graphcol}{RGB}{254,249,238}
+\definecolor{graphborder}{RGB}{214,137,16}
+\definecolor{fusecol}{RGB}{247,243,252}
+\definecolor{fuseborder}{RGB}{142,68,173}
+
+\tikzset{
+  qnode/.style={draw=black!70, fill=black!5, rounded corners=3pt, line width=0.7pt, align=center, font=\scriptsize},
+  bnode/.style={draw=#1, fill=#1!10, rounded corners=3pt, line width=0.6pt, align=center, font=\scriptsize},
+  snode/.style={draw=#1, fill=white, rounded corners=2.5pt, line width=0.6pt, align=center, font=\scriptsize},
+  fnode/.style={draw=#1, fill=#1!12, rounded corners=3pt, line width=0.7pt, align=center, font=\scriptsize},
+  farrow/.style={-{Stealth[length=2mm,width=1.3mm]}, line width=0.7pt, draw=black!75}
+}
+
+\begin{document}
+
+\begin{figure}[!b]
+\centering
+\resizebox{0.98\columnwidth}{!}{%
+\begin{tikzpicture}[x=1mm, y=1mm]
+
+% Top: Query Node
+\node[qnode, text width=78mm, minimum height=7mm] (query) at (0, 48) {
+  \textbf{Scholarly Research Query } $ (User Query / Sub-problem)
+};
+
+% Branch 1: Dense Semantic Branch (Left, x = -28)
+\draw[rounded corners=3pt, fill=densecol, draw=denseborder, line width=0.6pt] (-41, 10) rectangle (-15, 39);
+\node[font=\tiny\bfseries, text=denseborder] at (-28, 36) {DENSE BRANCH};
+\node[snode=denseborder, text width=22mm, minimum height=8mm] (d1) at (-28, 28) {
+  \tiny\textbf{Dense Encoder}\\
+  \tiny OpenAI 3072-dim
+};
+\node[snode=denseborder, text width=22mm, minimum height=8mm] (d2) at (-28, 16) {
+  \tiny\textbf{Qdrant HNSW}\\
+  \tiny Top-$ Chunks {\mathrm{d}}$
+};
+\draw[farrow] (d1) -- (d2);
+
+% Branch 2: Sparse Lexical Branch (Center, x = 0)
+\draw[rounded corners=3pt, fill=lexcol, draw=lexborder, line width=0.6pt] (-13, 10) rectangle (13, 39);
+\node[font=\tiny\bfseries, text=lexborder] at (0, 36) {LEXICAL BRANCH};
+\node[snode=lexborder, text width=22mm, minimum height=8mm] (l1) at (0, 28) {
+  \tiny\textbf{Tokenizer / Stem}\\
+  \tiny Term Filter \& Stop
+};
+\node[snode=lexborder, text width=22mm, minimum height=8mm] (l2) at (0, 16) {
+  \tiny\textbf{BM25 Scoring}\\
+  \tiny Top-$ Chunks {\mathrm{l}}$
+};
+\draw[farrow] (l1) -- (l2);
+
+% Branch 3: Knowledge Graph Branch (Right, x = 28)
+\draw[rounded corners=3pt, fill=graphcol, draw=graphborder, line width=0.6pt] (15, 10) rectangle (41, 39);
+\node[font=\tiny\bfseries, text=graphborder] at (28, 36) {GRAPH BRANCH};
+\node[snode=graphborder, text width=22mm, minimum height=8mm] (g1) at (28, 28) {
+  \tiny\textbf{Entity Extractor}\\
+  \tiny Methods / Datasets
+};
+\node[snode=graphborder, text width=22mm, minimum height=8mm] (g2) at (28, 16) {
+  \tiny\textbf{Neo4j Cypher}\\
+  \tiny Boost IDs {\mathrm{boost}}$
+};
+\draw[farrow] (g1) -- (g2);
+
+% Query dispatch arrows
+\draw[farrow] (query.south) -| (-28, 39);
+\draw[farrow] (query.south) -- (0, 39);
+\draw[farrow] (query.south) -| (28, 39);
+
+% Fusion Layer
+\node[fnode=fuseborder, text width=78mm, minimum height=9mm] (rrf) at (0, -2) {
+  \textbf{Reciprocal Rank Fusion (RRF) with Graph Boosting}\\[1pt]
+  \tiny Score: $\sum_{r \in (d,l)} \frac{1}{60 + \mathrm{rank}_r(c)} \times (1.30 \text{ if } c.\mathrm{paper} \in P_{\mathrm{boost}} \text{ else } 1.0)$
+};
+
+% Convergence arrows into RRF
+\draw[farrow] (d2.south) |- (-25, 4) -- (-25, 2.5);
+\draw[farrow] (l2.south) -- (0, 2.5);
+\draw[farrow] (g2.south) |- (25, 4) -- (25, 2.5);
+
+% Output Node
+\node[fnode=denseborder, text width=78mm, minimum height=7mm] (out) at (0, -15) {
+  \textbf{Fused \& Deduplicated Context Chunks}\\
+  \tiny Top-$ (=15$) Passages $\to$ Dispatched to Specialized Research Agents
+};
+\draw[farrow, line width=0.9pt] (rrf) -- (out);
+
+\end{tikzpicture}}
+\caption{Tri-hybrid retrieval pipeline combining dense vector embeddings, BM25 lexical scoring, and Neo4j graph boosting via Reciprocal Rank Fusion.}
+\label{fig:retrieval}
+\end{figure}
+
+\end{document}
