@@ -6,7 +6,6 @@ export interface ExtractedUserKeys {
   gemini?: string;
   openai?: string;
   anthropic?: string;
-  is_owner?: boolean;
 }
 
 export const isPrimaryOwner = (_user?: { id?: string; email?: string }): boolean => {
@@ -53,8 +52,6 @@ export const getUserApiKeys = async (
       console.warn('[getUserApiKeys] DB lookup error:', err);
     }
   }
-
-  keys.is_owner = false;
 
   return keys;
 };

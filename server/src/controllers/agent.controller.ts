@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
+import mongoose from 'mongoose';
 import AgentRun from '../models/AgentRun.js';
 import Gap from '../models/Gap.js';
 import FactCheck from '../models/FactCheck.js';
@@ -60,7 +61,7 @@ export const triggerAgentRun = async (req: Request, res: Response) => {
 
     // 2. Trigger AI Service async in background, sending our MongoDB runId and user API keys for callbacks
     axios.post(`${AI_SERVICE_URL}/api/agent/run`, {
-      run_id: run._id,
+      run_id: run._id.toString(),
       project_id: projectId,
       query,
       workflow_type: workflowType,
@@ -187,6 +188,22 @@ export const updateAgentRunStep = async (req: Request, res: Response) => {
       await paper.save();
 
       // 2. Save Gaps
+      const validCategories = ['methodological', 'empirical', 'theoretical', 'dataset', 'other'] as const;
+      const clampScore = (val: any, min: number, max: number, fallback: number): number => {
+        const num = Number(val);
+        if (!Number.isFinite(num)) return fallback;
+        return Math.min(max, Math.max(min, num));
+      };
+      const normalizeCategory = (raw: any) => {
+        const c = String(raw || 'other').toLowerCase().trim();
+        if (validCategories.includes(c as any)) return c;
+        if (c.startsWith('methodolog')) return 'methodological';
+        if (c.startsWith('empiric')) return 'empirical';
+        if (c.startsWith('theor')) return 'theoretical';
+        if (c === 'dataset' || c === 'data') return 'dataset';
+        return 'other';
+      };
+
       if (result.research_gaps && Array.isArray(result.research_gaps)) {
         let actualGaps: any[] = [];
         for (const item of result.research_gaps) {
@@ -200,35 +217,50 @@ export const updateAgentRunStep = async (req: Request, res: Response) => {
         }
 
         for (const g of actualGaps) {
+          const evidenceArr = Array.isArray(g.evidence)
+            ? g.evidence.map((e: any) => String(e))
+            : g.evidence
+              ? [String(g.evidence)]
+              : [];
           const gap = new Gap({
             projectId,
             title: g.title || g.gap_title || 'Mined Gap',
             description: g.description || 'No description provided.',
-            evidence: g.evidence || [],
-            category: g.category || 'other',
-            impactScore: g.impactScore || 5,
-            feasibilityScore: g.feasibilityScore || 5,
+            evidence: evidenceArr,
+            category: normalizeCategory(g.category),
+            impactScore: Math.round(clampScore(g.impactScore, 1, 10, 5)),
+            feasibilityScore: Math.round(clampScore(g.feasibilityScore, 1, 10, 5)),
           });
           await gap.save();
         }
       }
 
       // 3. Save FactChecks
+      const normalizeFactStatus = (raw: any): 'verified' | 'refuted' | 'unverified' => {
+        const s = String(raw || 'unverified').toLowerCase().trim();
+        if (s === 'verified' || s === 'supported') return 'verified';
+        if (s === 'refuted' || s === 'contradicted' || s === 'false') return 'refuted';
+        return 'unverified';
+      };
+
       if (result.fact_checks && Array.isArray(result.fact_checks)) {
         for (const fc of result.fact_checks) {
-          const sanitizedSources = (fc.sources || []).map((s: any) => ({
-            paperId: s.paperId || undefined,
-            paperTitle: s.paperTitle || s.paper || 'Reference Source',
-            pageNumber: s.pageNumber || s.page || undefined,
-            snippet: s.snippet || s.text || 'Claim verification source details.',
-            confidenceScore: typeof s.confidenceScore === 'number' ? s.confidenceScore : 0.8,
-          }));
+          const sanitizedSources = (Array.isArray(fc.sources) ? fc.sources : []).map((s: any) => {
+            const parsedPage = Number(s?.pageNumber ?? s?.page);
+            return {
+              paperId: s?.paperId && mongoose.Types.ObjectId.isValid(String(s.paperId)) ? String(s.paperId) : undefined,
+              paperTitle: s?.paperTitle || s?.paper || 'Reference Source',
+              pageNumber: Number.isFinite(parsedPage) ? Math.max(1, Math.round(parsedPage)) : undefined,
+              snippet: s?.snippet || s?.text || 'Claim verification source details.',
+              confidenceScore: clampScore(s?.confidenceScore, 0, 1, 0.8),
+            };
+          });
 
           const check = new FactCheck({
             projectId,
             claim: fc.claim || 'Scholarly claim',
-            status: fc.status || 'unverified',
-            confidenceScore: fc.confidenceScore || 0,
+            status: normalizeFactStatus(fc.status),
+            confidenceScore: clampScore(fc.confidenceScore, 0, 1, 0),
             analysis: fc.analysis || '',
             sources: sanitizedSources,
           });
@@ -237,6 +269,12 @@ export const updateAgentRunStep = async (req: Request, res: Response) => {
       }
 
       // 4. Save Literature Reviews to Paper collection (populates 3D graph and litreview matrix)
+      const currentYear = new Date().getFullYear();
+      const parseSafeYear = (raw: any): number => {
+        const y = parseInt(String(raw ?? ''), 10);
+        return Number.isFinite(y) && y >= 1900 && y <= currentYear + 5 ? y : currentYear;
+      };
+
       if (result.literature_reviews && Array.isArray(result.literature_reviews)) {
         for (const lr of result.literature_reviews) {
           const mockTitle = `${lr.method} study by ${lr.author}`;
@@ -246,7 +284,7 @@ export const updateAgentRunStep = async (req: Request, res: Response) => {
               projectId,
               title: mockTitle,
               authors: lr.author ? [lr.author] : ['Unknown Author'],
-              year: lr.year || new Date().getFullYear(),
+              year: parseSafeYear(lr.year),
               abstract: `Method: ${lr.method}. Dataset: ${lr.dataset}. Results: ${lr.results}. Limitation: ${lr.limitation}.`,
               status: 'processed'
             });
@@ -275,7 +313,7 @@ export const updateAgentRunStep = async (req: Request, res: Response) => {
               title: c.title || 'Untitled Reference',
               authors: c.authors || (c.author ? [c.author] : []),
               journal: c.journal || '',
-              year: c.year || new Date().getFullYear(),
+              year: parseSafeYear(c.year),
               publishDate: c.publish_date || c.publishDate || (c.year ? String(c.year) : ''),
               volume: c.volume || '',
               issue: c.issue || '',

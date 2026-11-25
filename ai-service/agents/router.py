@@ -96,6 +96,16 @@ def call_gemini_direct(model_name: str, temp: float, system_prompt: str, user_pr
 
     return _call_with_retry(_do_gemini_call, max_retries=2, base_delay=4.0)
 
+def _wants_json_object(system_prompt: str) -> bool:
+    """Return True only when the prompt expects a top-level JSON object (not a JSON list/array)."""
+    low = (system_prompt or "").lower()
+    if "json" not in low:
+        return False
+    if "json list" in low or "json array" in low or "list of " in low:
+        return False
+    return True
+
+
 def call_openai_direct(model_name: str, temp: float, system_prompt: str, user_prompt: str, max_tokens: int = 8192, api_key: Optional[str] = None, is_owner: bool = False) -> str:
     # Strictly use ONLY the user-provided OpenAI API key (never personal .env keys)
     openai_key = api_key.strip() if isinstance(api_key, str) and api_key.strip() else None
@@ -112,7 +122,7 @@ def call_openai_direct(model_name: str, temp: float, system_prompt: str, user_pr
         "temperature": temp,
         "max_tokens": max_tokens
     }
-    if "json" in system_prompt.lower():
+    if _wants_json_object(system_prompt):
         data["response_format"] = {"type": "json_object"}
 
     def _do_openai_call():
@@ -168,7 +178,7 @@ def call_groq_direct(model_name: str, temp: float, system_prompt: str, user_prom
         "temperature": temp,
         "max_tokens": max_tokens
     }
-    if "json" in system_prompt.lower():
+    if _wants_json_object(system_prompt):
         data["response_format"] = {"type": "json_object"}
     def _do_groq():
         res = requests.post(url, headers=headers, json=data, timeout=180)
@@ -195,7 +205,7 @@ def _call_with_retry(call_fn, max_retries: int = 3, base_delay: float = 5.0):
             raise
 
 
-def _extract_user_key(user_api_keys: Optional[Dict[str, str]], *names: str) -> Optional[str]:
+def _extract_user_key(user_api_keys: Optional[Dict[str, Any]], *names: str) -> Optional[str]:
     if not user_api_keys or not isinstance(user_api_keys, dict):
         return None
     for name in names:
@@ -205,7 +215,7 @@ def _extract_user_key(user_api_keys: Optional[Dict[str, str]], *names: str) -> O
     return None
 
 
-def call_model(agent_role: str, system_prompt: str, user_prompt: str, user_api_keys: Optional[Dict[str, str]] = None) -> str:
+def call_model(agent_role: str, system_prompt: str, user_prompt: str, user_api_keys: Optional[Dict[str, Any]] = None) -> str:
     model = MODEL_REGISTRY.get(agent_role, "groq/llama-3.3-70b-versatile")
     temp = AGENT_TEMPERATURES.get(agent_role, 0.3)
 
@@ -264,7 +274,7 @@ def call_model(agent_role: str, system_prompt: str, user_prompt: str, user_api_k
     assert last_err is not None
     raise last_err
 
-def call_llm(system_prompt: str, user_prompt: str, user_api_keys: Optional[Dict[str, str]] = None) -> str:
+def call_llm(system_prompt: str, user_prompt: str, user_api_keys: Optional[Dict[str, Any]] = None) -> str:
     return call_model("writer", system_prompt, user_prompt, user_api_keys=user_api_keys)
 
 def get_project_papers(project_id: str) -> List[Dict[str, Any]]:
@@ -904,7 +914,8 @@ def parse_json_list_of_dicts(json_text: str) -> List[Dict[str, Any]]:
         raise ValueError(f"JSON parsing failed: {e}")
     
     if isinstance(parsed, dict):
-        parsed = [parsed]
+        list_val = next((v for v in parsed.values() if isinstance(v, list)), None)
+        parsed = list_val if list_val is not None else [parsed]
         
     if not isinstance(parsed, list):
         raise ValueError("Parsed JSON is not a list or dictionary")
@@ -986,6 +997,8 @@ def planner_node(state: AgentWorkflowState) -> AgentWorkflowState:
             if res_text.startswith("json"):
                 res_text = res_text[4:]
         subtopics = json.loads(res_text.strip())
+        if isinstance(subtopics, dict):
+            subtopics = next((v for v in subtopics.values() if isinstance(v, list)), [])
     except Exception as e:
         print(f"Planner fallback engaged: {e}")
         subtopics = generate_fallback_data("planner", state["project_id"], state["query"])
@@ -1192,8 +1205,10 @@ def citation_verification_node(state: AgentWorkflowState) -> AgentWorkflowState:
     project_papers = get_project_papers(state["project_id"])
     for p in project_papers:
         if p.get("title") and not any(a["title"].lower() == p["title"].lower() for a in academic_papers):
-            authors_list = p.get("authors") or ["Author"]
-            author_last = authors_list[0].split(" ")[-1] if authors_list and " " in authors_list[0] else "Author"
+            raw_authors = p.get("authors")
+            authors_list = raw_authors if isinstance(raw_authors, list) and raw_authors else ([str(raw_authors)] if raw_authors else ["Author"])
+            first_author = str(authors_list[0] or "Author")
+            author_last = first_author.split(" ")[-1] if " " in first_author else (first_author or "Author")
             yr = p.get("year") or 2024
             paper_dict = {
                 "title": p["title"],

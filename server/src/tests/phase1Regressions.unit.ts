@@ -127,13 +127,13 @@ async function runTests() {
     else process.env.ALLOW_DEV_MOCK_AUTH = prevBypass;
   }
 
-  // 6. Strict user-only API key enforcement (never unlock .env owner bypass)
+  // 6. Strict user-only API key enforcement (never unlock .env owner bypass or emit boolean flags)
   assert.equal(isPrimaryOwner({ id: '666a7b29d5b51a0211a7c501', email: 'archit@test.edu' }), false);
   const extractedKeys = await getUserApiKeys('', {
     headers: { 'x-gemini-api-key': 'user_gemini_test_key' },
   } as any);
   assert.equal(extractedKeys.gemini, 'user_gemini_test_key');
-  assert.equal(extractedKeys.is_owner, false);
+  assert.equal('is_owner' in extractedKeys, false);
 
   // 7. Local Node PDF fallback parses real PDFs without calling external AI providers
   const samplePdfPath = path.resolve(process.cwd(), '../Inference_Scaled_GraphRAG.pdf');

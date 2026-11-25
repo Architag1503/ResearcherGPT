@@ -47,17 +47,17 @@ class ProcessPDFRequest(BaseModel):
     storage_url: Optional[str] = None
     reuse_paper_id: Optional[str] = None
     user_gemini_key: Optional[str] = None  # Per-user Gemini API key to avoid server quota exhaustion
-    user_api_keys: Optional[Dict[str, str]] = None
+    user_api_keys: Optional[Dict[str, Any]] = None
 
 class GenerateGraphRequest(BaseModel):
     project_id: str
-    user_api_keys: Optional[Dict[str, str]] = None
+    user_api_keys: Optional[Dict[str, Any]] = None
 
 class ChatStreamRequest(BaseModel):
     query: str
     project_id: str
     session_id: str
-    user_api_keys: Optional[Dict[str, str]] = None
+    user_api_keys: Optional[Dict[str, Any]] = None
 
 class AgentRunRequest(BaseModel):
     run_id: str
@@ -66,13 +66,13 @@ class AgentRunRequest(BaseModel):
     workflow_type: str = "paper"
     format: str = "IEEE"
     pages: int = 5
-    user_api_keys: Optional[Dict[str, str]] = None
+    user_api_keys: Optional[Dict[str, Any]] = None
 
 
 class ComparisonRequest(BaseModel):
     project_id: str
     paper_ids: List[str]
-    user_api_keys: Optional[Dict[str, str]] = None
+    user_api_keys: Optional[Dict[str, Any]] = None
 
 @app.post("/api/pdf/process")
 def process_pdf(req: ProcessPDFRequest):
@@ -268,7 +268,7 @@ def chat_stream(req: ChatStreamRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, workflow_type: str = "paper", format: str = "IEEE", pages: int = 5, user_api_keys: Optional[Dict[str, str]] = None):
+def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, workflow_type: str = "paper", format: str = "IEEE", pages: int = 5, user_api_keys: Optional[Dict[str, Any]] = None):
     if workflow_type == "proposal":
         report_progress(run_id, "Proposal Generation", "running", logs="Executing multi-agent proposal flow...")
         try:
@@ -458,7 +458,7 @@ class LearningNodeGenerateRequest(BaseModel):
     context_papers: List[Dict[str, Any]] = []
     connected_nodes: List[Dict[str, Any]] = []
     connected_links: List[Dict[str, Any]] = []
-    user_api_keys: Optional[Dict[str, str]] = None
+    user_api_keys: Optional[Dict[str, Any]] = None
 
 class LearningNodeAskRequest(BaseModel):
     project_id: str
@@ -467,7 +467,7 @@ class LearningNodeAskRequest(BaseModel):
     node_type: str
     question: str
     node_details: Dict[str, Any]
-    user_api_keys: Optional[Dict[str, str]] = None
+    user_api_keys: Optional[Dict[str, Any]] = None
 
 @app.post("/api/graph/learning-node")
 def generate_node_learning(req: LearningNodeGenerateRequest):
@@ -504,7 +504,7 @@ def ask_node_learning(req: LearningNodeAskRequest):
 
 class DescriptionGenerateRequest(BaseModel):
     name: str
-    user_api_keys: Optional[Dict[str, str]] = None
+    user_api_keys: Optional[Dict[str, Any]] = None
 
 @app.post("/api/project/generate-description")
 def generate_project_description(req: DescriptionGenerateRequest):
@@ -525,7 +525,7 @@ def generate_project_description(req: DescriptionGenerateRequest):
 class GapsGenerateRequest(BaseModel):
     name: str
     description: str
-    user_api_keys: Optional[Dict[str, str]] = None
+    user_api_keys: Optional[Dict[str, Any]] = None
 
 @app.post("/api/project/generate-gaps")
 def generate_project_gaps(req: GapsGenerateRequest):
@@ -586,7 +586,7 @@ def generate_project_gaps(req: GapsGenerateRequest):
 class SingleGapGenerateRequest(BaseModel):
     name: str
     description: str
-    user_api_keys: Optional[Dict[str, str]] = None
+    user_api_keys: Optional[Dict[str, Any]] = None
 
 @app.post("/api/project/generate-single-gap")
 def generate_project_single_gap(req: SingleGapGenerateRequest):

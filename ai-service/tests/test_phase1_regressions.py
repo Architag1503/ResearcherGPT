@@ -2,6 +2,7 @@ import os
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 os.environ.setdefault("QDRANT_HOST", "127.0.0.1")
 os.environ.setdefault("QDRANT_PORT", "63999")
@@ -265,6 +266,40 @@ class Phase1RegressionTests(unittest.TestCase):
                     os.environ.pop(k, None)
                 else:
                     os.environ[k] = v
+
+    def test_agent_run_accepts_non_string_values_in_user_api_keys_and_json_list_prompts(self):
+        from fastapi.testclient import TestClient
+        from agents import router
+        import main
+
+        self.assertFalse(router._wants_json_object("You must output a JSON list of objects."))
+        self.assertTrue(router._wants_json_object("Return strictly as a JSON object."))
+        unwrapped = router.parse_json_list_of_dicts('{"gaps": [{"title": "Gap A", "description": "Details"}]}')
+        self.assertEqual(unwrapped[0]["title"], "Gap A")
+
+        with patch.object(main, "run_agent_workflow_in_background") as mock_bg:
+            client = TestClient(main.app)
+            resp = client.post(
+                "/api/agent/run",
+                json={
+                    "run_id": "run-123",
+                    "project_id": "proj-123",
+                    "query": "Multi-Agent GraphRAG",
+                    "workflow_type": "paper",
+                    "format": "IEEE",
+                    "pages": 5,
+                    "user_api_keys": {
+                        "groq": "user_groq",
+                        "gemini": "user_gemini",
+                        "openai": "user_openai",
+                        "anthropic": "user_anthropic",
+                        "is_owner": False,
+                    },
+                },
+            )
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.json().get("status"), "running")
+            mock_bg.assert_called_once()
 
 
 if __name__ == "__main__":
