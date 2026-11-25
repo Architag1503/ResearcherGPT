@@ -347,7 +347,8 @@ def run_agent_workflow_in_background(run_id: str, project_id: str, query: str, w
             # Run state machine sequentially
             agent_workflow.invoke(initial_state, config={"recursion_limit": 50})
         except Exception as e:
-            err_str = str(e)
+            import re
+            err_str = re.sub(r"(['\"](?:groq|gemini|openai|anthropic|api_key|token)['\"]\s*:\s*['\"])[^'\"]+(['\"])", r"\1[REDACTED]\2", str(e), flags=re.IGNORECASE)
             print(f"Workflow execution failure: {err_str}")
             provider = "LLM"
             is_token_limit = "TOKEN_LIMIT_EXCEEDED" in err_str

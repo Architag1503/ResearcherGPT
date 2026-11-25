@@ -301,6 +301,63 @@ class Phase1RegressionTests(unittest.TestCase):
             self.assertEqual(resp.json().get("status"), "running")
             mock_bg.assert_called_once()
 
+        # Also exercise the real compiled LangGraph `agent_workflow` end-to-end with `user_api_keys`
+        callbacks = []
+
+        def fake_report_progress(run_id, step_name, status, logs="", output=None, overall_status=None, result=None):
+            callbacks.append({
+                "run_id": run_id,
+                "step_name": step_name,
+                "status": status,
+                "overall_status": overall_status,
+                "result": result,
+            })
+
+        def fake_call_model(role, system_prompt, user_prompt, user_api_keys=None):
+            if role == "planner":
+                return '["Subtopic A", "Subtopic B"]'
+            if role == "literature_review":
+                return '[{"author": "Alice", "year": 2025, "method": "GraphRAG", "dataset": "HotpotQA", "results": "94%", "limitation": "Latency"}]'
+            if role == "methodology_extraction":
+                return '[{"paper": "GraphRAG", "architecture": "Hierarchical", "dataset": "HotpotQA", "algorithm": "BFS"}]'
+            if role == "comparison":
+                return '[{"paper": "GraphRAG", "accuracy": "94%", "latency": "120ms", "parameters": "1M", "strengths": "Recall", "weaknesses": "Cost"}]'
+            if role == "trend_analysis":
+                return '[{"trend": "Graph indexing", "evidence": "Higher recall", "confidence": 0.9}]'
+            if role == "gap_analysis":
+                return '[{"title": "Scalability", "description": "Detailed gap description.", "evidence": ["Evidence 1"], "category": "methodological", "impactScore": 8, "feasibilityScore": 7}]'
+            if role == "contradiction_detection":
+                return '[{"conflict_area": "Chunking", "paper_a": "A", "claim_a": "Small", "paper_b": "B", "claim_b": "Large", "resolution": "Adaptive"}]'
+            if role == "fact_verification":
+                return '[{"claim": "Recall improved", "status": "verified", "confidenceScore": 0.9, "analysis": "Supported", "sources": [{"paperTitle": "GraphRAG", "pageNumber": 1, "snippet": "Improved recall", "confidenceScore": 0.9}]}]'
+            if role == "reviewer":
+                return "Strong methodology and coherent structure."
+            return "## Title\nSample Title\n\n## Abstract\nSample abstract content for testing.\n\n## 1. Introduction\nDetailed introduction content with verified claims."
+
+        with patch.object(router, "report_progress", side_effect=fake_report_progress), \
+             patch.object(router, "call_model", side_effect=fake_call_model), \
+             patch.object(router, "search_academic_papers", return_value=[]), \
+             patch.object(router, "get_project_papers", return_value=[]):
+            main.run_agent_workflow_in_background(
+                "run-e2e",
+                "proj-e2e",
+                "Multi-Agent GraphRAG",
+                workflow_type="paper",
+                format="IEEE",
+                pages=5,
+                user_api_keys={
+                    "groq": "user_groq",
+                    "gemini": "user_gemini",
+                    "openai": "user_openai",
+                    "anthropic": "user_anthropic",
+                },
+            )
+        completed = [c for c in callbacks if c["overall_status"] == "completed"]
+        failed = [c for c in callbacks if c["overall_status"] == "failed"]
+        self.assertEqual(failed, [])
+        self.assertEqual(len(completed), 1)
+        self.assertIn("sections", completed[0]["result"])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

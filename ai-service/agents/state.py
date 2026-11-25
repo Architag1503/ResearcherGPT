@@ -1,4 +1,4 @@
-from typing import TypedDict, List, Dict, Any
+from typing import TypedDict, List, Dict, Any, Optional
 
 class AgentWorkflowState(TypedDict):
     project_id: str
@@ -6,6 +6,7 @@ class AgentWorkflowState(TypedDict):
     query: str
     format: str
     pages: int
+    user_api_keys: Optional[Dict[str, Any]]
 
     
     # Retrieved chunks from vector search
